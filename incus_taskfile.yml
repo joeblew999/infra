@@ -10,20 +10,13 @@
 
 version: '3'
 
-includes:
-  incus:
-    taskfile: ./incus_taskfile.yml
-  tofu:
-    taskfile: ./tofu_taskfile.yml
-  hetzner:
-    taskfile: ./hetzner_taskfile.yml
 
 vars:
   
 
 tasks:
   default:
-    desc: List operations and state.
+    desc: List Incus operations and state.
     cmds:
       - echo
       - echo "Runs Incus on a macOS host using Macpine."
