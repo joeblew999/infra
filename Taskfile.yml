@@ -1,9 +1,13 @@
 # https://taskfile.dev
 
+# https://taskfile.dev/reference/cli
+
 # Runs Incus on a macOS host using Macpine.
 
 # Its as idempotent as possible, so you can run it multiple times without issues and at any stage and it will be smart 
 # about only running what is needed.
+
+
 
 version: '3'
 
@@ -40,17 +44,38 @@ tasks:
   dep-cli:
     desc: install cli dependencies
     cmds:
-      # CLI: https://formulae.brew.sh/formula/incus
-      - |
-        if ! command -v incus >/dev/null 2>&1; then
-          brew install incus
-        else
-          echo "incus is already installed."
-        fi
+      - cmd: |
+          # brew https://formulae.brew.sh/formula/incus
+          if ! command -v incus >/dev/null 2>&1; then
+            brew install incus
+          else
+            echo "incus is already installed."
+          fi
+        platforms: [darwin]
+      - cmd: |
+          # https://linuxcontainers.org/incus/docs/main/installing/#linux
+          apk add incus-client
+        platforms: [linux]
+      - cmd: |
+          # choco cli: https://community.chocolatey.org/packages/incus
+          choco install incus
+        platforms: [windows]
+
   dep-cli-del:
     desc: remove cli dependencies
     cmds:
-      - brew uninstall incus
+      - cmd: |
+          # brew https://formulae.brew.sh/formula/incus
+          brew uninstall incus
+        platforms: [darwin]
+      - cmd: |
+          # https://linuxcontainers.org/incus/docs/main/installing/#linux
+          apk del incus-client
+        platforms: [linux]
+      - cmd: |
+          # choco cli: https://community.chocolatey.org/packages/incus
+          choco uninstall incus
+        platforms: [windows]
 
   dep-server:
     desc: install server dependencies

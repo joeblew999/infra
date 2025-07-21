@@ -2,22 +2,29 @@
 
 SOURCE : https://github.com/joeblew999/infra
 
+Designed for Hetzner for Dedciated and VPS where ZFS can be used for both.
 
-Origin is ONLY Hetzner.
+Taskfile for local and remote setup for darwin, linux and windows.
 
-Incus
+See "task dep-cli" for pattern for how to do it.
 
-code: https://github.com/lxc/incus on Hetzner which has zfs backed in.
+
+## Incus
+
+code: https://github.com/lxc/incus 
 
 docs: https://linuxcontainers.org/incus/docs/main/
 
-brew cli: https://formulae.brew.sh/formula/incus
-- brew install incus
+Remote uses Tofu of course.
 
-brew server:
-https://github.com/beringresearch/macpine/blob/main/docs/docs/incus_macpine.md
+## Installation
+
+https://linuxcontainers.org/incus/docs/main/installing/
 
 
+
+
+## OPS
 
 terraform: https://github.com/lxc/terraform-provider-incus
 
