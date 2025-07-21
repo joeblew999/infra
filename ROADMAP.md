@@ -7,3 +7,6 @@ Finish main taskfile to be cross platform.
 
 Finish tofo taskfile
 - has everything needed but needs testing.
+
+Finished hetzner taskfile
+- just started...

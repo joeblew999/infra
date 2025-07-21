@@ -1,0 +1,350 @@
+
+# https://taskfile.dev
+
+# https://taskfile.dev/reference/cli
+
+## Hetzer Cloud CLI Taskfile
+
+# https://github.com/hetznercloud/cli
+
+# This Taskfile manages the installation and configuration of the Hetzner Cloud CLI (hcloud).
+# It provides tasks for installing, configuring, and managing Hetzner Cloud resources.
+# It supports multiple platforms (macOS, Linux, Windows) and is designed to be idempotent.
+# The tasks include installation, configuration, server management, network management, and more.
+
+
+
+version: '3'
+
+vars:
+  HCLOUD_VERSION: v1.51.0
+  INSTALL_DIR: /usr/local/bin
+
+tasks:
+  # Default task to show help
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list-all
+
+### DEP
+  
+
+  dep:
+    desc: "Install hcloud CLI"
+    preconditions:
+      - sh: '! command -v hcloud >/dev/null 2>&1'
+        msg: 'hcloud is already installed'
+    cmds:
+      - cmd: |
+          echo "Installing hcloud {{.HCLOUD_VERSION}} for macOS..."
+          curl -LO https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-darwin-amd64.tar.gz
+          tar -xzf hcloud-darwin-amd64.tar.gz
+          sudo mv hcloud {{.INSTALL_DIR}}/hcloud
+          rm hcloud-darwin-amd64.tar.gz
+          echo "✅ Hetzner Cloud CLI installed successfully to {{.INSTALL_DIR}}/hcloud"
+        platforms: [darwin]
+      - cmd: |
+          echo "Installing hcloud {{.HCLOUD_VERSION}} for Linux..."
+          curl -LO https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-linux-amd64.tar.gz
+          tar -xzf hcloud-linux-amd64.tar.gz
+          sudo mv hcloud {{.INSTALL_DIR}}/hcloud
+          rm hcloud-linux-amd64.tar.gz
+          echo "✅ Hetzner Cloud CLI installed successfully to {{.INSTALL_DIR}}/hcloud"
+        platforms: [linux]
+      - cmd: |
+          echo "Installing hcloud {{.HCLOUD_VERSION}} for Windows..."
+          if (Get-Command winget -ErrorAction SilentlyContinue) {
+            echo "Using winget to install hcloud..."
+            winget install hetznercloud.hcloud-cli
+          } else {
+            echo "Winget not available, downloading manually..."
+            $url = "https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-windows-amd64.zip"
+            $output = "$env:TEMP\hcloud-windows-amd64.zip"
+            $extractPath = "$env:TEMP\hcloud"
+            
+            Invoke-WebRequest -Uri $url -OutFile $output
+            Expand-Archive -Path $output -DestinationPath $extractPath -Force
+            
+            $installDir = "$env:ProgramFiles\hcloud"
+            if (!(Test-Path $installDir)) {
+              New-Item -ItemType Directory -Path $installDir -Force
+            }
+            
+            Copy-Item "$extractPath\hcloud.exe" "$installDir\hcloud.exe" -Force
+            
+            # Add to PATH if not already there
+            $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+            if ($currentPath -notlike "*$installDir*") {
+              [Environment]::SetEnvironmentVariable("PATH", "$currentPath;$installDir", "Machine")
+              echo "Added $installDir to system PATH"
+            }
+            
+            Remove-Item $output -Force
+            Remove-Item $extractPath -Recurse -Force
+          }
+          echo "✅ Hetzner Cloud CLI installed successfully"
+          echo "ℹ️  You may need to restart your terminal or run 'refreshenv' to use hcloud"
+        platforms: [windows]
+
+  dep:del:
+    desc: "Uninstalls the Hetzner Cloud CLI (hcloud)"
+    prompt: "Are you sure you want to uninstall hcloud?"
+    cmds:
+      - cmd: |
+          sudo rm -f {{.INSTALL_DIR}}/hcloud
+          echo "✅ Hetzner Cloud CLI uninstalled."
+        platforms: [darwin, linux]
+      - cmd: |
+          if (Get-Command winget -ErrorAction SilentlyContinue) {
+            echo "Uninstalling hcloud using winget..."
+            winget uninstall hetznercloud.hcloud-cli
+          } else {
+            echo "Removing hcloud manually..."
+            $installDir = "$env:ProgramFiles\hcloud"
+            if (Test-Path "$installDir\hcloud.exe") {
+              Remove-Item "$installDir\hcloud.exe" -Force
+              echo "Removed hcloud.exe"
+            }
+            if (Test-Path $installDir) {
+              Remove-Item $installDir -Force
+              echo "Removed installation directory"
+            }
+            
+            # Remove from PATH
+            $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
+            if ($currentPath -like "*$installDir*") {
+              $newPath = $currentPath -replace [regex]::Escape(";$installDir"), ""
+              $newPath = $newPath -replace [regex]::Escape("$installDir;"), ""
+              $newPath = $newPath -replace [regex]::Escape("$installDir"), ""
+              [Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
+              echo "Removed from system PATH"
+            }
+          }
+          echo "✅ Hetzner Cloud CLI uninstalled."
+        platforms: [windows]
+
+  # Configuration tasks
+  config:
+    desc: "Configure hcloud with API token"
+    cmds:
+      - cmd: |
+          if [ -z "$HCLOUD_TOKEN" ]; then
+            echo "Please set HCLOUD_TOKEN environment variable or run: hcloud context create"
+            hcloud context create
+          else
+            echo "Using HCLOUD_TOKEN from environment"
+            hcloud context create --name default --token "$HCLOUD_TOKEN"
+          fi
+        platforms: [darwin, linux]
+      - cmd: |
+          if (-not $env:HCLOUD_TOKEN) {
+            Write-Host "Please set HCLOUD_TOKEN environment variable or run: hcloud context create" -ForegroundColor Yellow
+            hcloud context create
+          } else {
+            Write-Host "Using HCLOUD_TOKEN from environment" -ForegroundColor Green
+            hcloud context create --name default --token $env:HCLOUD_TOKEN
+          }
+        platforms: [windows]
+
+  config:list:
+    desc: "List hcloud contexts"
+    cmds:
+      - hcloud context list
+
+  config:active:
+    desc: "Show active context"
+    cmds:
+      - hcloud context active
+
+  # Server management tasks
+  server:list:
+    desc: "List all servers"
+    cmds:
+      - hcloud server list
+
+  server:create:
+    desc: "Create a new server (interactive)"
+    cmds:
+      - cmd: |
+          echo "Creating a new server..."
+          echo "Available server types:"
+          hcloud server-type list
+          echo ""
+          echo "Available images:"
+          hcloud image list --type system | head -10
+          echo ""
+          read -p "Server name: " name
+          read -p "Server type (e.g., cx11): " type
+          read -p "Image (e.g., ubuntu-22.04): " image
+          read -p "Location (e.g., fsn1): " location
+          hcloud server create --name "$name" --type "$type" --image "$image" --location "$location"
+        platforms: [darwin, linux]
+      - cmd: |
+          Write-Host "Creating a new server..." -ForegroundColor Green
+          Write-Host "Available server types:" -ForegroundColor Yellow
+          hcloud server-type list
+          Write-Host ""
+          Write-Host "Available images:" -ForegroundColor Yellow
+          hcloud image list --type system | Select-Object -First 10
+          Write-Host ""
+          $name = Read-Host "Server name"
+          $type = Read-Host "Server type (e.g., cx11)"
+          $image = Read-Host "Image (e.g., ubuntu-22.04)"
+          $location = Read-Host "Location (e.g., fsn1)"
+          hcloud server create --name "$name" --type "$type" --image "$image" --location "$location"
+        platforms: [windows]
+
+  server:delete:
+    desc: "Delete a server by name. Usage: task server:delete -- <server-name>"
+    cmds:
+      - hcloud server delete {{.CLI_ARGS}}
+
+  server:ssh:
+    desc: "SSH into a server. Usage: task server:ssh -- <server-name>"
+    cmds:
+      - hcloud server ssh {{.CLI_ARGS}}
+
+  # Network tasks
+  network:list:
+    desc: "List all networks"
+    cmds:
+      - hcloud network list
+
+  # Volume tasks
+  volume:list:
+    desc: "List all volumes"
+    cmds:
+      - hcloud volume list
+
+  # Firewall tasks
+  firewall:list:
+    desc: "List all firewalls"
+    cmds:
+      - hcloud firewall list
+
+  # Load balancer tasks
+  lb:list:
+    desc: "List all load balancers"
+    cmds:
+      - hcloud load-balancer list
+
+  # Generic hcloud command runner
+  run:
+    desc: "Runs a Hetzner Cloud CLI command. Example: task run -- server list"
+    cmds:
+      - hcloud {{.CLI_ARGS}}
+
+  # Development environment setup
+  dev:setup:
+    desc: "Setup development environment with basic server"
+    cmds:
+      - cmd: |
+          echo "Setting up development environment..."
+          SERVER_NAME="dev-$(date +%s)"
+          hcloud server create \
+            --name "$SERVER_NAME" \
+            --type cx11 \
+            --image ubuntu-22.04 \
+            --location fsn1 \
+            --ssh-key $(hcloud ssh-key list -o noheader | head -1 | awk '{print $1}') \
+            --user-data-from-file cloud-init.yml 2>/dev/null || \
+          hcloud server create \
+            --name "$SERVER_NAME" \
+            --type cx11 \
+            --image ubuntu-22.04 \
+            --location fsn1
+          echo "✅ Development server '$SERVER_NAME' created"
+        platforms: [darwin, linux]
+      - cmd: |
+          Write-Host "Setting up development environment..." -ForegroundColor Green
+          $timestamp = Get-Date -Format "yyyyMMddHHmmss"
+          $SERVER_NAME = "dev-$timestamp"
+          
+          # Try with SSH key first, fallback without
+          $sshKeys = hcloud ssh-key list -o noheader
+          if ($sshKeys) {
+            $firstKey = ($sshKeys | Select-Object -First 1) -split '\s+' | Select-Object -First 1
+            try {
+              if (Test-Path "cloud-init.yml") {
+                hcloud server create --name "$SERVER_NAME" --type cx11 --image ubuntu-22.04 --location fsn1 --ssh-key $firstKey --user-data-from-file cloud-init.yml
+              } else {
+                hcloud server create --name "$SERVER_NAME" --type cx11 --image ubuntu-22.04 --location fsn1 --ssh-key $firstKey
+              }
+            } catch {
+              hcloud server create --name "$SERVER_NAME" --type cx11 --image ubuntu-22.04 --location fsn1
+            }
+          } else {
+            hcloud server create --name "$SERVER_NAME" --type cx11 --image ubuntu-22.04 --location fsn1
+          }
+          Write-Host "✅ Development server '$SERVER_NAME' created" -ForegroundColor Green
+        platforms: [windows]
+
+  dev:teardown:
+    desc: "Teardown development servers"
+    prompt: "This will delete all servers with 'dev-' prefix. Continue?"
+    cmds:
+      - cmd: |
+          echo "Deleting development servers..."
+          hcloud server list -o noheader | grep "^dev-" | awk '{print $1}' | while read server; do
+            echo "Deleting $server..."
+            hcloud server delete "$server"
+          done
+          echo "✅ Development servers deleted"
+        platforms: [darwin, linux]
+      - cmd: |
+          Write-Host "Deleting development servers..." -ForegroundColor Yellow
+          $servers = hcloud server list -o noheader | Where-Object { $_ -match "^dev-" }
+          foreach ($server in $servers) {
+            $serverName = ($server -split '\s+')[0]
+            Write-Host "Deleting $serverName..." -ForegroundColor Red
+            hcloud server delete "$serverName"
+          }
+          Write-Host "✅ Development servers deleted" -ForegroundColor Green
+        platforms: [windows]
+
+  # Status and info tasks
+  status:
+    desc: "Show overall Hetzner Cloud status"
+    cmds:
+      - cmd: |
+          echo "=== Hetzner Cloud Status ==="
+          echo ""
+          echo "📊 Servers:"
+          hcloud server list
+          echo ""
+          echo "🌐 Networks:"
+          hcloud network list
+          echo ""
+          echo "💾 Volumes:"
+          hcloud volume list
+          echo ""
+          echo "🔥 Firewalls:"
+          hcloud firewall list
+          echo ""
+          echo "⚖️  Load Balancers:"
+          hcloud load-balancer list
+
+  pricing:
+    desc: "Show pricing information"
+    cmds:
+      - cmd: |
+          echo "=== Server Types & Pricing ==="
+          hcloud server-type list
+          echo ""
+          echo "=== Volume Pricing ==="
+          echo "Volumes: €0.0476/GB/month"
+          echo ""
+          echo "=== Traffic Pricing ==="
+          echo "Outbound traffic: €1.00/TB (first 21TB free per server)"
+
+  # Backup and snapshot tasks
+  backup:create:
+    desc: "Create backup of server. Usage: task backup:create -- <server-name>"
+    cmds:
+      - hcloud server create-image --description "Backup-$(date +%Y%m%d-%H%M%S)" {{.CLI_ARGS}}
+
+  backup:list:
+    desc: "List all backups/images"
+    cmds:
+      - hcloud image list --type backup

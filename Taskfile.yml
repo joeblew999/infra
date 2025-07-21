@@ -13,6 +13,8 @@ version: '3'
 includes:
   tofu:
     taskfile: ./tofu_taskfile.yml
+  hetzner:
+    taskfile: ./hetzner_taskfile.yml
 
 vars:
   

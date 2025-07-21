@@ -1,28 +1,22 @@
+# hcloud: Command-line interface for Hetzner Cloud
 
-infra
+[![Release](https://img.shields.io/github/v/release/hetznercloud/cli)](https://github.com/hetznercloud/cli/releases/latest)
+![Go Version](https://img.shields.io/github/go-mod/go-version/hetznercloud/cli/main?label=Go)
+[![CI](https://github.com/hetznercloud/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/hetznercloud/cli/actions/workflows/ci.yml)
+[![Build](https://github.com/hetznercloud/cli/actions/workflows/build.yml/badge.svg)](https://github.com/hetznercloud/cli/actions/workflows/build.yml)
+[![codecov](https://codecov.io/gh/hetznercloud/cli/graph/badge.svg?token=fFDgg6Ua6U)](https://codecov.io/gh/hetznercloud/cli)
 
-Hetzner only. Dedicated or VPS. ZFS required.
+`hcloud` is a command-line interface for interacting with Hetzner Cloud.
 
-Incus: https://github.com/lxc/incus
-Docs: https://linuxcontainers.org/incus/docs/main/
-Install: https://linuxcontainers.org/incus/docs/main/installing/
-Third party: https://linuxcontainers.org/incus/docs/main/third_party/
+[![asciicast](https://asciinema.org/a/157991.png)](https://asciinema.org/a/157991)
 
-Taskfile for darwin, linux, windows. See 'task dep-cli'.
+## Docs
 
-Remote uses Tofu.
-Terraform: https://github.com/lxc/terraform-provider-incus
-CI: https://github.com/cloudbase/garm
+- See [setting up hcloud](docs/tutorials/setup-hcloud-cli.md) for instructions on how to install and configure the CLI.
+- See the [manual](docs/reference/manual/hcloud.md) for a list of all available commands and their options.
 
-Hetzner AX42: https://www.hetzner.com/dedicated-rootserver/ax52/
-64GB RAM, 2x1TB SSD, $59/mo
+For additional information, see the [documentation](docs).
 
-Reference: https://pieterbakker.com/incus/
+## License
 
-FS is the DB.
-ko builds containers.
-
-NATS for everything. NGS for tracking. Cloudflare R2 for fast file requests.
-Web/Desktop/Mobile via Web. NATS leaf node/code on desktops.
-
-
+MIT license
