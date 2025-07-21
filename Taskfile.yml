@@ -8,8 +8,11 @@
 # about only running what is needed.
 
 
-
 version: '3'
+
+includes:
+  tofu:
+    taskfile: ./tofu_taskfile.yml
 
 vars:
   

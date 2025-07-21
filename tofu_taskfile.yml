@@ -1,0 +1,235 @@
+# https://taskfile.dev
+# Tofu for Incus.
+# terraform: https://github.com/lxc/terraform-provider-incus
+version: '3'
+
+vars:
+  TF_DIR: "{{.TF_DIR | default \"./terraform\"}}"
+  INCUS_REMOTE: "{{.INCUS_REMOTE | default \"local\"}}"
+
+tasks:
+  default:
+    desc: List operations and state.
+    cmds:
+      - echo
+      - echo "Runs Incus on a macOS host using Macpine."
+      - echo
+      - task --list-all
+      - echo
+    silent: true
+
+  dep:
+    desc: Install OpenTofu CLI and Incus provider dependencies
+    cmds:
+      - cmd: |
+          # macOS via Homebrew (recommended)
+          if ! command -v tofu >/dev/null 2>&1; then
+            brew install opentofu/tap/opentofu
+          else
+            echo "OpenTofu is already installed."
+          fi
+        platforms: [darwin]
+      - cmd: |
+          # Unix systems via installer script
+          if ! command -v tofu >/dev/null 2>&1; then
+            curl -fsSL https://get.opentofu.org/install-opentofu.sh | sudo bash
+          else
+            echo "OpenTofu is already installed."
+          fi
+        platforms: [linux]
+      - cmd: |
+          # Windows via Chocolatey
+          if (!(Get-Command tofu -ErrorAction SilentlyContinue)) {
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              choco install opentofu -y
+            } else {
+              Write-Host "Please install Chocolatey first or install OpenTofu manually"
+              exit 1
+            }
+          } else {
+            Write-Host "OpenTofu is already installed."
+          }
+        platforms: [windows]
+        sh: powershell
+      - cmd: tofu version
+        desc: "Verify OpenTofu installation"
+
+  dep-provider:
+    desc: Install Incus provider for OpenTofu
+    dir: "{{.TF_DIR}}"
+    deps: [dep]
+    cmds:
+      - cmd: |
+          # Create terraform directory if it doesn't exist
+          mkdir -p "$(pwd)"
+          
+          # Create basic terraform configuration if it doesn't exist
+          if [ ! -f "versions.tf" ] && [ ! -f "main.tf" ] && [ ! -f "*.tf" ]; then
+            cat > versions.tf << 'EOF'
+          terraform {
+            required_version = ">= 1.0"
+            required_providers {
+              incus = {
+                source  = "lxc/incus"
+                version = "~> 0.1"
+              }
+            }
+          }
+          EOF
+            echo "Created versions.tf with Incus provider configuration"
+          fi
+          
+          # Initialize with provider
+          tofu init
+        desc: "Initialize OpenTofu and install Incus provider"
+
+  dep-del:
+    desc: Uninstall OpenTofu CLI
+    cmds:
+      - cmd: |
+          # macOS via Homebrew
+          if command -v tofu >/dev/null 2>&1; then
+            brew uninstall opentofu
+            echo "OpenTofu has been uninstalled."
+          else
+            echo "OpenTofu is not installed."
+          fi
+        platforms: [darwin]
+      - cmd: |
+          # Unix systems - manual removal
+          if command -v tofu >/dev/null 2>&1; then
+            sudo rm -f $(which tofu)
+            echo "OpenTofu has been uninstalled."
+          else
+            echo "OpenTofu is not installed."
+          fi
+        platforms: [linux]
+      - cmd: |
+          # Windows via Chocolatey
+          if (Get-Command tofu -ErrorAction SilentlyContinue) {
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              choco uninstall opentofu -y
+              Write-Host "OpenTofu has been uninstalled."
+            } else {
+              Write-Host "Chocolatey not found. Please uninstall OpenTofu manually."
+              exit 1
+            }
+          } else {
+            Write-Host "OpenTofu is not installed."
+          }
+        platforms: [windows]
+        sh: powershell
+
+  init:
+    desc: Initialize OpenTofu configuration
+    dir: "{{.TF_DIR}}"
+    deps: [dep]
+    cmds:
+      - tofu init
+
+  validate:
+    desc: Validate OpenTofu configuration
+    dir: "{{.TF_DIR}}"
+    deps: [init]
+    cmds:
+      - tofu validate
+
+  plan:
+    desc: Create and show an execution plan
+    dir: "{{.TF_DIR}}"
+    deps: [validate]
+    cmds:
+      - tofu plan
+
+  apply:
+    desc: Apply the configuration to create/update infrastructure
+    dir: "{{.TF_DIR}}"
+    deps: [validate]
+    cmds:
+      - tofu apply
+
+  apply:auto:
+    desc: Apply the configuration automatically (non-interactive)
+    dir: "{{.TF_DIR}}"
+    deps: [validate]
+    cmds:
+      - tofu apply -auto-approve
+
+  destroy:
+    desc: Destroy the managed infrastructure
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - tofu destroy
+
+  destroy:auto:
+    desc: Destroy the managed infrastructure automatically (non-interactive)
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - tofu destroy -auto-approve
+
+  state:
+    desc: Show current state
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - tofu state list
+      - echo "---"
+      - tofu show
+
+  output:
+    desc: Show output values
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - tofu output
+
+  clean:
+    desc: Clean up temporary files and state locks
+    dir: "{{.TF_DIR}}"
+    cmds:
+      - rm -rf .terraform.lock.hcl .terraform/
+      - echo "Cleaned up OpenTofu temporary files"
+
+  incus:status:
+    desc: Show Incus status and containers
+    cmds:
+      - incus info
+      - echo "---"
+      - "incus list {{.INCUS_REMOTE}}:"
+
+  incus:images:
+    desc: List available Incus images
+    cmds:
+      - "incus image list {{.INCUS_REMOTE}}:"
+
+  logs:
+    desc: Show recent logs for a container
+    cmds:
+      - cmd: |
+          if [ -z "{{.CONTAINER}}" ]; then
+            echo "Usage: task logs CONTAINER=container-name"
+            exit 1
+          fi
+          incus info "{{.INCUS_REMOTE}}:{{.CONTAINER}}" --show-log
+
+  shell:
+    desc: Open shell in a container
+    cmds:
+      - cmd: |
+          if [ -z "{{.CONTAINER}}" ]; then
+            echo "Usage: task shell CONTAINER=container-name"
+            exit 1
+          fi
+          incus exec "{{.INCUS_REMOTE}}:{{.CONTAINER}}" -- /bin/bash
+
+  dev:
+    desc: Development workflow - validate, plan, and show status
+    deps: [validate]
+    cmds:
+      - task: plan
+      - task: incus:status
+
+  ci:
+    desc: CI workflow - init, validate, plan
+    cmds:
+      - task: init
+      - task: validate  
+      - task: plan

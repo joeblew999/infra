@@ -15,13 +15,13 @@ code: https://github.com/lxc/incus
 
 docs: https://linuxcontainers.org/incus/docs/main/
 
+https://linuxcontainers.org/incus/docs/main/third_party/
+
 Remote uses Tofu of course.
 
 ## Installation
 
 https://linuxcontainers.org/incus/docs/main/installing/
-
-
 
 
 ## OPS
@@ -30,7 +30,6 @@ terraform: https://github.com/lxc/terraform-provider-incus
 
 CI : https://github.com/cloudbase/garm
 
-https://linuxcontainers.org/incus/docs/main/third_party/
 
 
 Hetzner Servers:
