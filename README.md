@@ -1,85 +1,28 @@
-# infra
 
-SOURCE : https://github.com/joeblew999/infra
+infra
 
-Designed for Hetzner for Dedciated and VPS where ZFS can be used for both.
+Hetzner only. Dedicated or VPS. ZFS required.
 
-Taskfile for local and remote setup for darwin, linux and windows.
+Incus: https://github.com/lxc/incus
+Docs: https://linuxcontainers.org/incus/docs/main/
+Install: https://linuxcontainers.org/incus/docs/main/installing/
+Third party: https://linuxcontainers.org/incus/docs/main/third_party/
 
-See "task dep-cli" for pattern for how to do it.
+Taskfile for darwin, linux, windows. See 'task dep-cli'.
 
+Remote uses Tofu.
+Terraform: https://github.com/lxc/terraform-provider-incus
+CI: https://github.com/cloudbase/garm
 
-## Incus
+Hetzner AX42: https://www.hetzner.com/dedicated-rootserver/ax52/
+64GB RAM, 2x1TB SSD, $59/mo
 
-code: https://github.com/lxc/incus 
-
-docs: https://linuxcontainers.org/incus/docs/main/
-
-https://linuxcontainers.org/incus/docs/main/third_party/
-
-Remote uses Tofu of course.
-
-## Installation
-
-https://linuxcontainers.org/incus/docs/main/installing/
-
-
-## OPS
-
-terraform: https://github.com/lxc/terraform-provider-incus
-
-CI : https://github.com/cloudbase/garm
-
-
-
-Hetzner Servers:
-
-AX Servers.
-
-AX42 : https://www.hetzner.com/dedicated-rootserver/ax52/
-- 64 GB RAM
-- 1 TB x 2 SSD
-- 59 USD / month
-
-
-https://pieterbakker.com/blog/ uses Incus on Hetzner it alot.
-
-https://pieterbakker.com/incus/
-
-https://pieterbakker.com/rescaling-incus-zfs-storage-on-hetzner-cloud/
-
-
-Dedeciated or Cloud can run it.
+Reference: https://pieterbakker.com/incus/
 
 FS is the DB.
+ko builds containers.
 
----
-
-ko to build containers.
-
-
----
-
-NATS for everything, using NGS for tracking ONLY.
-
-NATS Servers.
-
-NATS Leaf Nodes
-
-nats.js for auth
-
-nats.go for auth, and everythign else
-
----
-
-Cloudflare 
-
-Only R2 so that file requests are faster.
-
----
-
-Web, Desktop and Mobile using only Web.
-
-Nats Leaf node and code on desktops.
+NATS for everything. NGS for tracking. Cloudflare R2 for fast file requests.
+Web/Desktop/Mobile via Web. NATS leaf node/code on desktops.
 
 
