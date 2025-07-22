@@ -29,20 +29,27 @@ tasks:
           echo "CLAUDE__DEFAULT_REMOTE      {{.CLAUDE__DEFAULT_REMOTE}}"
     silent: true
 
-### MCP
+### MCP: https://docs.anthropic.com/en/docs/claude-code/mcp
 
   mcp:start:
     desc: "Start CLAUDE MCP Server"
     cmds:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp serve --verbose'
 
-  mcp:install:
+  mcp:add:
     desc: "Install many standard MCP to allow CLAUDE to interact with GitHub"
     cmds:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add github npx @modelcontextprotocol/server-github'
       - echo "GitHub MCP installed. Restart Claude Code to activate the GitHub tools."
-  
+  mcp:remove:
+    desc: "remove installed CLAUDE MCP"
+    cmds:
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "github"'
   mcp:list:
     desc: "List installed CLAUDE MCPs"
     cmds:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp list'
+  mcp:get:
+    desc: "List installed CLAUDE MCPs"
+    cmds:
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp get github'
