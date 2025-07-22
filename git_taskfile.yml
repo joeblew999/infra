@@ -6,10 +6,10 @@
 version: '3'
 
 vars:
-  BINARY_NAME: git
-  BINARY_NAME_NATIVE: '{{if eq OS "windows"}}git.exe{{else}}git{{end}}'
-  DEFAULT_BRANCH: main
-  DEFAULT_REMOTE: origin
+  GIT__BINARY_NAME: "git"
+  GIT__BINARY_NAME_NATIVE: '{{if eq OS "windows"}}git.exe{{else}}git{{end}}'
+  GIT__DEFAULT_BRANCH: "main"
+  GIT__DEFAULT_REMOTE: "origin"
 
 tasks:
   default:
@@ -22,65 +22,75 @@ tasks:
       - echo
     silent: true
 
+  vars:
+    desc: Show taskfile variables
+    cmds:
+      - cmd: |
+          echo "GIT__BINARY_NAME         {{.GIT__BINARY_NAME}}"
+          echo "GIT__BINARY_NAME_NATIVE  {{.GIT__BINARY_NAME_NATIVE}}"
+          echo "GIT__DEFAULT_BRANCH      {{.GIT__DEFAULT_BRANCH}}"
+          echo "GIT__DEFAULT_REMOTE      {{.GIT__DEFAULT_REMOTE}}"
+    silent: true
+
   ### STATUS & INFO ###
 
   status:
     desc: Show git status
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} status'
+      - '{{.GIT__BINARY_NAME_NATIVE}} status'
 
   log:
     desc: Show recent commit log (default 10 commits)
     vars:
       LIMIT: '{{.LIMIT | default "10"}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} log --oneline -{{.LIMIT}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} log --oneline -{{.LIMIT}}'
 
   diff:
     desc: Show diff of changes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} diff'
+      - '{{.GIT__BINARY_NAME_NATIVE}} diff'
 
   diff-staged:
     desc: Show diff of staged changes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} diff --staged'
+      - '{{.GIT__BINARY_NAME_NATIVE}} diff --staged'
 
   branches:
     desc: List all branches
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} branch -a'
+      - '{{.GIT__BINARY_NAME_NATIVE}} branch -a'
 
   remotes:
     desc: Show remote repositories
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} remote -v'
+      - '{{.GIT__BINARY_NAME_NATIVE}} remote -v'
 
   ### STAGING ###
 
   add:
     desc: Stage all changes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} add .'
+      - '{{.GIT__BINARY_NAME_NATIVE}} add .'
 
   add-file:
     desc: Stage specific file (usage task git add-file FILE=path/to/file)
     vars:
       FILE: '{{.FILE | default "."}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} add {{.FILE}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} add {{.FILE}}'
 
   reset:
     desc: Unstage all changes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} reset'
+      - '{{.GIT__BINARY_NAME_NATIVE}} reset'
 
   reset-file:
     desc: Unstage specific file (usage task git reset-file FILE=path/to/file)
     vars:
       FILE: '{{.FILE}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} reset {{.FILE}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} reset {{.FILE}}'
 
   ### COMMITS ###
 
@@ -89,20 +99,20 @@ tasks:
     vars:
       MSG: '{{.MSG}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} commit -m "{{.MSG}}"'
+      - '{{.GIT__BINARY_NAME_NATIVE}} commit -m "{{.MSG}}"'
 
   commit-all:
     desc: Stage and commit all changes (usage task git commit-all MSG="your message")
     vars:
       MSG: '{{.MSG}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} add .'
-      - '{{.BINARY_NAME_NATIVE}} commit -m "{{.MSG}}"'
+      - '{{.GIT__BINARY_NAME_NATIVE}} add .'
+      - '{{.GIT__BINARY_NAME_NATIVE}} commit -m "{{.MSG}}"'
 
   amend:
     desc: Amend last commit (keeps same message)
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} commit --amend --no-edit'
+      - '{{.GIT__BINARY_NAME_NATIVE}} commit --amend --no-edit'
 
   ### BRANCHES ###
 
@@ -111,78 +121,78 @@ tasks:
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} checkout {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} checkout {{.BRANCH}}'
 
   checkout-new:
     desc: Create and switch to new branch (usage task git checkout-new BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} checkout -b {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} checkout -b {{.BRANCH}}'
 
   merge:
     desc: Merge branch into current (usage task git merge BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} merge {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} merge {{.BRANCH}}'
 
   delete-branch:
     desc: Delete local branch (usage task git delete-branch BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} branch -d {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} branch -d {{.BRANCH}}'
 
   ### REMOTE OPERATIONS ###
 
   fetch:
     desc: Fetch from remote
     vars:
-      REMOTE: '{{.REMOTE | default .DEFAULT_REMOTE}}'
+      REMOTE: '{{.REMOTE | default .GIT__DEFAULT_REMOTE}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} fetch {{.REMOTE}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} fetch {{.REMOTE}}'
 
   pull:
     desc: Pull from remote
     vars:
-      REMOTE: '{{.REMOTE | default .DEFAULT_REMOTE}}'
-      BRANCH: '{{.BRANCH | default .DEFAULT_BRANCH}}'
+      REMOTE: '{{.REMOTE | default .GIT__DEFAULT_REMOTE}}'
+      BRANCH: '{{.BRANCH | default .GIT__DEFAULT_BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} pull {{.REMOTE}} {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} pull {{.REMOTE}} {{.BRANCH}}'
 
   push:
     desc: Push to remote
     vars:
-      REMOTE: '{{.REMOTE | default .DEFAULT_REMOTE}}'
-      BRANCH: '{{.BRANCH | default .DEFAULT_BRANCH}}'
+      REMOTE: '{{.REMOTE | default .GIT__DEFAULT_REMOTE}}'
+      BRANCH: '{{.BRANCH | default .GIT__DEFAULT_BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} push {{.REMOTE}} {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} push {{.REMOTE}} {{.BRANCH}}'
 
   push-force:
     desc: Force push to remote (use with caution)
     vars:
-      REMOTE: '{{.REMOTE | default .DEFAULT_REMOTE}}'
-      BRANCH: '{{.BRANCH | default .DEFAULT_BRANCH}}'
+      REMOTE: '{{.REMOTE | default .GIT__DEFAULT_REMOTE}}'
+      BRANCH: '{{.BRANCH | default .GIT__DEFAULT_BRANCH}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} push --force-with-lease {{.REMOTE}} {{.BRANCH}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} push --force-with-lease {{.REMOTE}} {{.BRANCH}}'
 
   ### STASH ###
 
   stash:
     desc: Stash current changes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} stash'
+      - '{{.GIT__BINARY_NAME_NATIVE}} stash'
 
   stash-pop:
     desc: Apply and remove latest stash
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} stash pop'
+      - '{{.GIT__BINARY_NAME_NATIVE}} stash pop'
 
   stash-list:
     desc: List all stashes
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} stash list'
+      - '{{.GIT__BINARY_NAME_NATIVE}} stash list'
 
   ### CLEANUP ###
 
@@ -190,38 +200,38 @@ tasks:
     desc: Remove untracked files (dry run first)
     cmds:
       - echo "Dry run - files that would be removed"
-      - '{{.BINARY_NAME_NATIVE}} clean -n'
+      - '{{.GIT__BINARY_NAME_NATIVE}} clean -n'
       - echo "Run 'task git clean-force' to actually remove files"
 
   clean-force:
     desc: Remove untracked files (actual removal)
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} clean -f'
+      - '{{.GIT__BINARY_NAME_NATIVE}} clean -f'
 
   ### UTILITIES ###
 
   init:
     desc: Initialize new git repository
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} init'
+      - '{{.GIT__BINARY_NAME_NATIVE}} init'
 
   clone:
     desc: Clone repository (usage task git clone URL=https://github.com/user/repo.git)
     vars:
       URL: '{{.URL}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} clone {{.URL}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} clone {{.URL}}'
 
   tag:
     desc: Create tag (usage task git tag TAG=v1.0.0)
     vars:
       TAG: '{{.TAG}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} tag {{.TAG}}'
+      - '{{.GIT__BINARY_NAME_NATIVE}} tag {{.TAG}}'
 
   push-tags:
     desc: Push all tags to remote
     vars:
-      REMOTE: '{{.REMOTE | default .DEFAULT_REMOTE}}'
+      REMOTE: '{{.REMOTE | default .GIT__DEFAULT_REMOTE}}'
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} push {{.REMOTE}} --tags'
+      - '{{.GIT__BINARY_NAME_NATIVE}} push {{.REMOTE}} --tags'

@@ -16,16 +16,36 @@ Examples:
 - ✅ `server:create`, `server:delete` 
 - ❌ `server-create`, `server-delete`
 
-## Taskfile Tasks to Print Variables
+## Taskfile Tasks and Vars
+
+### Variable Naming Convention
+
+Use only uppercase letters for variable names
+
+Always prefix variables with the taskfile name using double underscores (`__`) to prevent namespace clashes when including multiple taskfiles.
+
+Pattern: `TASKFILENAME__VARIABLE_NAME`
+
+Examples:
+- `git_taskfile.yml` → `GIT__BINARY_NAME`, `GIT__DEFAULT_BRANCH`
+- `hetzner_taskfile.yml` → `HETZNER__BINARY_NAME`, `HETZNER__VERSION`
+- `docker_taskfile.yml` → `DOCKER__REGISTRY`, `DOCKER__IMAGE_TAG`
+
+### Required Tasks
 
 Always include a `vars` task that displays all taskfile variables.
 
-Place this task after the `default` task.
+Place this task immediately after the `default` task.
 
-Example:
+### Example
+
+Example of `dummy_taskfile.yml`:
 ```yaml
+# dummy_taskfile.yml
+
 vars:
-  FOO: bar
+  DUMMY__FOO: bar
+  DUMMY__VERSION: v1.0.0
 
 tasks:
   default:
@@ -37,12 +57,15 @@ tasks:
     desc: Show taskfile variables
     cmds:
       - cmd: |
-          echo "FOO         {{.FOO}}"
+          echo "DUMMY__FOO         {{.DUMMY__FOO}}"
+          echo "DUMMY__VERSION     {{.DUMMY__VERSION}}"
     silent: true
 ```
 
+This prevents variable name conflicts and makes it clear which taskfile each variable belongs to.
 
-## Taskfiles That Reference Native Binaries
+
+## Taskfiles That Reference Native Binaries that are NOT downloaded
 
 For binaries assumed to exist on all operating systems (like `git`, `docker`):
 
@@ -69,6 +92,7 @@ This handles platform differences like Windows requiring `.exe` extensions.
 
 For binaries that must be downloaded from external sources:
 
+- Always have a var like INSTALL_DIR: "{{.TASK_DIR}}/.dep" so that the highest Taskfile in the directory hierachy is used.
 - Always use task name `dep` for installation
 - Always include corresponding `dep:del` task for uninstallation
 - Follow patterns from `hetzner_taskfile.yml` for cross-platform compatibility
@@ -89,6 +113,36 @@ vars:
 ```
 
 ## Syntax Rules
+
+### Use echo, not printf
+
+printf is not cross platform in Task files
+
+
+**Wrong:**
+```yaml
+- printf "✅ Development server '%s' created\n" "$SERVER_NAME"
+```
+
+**Right:**
+```yaml
+- echo "✅ Development server '$SERVER_NAME' created"
+```
+
+
+
+### Use of Vars at start or end of a line
+
+**Wrong:**
+```yaml
+- {{.BINARY_NAME_NATIVE}} context list
+```
+
+**Right:**
+```yaml
+- "{{.BINARY_NAME_NATIVE}} context list"
+```
+
 
 ### Colons inside Echo statements
 Never use ":" inside an echo statement.

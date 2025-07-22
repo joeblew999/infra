@@ -1,23 +1,22 @@
+
+# https://taskfile.dev
+
+## Prints all Task built-in variables
+
 version: '3'
-
-vars:
-  
-
-# Print all Task built-in variables
-
 
 tasks:
   
   # Default task to show help
   default:
-    desc: "Show available tasks"
+    desc:  Show available tasks
     cmds:
       - task --list-all
-    silent: true
+    silent  true
 
 
   vars:
-    desc: Print all Task built-in variables
+    desc:  Print all Task built-in variables
     cmds:
       - echo ""
       - echo "Task Information"
@@ -37,4 +36,4 @@ tasks:
       - echo "GO_ARCH             {{.GO_ARCH}}"
       - echo "GO_OS               {{.GO_OS}}"
       - echo ""
-    silent: true
+    silent  true

@@ -21,6 +21,7 @@ Datastar web gui to see it all :)
 Credentials to each cloud are stored in nats as secrets and supplied. https://www.runatlantis.io/docs/provider-credentials.html
 
 Goss might help: https://github.com/goss-org/goss as they also use it.
+- docs: https://github.com/goss-org/goss/blob/master/docs/gossfile.md
 
 
 Need to make a simple golang package that sends web hooks, so that all binaries tell NATS there stats using github.com/shirou/gopsutil/v4 from https://github.com/shirou/gopsutil
