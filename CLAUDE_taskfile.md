@@ -1,6 +1,15 @@
 # CLAUDE_taskfile.md
 
-dummy_taskfile.yml is our best practice refernece exmaple.
+Unless an exclusion is in a Taskfile, this is the way to code taskfiles.
+
+dummy_taskfile.yml is our best practice reference example.
+
+Testing directly:
+```sh
+task -d dummy_taskfile.yml --list-all
+
+task -d dummy_taskfile.yml vars
+```
 
 ## File Naming Conventions
 
@@ -72,8 +81,8 @@ This prevents variable name conflicts and makes it clear which taskfile each var
 For binaries assumed to exist on all operating systems (like `git`, `docker`):
 
 - Always include `DUMMY__BINARY_NAME` variable at the top of the taskfile
-- Always include `DUMMY__NAME_NATIVE` variable with OS-specific logic
-- Always use `{{.DUMMY__NAME_NATIVE}}` when calling the binary in commands
+- Always include `DUMMY__BINARY_NAME_NATIVE` variable with OS-specific naming
+- Always use `{{.DUMMY__BINARY_NAME_NATIVE}}` when calling the binary in commands
 
 Example for git:
 ```yaml
@@ -85,7 +94,7 @@ tasks:
   status:
     desc: Show git status
     cmds:
-      - '{{.BINARY_NAME_NATIVE}} status'
+      - '{{.DUMMY__BINARY_NAME_NATIVE}} status'
 ```
 
 This handles platform differences like Windows requiring `.exe` extensions.
@@ -94,16 +103,15 @@ This handles platform differences like Windows requiring `.exe` extensions.
 
 For binaries that must be downloaded from external sources:
 
-- Always have a var like DUMMY__INSTALL_DIR: "{{.TASK_DIR}}/.dep" so that the highest Taskfile in the directory hierachy is used.
-- Always use task name `dep` for installation, following `dummy_taskfile.yml` for cross-platform compatibility 
-- Always include corresponding `dep:del` task for uninstallation
 - Always include these variables at the top:
   - `DUMMY__BINARY_NAME` - name of the binary
-  - `DUMMY__NAME_NATIVE` - OS/ARCH specific binary name
-  - Version variable (e.g., `DUMMY__VERSION`) - version used for download
-- Always place downloaded binaries in `.dep` folder
-- Always download from GitHub release tags matching the version
-- Always use `{{.DUMMY__BINARY_NAME_NATIVE}}` when calling the binary
+  - `DUMMY__BINARY_NAME_NATIVE` - OS/ARCH specific binary name that is used in the taskfile to call the binary
+  - `DUMMY__VERSION` - version of the binary downloaded from GitHub releases
+  - `DUMMY__INSTALL_DIR: "{{.TASK_DIR}}/.dep"` - location of the final binary on disk
+- Always use `{{.DUMMY__INSTALL_DIR}}/tmp` for temporary downloading and unpacking operations
+- Always use the task name `dep` for the binary download, following `dummy_taskfile.yml` for cross-platform compatibility with a separate sub command per OS where needed
+- Always include corresponding `dep:del` task for uninstallation
+
 
 Example:
 ```yaml

@@ -1,0 +1,48 @@
+version: '3'
+
+# Exclusions: This taskfile does not need to handle dep or dep:del tasks
+
+vars:
+  CLAUDE__BINARY_NAME: "claude"
+  CLAUDE__BINARY_NAME_NATIVE: '{{.CLAUDE__BINARY_NAME}}{{if eq OS "windows"}}.exe{{end}}'
+  CLAUDE__VERSION: "v1.15.0"
+
+
+tasks:
+  default:
+    desc: List available CLAUDE tasks
+    cmds:
+      - echo
+      - echo "Basic CLAUDE commands for reuse across projects"
+      - echo
+      - task --list-all
+      - echo
+    silent: true
+
+  vars:
+    desc: Show taskfile variables
+    cmds:
+      - cmd: |
+          echo "CLAUDE__BINARY_NAME         {{.CLAUDE__BINARY_NAME}}"
+          echo "CLAUDE__BINARY_NAME_NATIVE  {{.CLAUDE__BINARY_NAME_NATIVE}}"
+          echo "CLAUDE__DEFAULT_BRANCH      {{.CLAUDE__DEFAULT_BRANCH}}"
+          echo "CLAUDE__DEFAULT_REMOTE      {{.CLAUDE__DEFAULT_REMOTE}}"
+    silent: true
+
+### MCP
+
+  mcp:start:
+    desc: "Start CLAUDE MCP Server"
+    cmds:
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp serve --verbose'
+
+  mcp:install:
+    desc: "Install many standard MCP to allow CLAUDE to interact with GitHub"
+    cmds:
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add github npx @modelcontextprotocol/server-github'
+      - echo "GitHub MCP installed. Restart Claude Code to activate the GitHub tools."
+  
+  mcp:list:
+    desc: "List installed CLAUDE MCPs"
+    cmds:
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp list'
