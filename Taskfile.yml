@@ -17,6 +17,8 @@ includes:
     taskfile: ./tofu_taskfile.yml
   hetzner:
     taskfile: ./hetzner_taskfile.yml
+  playwright:
+    taskfile: ./playwright_taskfile.yml
 
 vars:
   

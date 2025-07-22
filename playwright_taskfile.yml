@@ -1,0 +1,163 @@
+# https://taskfile.dev
+
+# Playwright browser automation using official Docker image
+# Official docs: https://playwright.dev/docs/docker
+# Official image: mcr.microsoft.com/playwright
+
+version: '3'
+
+vars:
+  PLAYWRIGHT_IMAGE: mcr.microsoft.com/playwright:v1.54.0-noble
+  CONTAINER_NAME: playwright-runner
+  # Default test directory (can be overridden)
+  TEST_DIR: ./tests
+  # Default project directory for mounting
+  PROJECT_DIR: .
+
+tasks:
+  default:
+    desc: List available Playwright tasks
+    cmds:
+      - echo
+      - echo "Playwright browser automation using official Docker image"
+      - echo "Image     {{.PLAYWRIGHT_IMAGE}}"
+      - echo
+      - task --list-all
+      - echo
+    silent: true
+
+  ### SETUP ###
+
+  pull:
+    desc: Pull the official Playwright Docker image
+    cmds:
+      - docker pull {{.PLAYWRIGHT_IMAGE}}
+
+  info:
+    desc: Show Playwright Docker image information
+    cmds:
+      - docker images {{.PLAYWRIGHT_IMAGE}}
+      - echo
+      - docker run --rm {{.PLAYWRIGHT_IMAGE}} npx playwright --version
+
+  ### BASIC OPERATIONS ###
+
+  version:
+    desc: Show Playwright version
+    cmds:
+      - docker run --rm {{.PLAYWRIGHT_IMAGE}} npx playwright --version
+
+  help:
+    desc: Show Playwright help
+    cmds:
+      - docker run --rm {{.PLAYWRIGHT_IMAGE}} npx playwright --help
+
+  ### TEST EXECUTION ###
+
+  test:
+    desc: Run all Playwright tests (mount current directory)
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test
+
+  test-dir:
+    desc: Run tests from specific directory (usage: task playwright:test-dir TEST_DIR=./my-tests)
+    cmds:
+      - docker run --rm -v {{.TEST_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test
+
+  test-headed:
+    desc: Run tests in headed mode (visible browser)
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test --headed
+
+  test-debug:
+    desc: Run tests in debug mode
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test --debug
+
+  test-ui:
+    desc: Open Playwright UI mode (interactive)
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace -p 9323:9323 {{.PLAYWRIGHT_IMAGE}} npx playwright test --ui-host=0.0.0.0
+
+  ### CODE GENERATION ###
+
+  codegen:
+    desc: Open Playwright code generator
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace -p 9222:9222 {{.PLAYWRIGHT_IMAGE}} npx playwright codegen
+
+  codegen-url:
+    desc: Generate code for specific URL (usage: task playwright:codegen-url URL=https://example.com)
+    vars:
+      URL: https://example.com
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace -p 9222:9222 {{.PLAYWRIGHT_IMAGE}} npx playwright codegen {{.URL}}
+
+  ### REPORTS ###
+
+  show-report:
+    desc: Show last test report (serves on port 9323)
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace -p 9323:9323 {{.PLAYWRIGHT_IMAGE}} npx playwright show-report --host=0.0.0.0
+
+  ### BROWSER MANAGEMENT ###
+
+  install:
+    desc: Install Playwright browsers (usually not needed in Docker)
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright install
+
+  install-deps:
+    desc: Install system dependencies for browsers
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright install-deps
+
+  ### INTERACTIVE SHELL ###
+
+  shell:
+    desc: Open interactive shell in Playwright container
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} bash
+
+  shell-node:
+    desc: Open Node.js REPL with Playwright
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} node
+
+  ### CONTAINER MANAGEMENT ###
+
+  run:
+    desc: Run custom Playwright command (usage: task playwright:run CMD="npx playwright test --grep 'my test'")
+    vars:
+      CMD: npx playwright --help
+    cmds:
+      - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} {{.CMD}}
+
+  run-interactive:
+    desc: Run interactive Playwright command
+    vars:
+      CMD: bash
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} {{.CMD}}
+
+  ### CLEANUP ###
+
+  clean:
+    desc: Remove Playwright Docker image
+    cmds:
+      - docker rmi {{.PLAYWRIGHT_IMAGE}}
+
+  clean-all:
+    desc: Remove all Playwright related containers and images
+    cmds:
+      - cmd: docker ps -a --filter "ancestor={{.PLAYWRIGHT_IMAGE}}" --format "{{.ID}}" | xargs -r docker rm -f
+        ignore_error: true
+      - cmd: docker rmi {{.PLAYWRIGHT_IMAGE}}
+        ignore_error: true
+
+  ### EXAMPLES ###
+
+  example-init:
+    desc: Initialize a new Playwright project in current directory
+    cmds:
+      - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npm init playwright@latest

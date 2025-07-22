@@ -1,0 +1,173 @@
+version: '3'
+
+# Gemini CLI - Independent Taskfile (Phase 3)
+# Uses only STACK_* environment variables and Go-powered commands
+# No base.yml dependency, no shell statements
+
+vars:
+  GEMINI_NAME: "gemini-cli"
+  GEMINI_VERSION: "v0.1.9"
+  GEMINI_REPO: "https://github.com/google-gemini/gemini-cli.git"
+  GEMINI_BINARY_NAME: "gemini"
+
+  STACK_BIN_DIR: "{{.TASK_DIR}}"
+
+  GEMINI_BIN: "{{.STACK_BIN_DIR}}/{{.GEMINI_BINARY_NAME}}{{.STACK_BIN_SUFFIX}}"
+  GEMINI_SRC_DIR: "{{.STACK_SRC_DIR}}/{{.GEMINI_NAME}}"
+  GEMINI_DATA_DIR: "{{.STACK_DATA_DIR}}/gemini"
+  GEMINI_CONFIG_DIR: "{{.STACK_CONFIG_DIR}}/gemini"
+
+tasks:
+  # Default task to show help
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list-all
+    silent: true
+
+  vars:
+    desc: "Show environment variables"
+    cmds:
+      - echo "GEMINI_NAME         {{.GEMINI_NAME}}"
+      - echo "GEMINI_VERSION      {{.GEMINI_VERSION}}"
+      - echo "GEMINI_REPO         {{.GEMINI_REPO}}"
+      - echo "GEMINI_BINARY_NAME  {{.GEMINI_BINARY_NAME}}"
+      - echo "STACK_BIN_DIR       {{.STACK_BIN_DIR}}"
+      - echo "GEMINI_BIN          {{.GEMINI_BIN}}"
+      - echo "GEMINI_SRC_DIR      {{.GEMINI_SRC_DIR}}"
+      - echo "GEMINI_DATA_DIR     {{.GEMINI_DATA_DIR}}"
+      - echo "GEMINI_CONFIG_DIR   {{.GEMINI_CONFIG_DIR}}"
+    silent: true
+
+  # === STANDARD CONTRACT TASKS ===
+
+
+  
+  info:
+    desc: "Show tool information"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool info "{{.GEMINI_NAME}}" "{{.GEMINI_VERSION}}"'
+
+  status:
+    desc: "Check tool build status"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool status "{{.GEMINI_NAME}}" "{{.GEMINI_VERSION}}"'
+
+  clean:
+    desc: "Clean tool runtime data"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool clean "{{.GEMINI_NAME}}"'
+
+  clean-binary:
+    desc: "Clean tool binary"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool clean-binary "{{.GEMINI_NAME}}"'
+
+  clean-data:
+    desc: "Clean tool data directory"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool clean-data "{{.GEMINI_NAME}}"'
+
+  # === SOURCE MANAGEMENT ===
+  
+  source-clone:
+    desc: "Clone or check source repository"
+    cmds:
+      - mkdir -p "{{.STACK_SRC_DIR}}"
+      - git clone "{{.GEMINI_REPO}}" "{{.GEMINI_SRC_DIR}}" || git -C "{{.GEMINI_SRC_DIR}}" pull
+
+  source-check:
+    desc: "Check source repository status"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" source check "{{.GEMINI_NAME}}"'
+
+  source-update:
+    desc: "Update source repository"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" source update "{{.GEMINI_NAME}}" "{{.GEMINI_VERSION}}"'
+
+  # === BUILD TASKS ===
+  
+  install-bun:
+    desc: "Install Bun (required for Gemini CLI)"
+    cmds:
+      - test -x "$(command -v bun)" || curl -fsSL https://bun.sh/install | bash
+
+  build:
+    desc: "Build Gemini CLI binary with Bun"
+    deps: [source-clone, install-bun]
+    cmds:
+      - mkdir -p "{{.STACK_BIN_DIR}}"
+      - 'cd "{{.GEMINI_SRC_DIR}}" && bun install'
+      - 'cd "{{.GEMINI_SRC_DIR}}" && bun run build'
+      - cp "{{.GEMINI_SRC_DIR}}/dist/{{.GEMINI_BINARY_NAME}}" "{{.GEMINI_BIN}}"
+      - chmod +x "{{.GEMINI_BIN}}"
+
+  build-all:
+    desc: "Build all Gemini CLI targets"
+    deps: [build]
+
+  # === RUNTIME TASKS ===
+  
+  setup:
+    desc: "Setup Gemini CLI configuration"
+    cmds:
+      - mkdir -p "{{.GEMINI_CONFIG_DIR}}"
+      - mkdir -p "{{.GEMINI_DATA_DIR}}"
+
+  version:
+    desc: "Check Gemini CLI version"
+    deps: [build]
+    cmds:
+      - '"{{.GEMINI_BIN}}" --version'
+
+  help:
+    desc: "Show Gemini CLI help"
+    deps: [build]
+    cmds:
+      - '"{{.GEMINI_BIN}}" --help'
+
+  # === AI TASKS ===
+  
+  chat:
+    desc: "Start interactive chat with Gemini"
+    deps: [build, setup]
+    cmds:
+      - '"{{.GEMINI_BIN}}" chat'
+
+  generate:
+    desc: "Generate content with prompt (use PROMPT env var)"
+    deps: [build, setup]
+    cmds:
+      - test -n "$PROMPT" || (printf "PROMPT environment variable required\n" && exit 1)
+      - '"{{.GEMINI_BIN}}" generate "$PROMPT"'
+
+  # === CONFIG TASKS ===
+  
+  config-api-key:
+    desc: "Configure Gemini API key (use GEMINI_API_KEY env var)"
+    deps: [build, setup]
+    cmds:
+      - test -n "$GEMINI_API_KEY" || (printf "GEMINI_API_KEY environment variable required\n" && exit 1)
+      - '"{{.GEMINI_BIN}}" config set api-key "$GEMINI_API_KEY"'
+
+  config-show:
+    desc: "Show current configuration"
+    deps: [build, setup]
+    cmds:
+      - '"{{.GEMINI_BIN}}" config show'
+
+  # === TEST TASKS ===
+  
+  test:
+    desc: "Run Gemini CLI tests"
+    deps: [source-clone, install-bun]
+    cmds:
+      - 'cd "{{.GEMINI_SRC_DIR}}" && bun test'
+
+  # === UTILITY TASKS ===
+  
+  show-config:
+    desc: "Show current configuration paths"
+    cmds:
+      - '"{{.STACK_PROJECT_ROOT}}/.bin/stack-base" tool info "{{.GEMINI_NAME}}" "{{.GEMINI_VERSION}}"'

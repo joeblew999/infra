@@ -1,0 +1,193 @@
+package main
+
+import (
+	_ "embed"
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/delaneyj/toolbelt/embeddednats"
+	"github.com/go-chi/chi/v5"
+	"github.com/nats-io/nats.go"
+	"github.com/starfederation/datastar-go/datastar"
+)
+
+//go:embed index.html
+var helloWorldHTML []byte
+
+const port = 1337
+
+type App struct {
+	natsConn *nats.Conn
+	router   *chi.Mux
+}
+
+type Store struct {
+	Delay time.Duration `json:"delay"`
+}
+
+type Message struct {
+	Content   string    `json:"content"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+func main() {
+	ctx := context.Background()
+
+	// Initialize embedded NATS server
+	log.Println("Starting embedded NATS server...")
+	natsServer, err := embeddednats.New(ctx, 
+		embeddednats.WithDirectory("./nats-store"), // Store directory
+	)
+	if err != nil {
+		log.Fatal("Failed to create embedded NATS server:", err)
+	}
+	defer natsServer.Close()
+
+	// Wait for the server to be ready
+	natsServer.WaitForServer()
+	log.Printf("Embedded NATS server started")
+
+	// Get client connection from the embedded server
+	nc, err := natsServer.Client()
+	if err != nil {
+		log.Fatal("Failed to get NATS client:", err)
+	}
+	defer nc.Close()
+
+	app := &App{
+		natsConn: nc,
+		router:   chi.NewRouter(),
+	}
+
+	app.setupRoutes()
+	app.setupNATSStreams(ctx)
+
+	log.Printf("Starting web server on http://localhost:%d", port)
+	log.Printf("Embedded NATS server running with JetStream enabled")
+
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.router); err != nil {
+		panic(err)
+	}
+}
+
+func (app *App) setupRoutes() {
+	app.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write(helloWorldHTML)
+	})
+
+	// Original hello-world endpoint
+	app.router.Get("/hello-world", func(w http.ResponseWriter, r *http.Request) {
+		store := &Store{}
+		if err := datastar.ReadSignals(r, store); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		sse := datastar.NewSSE(w, r)
+		const message = "Hello, world!"
+
+		for i := 0; i < len(message); i++ {
+			if err := sse.PatchElements(`<div id="message">` + message[:i+1] + `</div>`); err != nil {
+				return
+			}
+			time.Sleep(store.Delay * time.Millisecond)
+		}
+	})
+
+	// New NATS-powered endpoint
+	app.router.Get("/nats-stream", func(w http.ResponseWriter, r *http.Request) {
+		app.handleNATSStream(w, r)
+	})
+
+	// Endpoint to publish messages to NATS
+	app.router.Post("/publish", func(w http.ResponseWriter, r *http.Request) {
+		app.handlePublish(w, r)
+	})
+}
+
+func (app *App) setupNATSStreams(ctx context.Context) {
+	// Create JetStream context
+	js, err := app.natsConn.JetStream()
+	if err != nil {
+		log.Fatal("Failed to create JetStream context:", err)
+	}
+
+	// Create a stream for messages
+	streamName := "MESSAGES"
+	_, err = js.AddStream(&nats.StreamConfig{
+		Name:      streamName,
+		Subjects:  []string{"messages.*"},
+		Retention: nats.LimitsPolicy,
+		MaxAge:    time.Hour * 24, // Keep messages for 24 hours
+	})
+	if err != nil {
+		log.Printf("Stream may already exist: %v", err)
+	}
+
+	log.Printf("NATS JetStream setup complete - Stream: %s", streamName)
+}
+
+func (app *App) handleNATSStream(w http.ResponseWriter, r *http.Request) {
+	sse := datastar.NewSSE(w, r)
+
+	// Subscribe to NATS messages
+	sub, err := app.natsConn.Subscribe("messages.demo", func(msg *nats.Msg) {
+		var message Message
+		if err := json.Unmarshal(msg.Data, &message); err != nil {
+			log.Printf("Error unmarshaling message: %v", err)
+			return
+		}
+
+		// Send the message to the browser via DataStar
+		html := fmt.Sprintf(`<div id="messages" data-store='{"timestamp":"%s"}'>%s</div>`, 
+			message.Timestamp.Format(time.RFC3339), message.Content)
+		
+		if err := sse.PatchElements(html); err != nil {
+			log.Printf("Error sending SSE: %v", err)
+		}
+	})
+
+	if err != nil {
+		http.Error(w, "Failed to subscribe to NATS", http.StatusInternalServerError)
+		return
+	}
+	defer sub.Unsubscribe()
+
+	// Keep the connection alive
+	<-r.Context().Done()
+}
+
+func (app *App) handlePublish(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Content string `json:"content"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	message := Message{
+		Content:   req.Content,
+		Timestamp: time.Now(),
+	}
+
+	data, err := json.Marshal(message)
+	if err != nil {
+		http.Error(w, "Failed to marshal message", http.StatusInternalServerError)
+		return
+	}
+
+	// Publish to NATS
+	if err := app.natsConn.Publish("messages.demo", data); err != nil {
+		http.Error(w, "Failed to publish message", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"status": "published"})
+}

@@ -1,0 +1,26 @@
+# ko.yaml for building and publishing Go containers with ko
+
+apiVersion: ko.dev/v1beta1
+kind: Config
+
+# This is ONLY a template to show usage of multi entry point repository.
+# Each CMD will be its own docker.
+
+# Build all main.go binaries in cmd/*
+
+builds:
+  - id: nats-secrets
+    main: ./cmd/nats-secrets
+    platforms:
+      - linux/amd64
+      - linux/arm64
+  - id: apple-secrets
+    main: ./cmd/apple-secrets
+    platforms:
+      - linux/amd64
+      - linux/arm64
+  - id: peering-analyzer
+    main: ./cmd/peering-analyzer
+    platforms:
+      - linux/amd64
+      - linux/arm64

@@ -1,0 +1,40 @@
+version: '3'
+
+vars:
+  
+
+# Print all Task built-in variables
+
+
+tasks:
+  
+  # Default task to show help
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list-all
+    silent: true
+
+
+  vars:
+    desc: Print all Task built-in variables
+    cmds:
+      - echo ""
+      - echo "Task Information"
+      - echo "task --version"
+      - echo "TASK                {{.TASK}}"
+      - echo "TASK_DIR            {{.TASK_DIR}}"
+      - echo "TASK_FILE           {{.TASK_FILE}}"
+      - echo ""
+      - echo "Environment and System Information"
+      - echo "OS                  {{.OS}}"
+      - echo "ARCH                {{.ARCH}}"
+      - echo "USER_WORKING_DIR    {{.USER_WORKING_DIR}}"
+      - echo "CLI_ARGS            {{.CLI_ARGS}}"
+      - echo "CLI_ARGS_ARRAY      {{.CLI_ARGS_ARRAY}}"
+      - echo ""
+      - echo "GO Information"
+      - echo "GO_ARCH             {{.GO_ARCH}}"
+      - echo "GO_OS               {{.GO_OS}}"
+      - echo ""
+    silent: true

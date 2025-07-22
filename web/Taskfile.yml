@@ -1,0 +1,87 @@
+# https://taskfile.dev
+
+version: '3'
+
+includes:
+  tofu:
+    taskfile: ../tofu_taskfile.yml
+    dir: ../
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  default:
+    cmds:
+      - echo "🚀 NATS + DataStar + Go Web Application"
+      - echo ""
+      - task --list-all
+    silent: true
+
+### DEP 
+
+  dep:
+    desc: Install dependencies
+    deps:
+      - task: vscode-dep
+      - task: go-dep
+    cmds:
+      - echo "✅ All dependencies installed"
+
+  vscode-dep:
+    desc: "Install VSCode extensions"
+    cmds:
+      - code --install-extension starfederation.datastar-vscode --force
+      - code --install-extension a-h.templ --force
+
+  go-dep:
+    desc: "Install/update Go dependencies"
+    cmds:
+      - go get -u github.com/delaneyj/toolbelt
+      - go get -u github.com/starfederation/datastar-go
+      - go get -u github.com/nats-io/nats.go
+      - go get -u github.com/go-chi/chi/v5
+      - go mod tidy
+
+### RUN 
+  
+  run:dev:
+    desc: "Start the embedded NATS + DataStar server"
+    cmds:
+      - |
+        echo "🚀 Starting NATS + DataStar development server..."
+        echo ""
+        echo "📡 Embedded NATS Server with JetStream"
+        echo "🌐 Web interface: http://localhost:1337"
+        echo ""
+        echo "Architecture: NATS JetStream → DataStar SSE → Browser"
+        echo ""
+        go run .
+
+  run:
+    desc: "Run the server (alias for run:dev)"
+    cmds:
+      - task: run:dev
+
+  clean:
+    desc: "Clean build artifacts and NATS store"
+    cmds:
+      - rm -rf ./nats-store
+      - go clean
+      - echo "🧹 Cleaned build artifacts and NATS store"
+
+### COMBINED WORKFLOWS
+
+  full:dev:
+    desc: "Full development workflow - infrastructure + web app"
+    cmds:
+      - task: tofu:validate
+      - echo "🚀 Starting web application..."
+      - task: run:dev
+
+  deploy:
+    desc: "Deploy infrastructure and start application"
+    cmds:
+      - task: tofu:apply
+      - task: run:dev
+
