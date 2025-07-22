@@ -3,12 +3,8 @@
 version: '3'
 
 includes:
-  task:
-    taskfile: ../task_taskfile.yml
-    dir: ../
-  hetzner:
-    taskfile: ../hetzner_taskfile.yml
-    dir: ../
+  tofu:
+    taskfile: ../tofu_taskfile.yml
 
 vars:
   GREETING: Hello, World!

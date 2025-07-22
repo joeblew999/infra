@@ -1,41 +1,47 @@
 # README
 
+https://github.com/joeblew999/infra
+
+infra
+
+Hetzner only. Dedicated or VPS. ZFS required.
+
+Incus: https://github.com/lxc/incus
+Docs: https://linuxcontainers.org/incus/docs/main/
+Install: https://linuxcontainers.org/incus/docs/main/installing/
+Third party: https://linuxcontainers.org/incus/docs/main/third_party/
 
 
- infra
 
-  Hetzner only. Dedicated or VPS. ZFS required.
+Remote uses Tofu.
+Terraform: https://github.com/lxc/terraform-provider-incus
+CI: https://github.com/cloudbase/garm
 
-  Incus: https://github.com/lxc/incus
-  Docs: https://linuxcontainers.org/incus/docs/main/
-  Install: https://linuxcontainers.org/incus/docs/main/installing/
-  Third party: https://linuxcontainers.org/incus/docs/main/third_party/
+Hetzner AX42: https://www.hetzner.com/dedicated-rootserver/ax52/
+64GB RAM, 2x1TB SSD, $59/mo
 
-  Taskfile for darwin, linux, windows. See 'task dep-cli'.
+Reference: https://pieterbakker.com/incus/
 
-  Remote uses Tofu.
-  Terraform: https://github.com/lxc/terraform-provider-incus
-  CI: https://github.com/cloudbase/garm
+FS is the DB.
+ko builds containers.
 
-  Hetzner AX42: https://www.hetzner.com/dedicated-rootserver/ax52/
-  64GB RAM, 2x1TB SSD, $59/mo
+NATS for everything. NGS for tracking. Cloudflare R2 for fast file requests.
+Web/Desktop/Mobile via Web. NATS leaf node/code on desktops.
 
-  Reference: https://pieterbakker.com/incus/
+This was the actual infrastructure repository README content before it got replaced
+with the Hetzner Cloud CLI documentation.
 
-  FS is the DB.
-  ko builds containers.
+## Task files
 
-  NATS for everything. NGS for tracking. Cloudflare R2 for fast file requests.
-  Web/Desktop/Mobile via Web. NATS leaf node/code on desktops.
+Can run on any device in CI, CD and Production.
 
-  This was the actual infrastructure repository README content before it got replaced
-  with the Hetzner Cloud CLI documentation.
+DRY everywhere.
 
-  ## Task files
+Designed for any OS.
 
-  Can run on any device in CI, CD and Production.
 
-  DRY everywhere.
 
-  Designed for any OS.
-  
+  ```sh
+  task this:git:push:all
+  ```
+
