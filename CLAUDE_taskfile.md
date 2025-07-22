@@ -1,5 +1,7 @@
 # CLAUDE_taskfile.md
 
+dummy_taskfile.yml is our best practice refernece exmaple.
+
 ## File Naming Conventions
 
 Each Taskfile must have a corresponding Markdown file using the pattern:
@@ -69,15 +71,15 @@ This prevents variable name conflicts and makes it clear which taskfile each var
 
 For binaries assumed to exist on all operating systems (like `git`, `docker`):
 
-- Always include `BINARY_NAME` variable at the top of the taskfile
-- Always include `BINARY_NAME_NATIVE` variable with OS-specific logic
-- Always use `{{.BINARY_NAME_NATIVE}}` when calling the binary in commands
+- Always include `DUMMY__BINARY_NAME` variable at the top of the taskfile
+- Always include `DUMMY__NAME_NATIVE` variable with OS-specific logic
+- Always use `{{.DUMMY__NAME_NATIVE}}` when calling the binary in commands
 
 Example for git:
 ```yaml
 vars:
-  BINARY_NAME: git
-  BINARY_NAME_NATIVE: '{{if eq OS "windows"}}git.exe{{else}}git{{end}}'
+  DUMMY__BINARY_NAME: git
+  DUMMY__BINARY_NAME_NATIVE: '{{if eq OS "windows"}}git.exe{{else}}git{{end}}'
 
 tasks:
   status:
@@ -92,24 +94,23 @@ This handles platform differences like Windows requiring `.exe` extensions.
 
 For binaries that must be downloaded from external sources:
 
-- Always have a var like INSTALL_DIR: "{{.TASK_DIR}}/.dep" so that the highest Taskfile in the directory hierachy is used.
-- Always use task name `dep` for installation
+- Always have a var like DUMMY__INSTALL_DIR: "{{.TASK_DIR}}/.dep" so that the highest Taskfile in the directory hierachy is used.
+- Always use task name `dep` for installation, following `dummy_taskfile.yml` for cross-platform compatibility 
 - Always include corresponding `dep:del` task for uninstallation
-- Follow patterns from `hetzner_taskfile.yml` for cross-platform compatibility
 - Always include these variables at the top:
-  - `BINARY_NAME` - name of the binary
-  - `BINARY_NAME_NATIVE` - OS/ARCH specific binary name
-  - Version variable (e.g., `HCLOUD_VERSION`) - version used for download
+  - `DUMMY__BINARY_NAME` - name of the binary
+  - `DUMMY__NAME_NATIVE` - OS/ARCH specific binary name
+  - Version variable (e.g., `DUMMY__VERSION`) - version used for download
 - Always place downloaded binaries in `.dep` folder
 - Always download from GitHub release tags matching the version
-- Always use `{{.BINARY_NAME_NATIVE}}` when calling the binary
+- Always use `{{.DUMMY__BINARY_NAME_NATIVE}}` when calling the binary
 
 Example:
 ```yaml
 vars:
-  BINARY_NAME: hcloud
-  HCLOUD_VERSION: v1.51.0
-  BINARY_NAME_NATIVE: '{{.BINARY_NAME}}-{{OS}}-{{ARCH}}{{if eq OS "windows"}}.exe{{end}}'
+  HCLOUD__NAME: hcloud
+  HCLOUD__VERSION: v1.51.0
+  HCLOUD__BINARY_NAME_NATIVE: '{{.HCLOUD__NAME}}-{{OS}}-{{ARCH}}{{if eq OS "windows"}}.exe{{end}}'
 ```
 
 ## Syntax Rules

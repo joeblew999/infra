@@ -1,0 +1,88 @@
+
+
+# https://taskfile.dev
+
+# Refernence dummy task file to check best practices.
+
+# we use https://github.com/magefile/mage/releases/tag/v1.15.0
+
+version: '3'
+
+vars:
+  DUMMY__BINARY_NAME: "mage"
+  DUMMY__BINARY_NAME_NATIVE: '{{.DUMMY__BINARY_NAME}}{{if eq OS "windows"}}.exe{{end}}'
+  DUMMY__VERSION: "v1.15.0"
+  DUMMY__INSTALL_DIR: "{{.TASK_DIR}}/.dep"
+
+tasks:
+  default:
+    desc: List available Git tasks
+    cmds:
+      - echo
+      - echo "Basic Git commands for reuse across projects"
+      - echo
+      - task --list-all
+      - echo
+    silent: true
+
+  vars:
+    desc: Show taskfile variables
+    cmds:
+      - cmd: |
+          echo "DUMMY__BINARY_NAME         {{.DUMMY__BINARY_NAME}}"
+          echo "DUMMY__BINARY_NAME_NATIVE  {{.DUMMY__BINARY_NAME_NATIVE}}"
+          echo "DUMMY__DEFAULT_BRANCH      {{.DUMMY__DEFAULT_BRANCH}}"
+          echo "DUMMY__DEFAULT_REMOTE      {{.DUMMY__DEFAULT_REMOTE}}"
+    silent: true
+
+  dep:
+    desc: Install mage CLI
+    preconditions:
+      - sh: '! command -v mage >/dev/null 2>&1'
+        msg: 'mage is already installed'
+    cmds:
+      - cmd: |
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
+          tar -xzf mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
+          mv mage {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64
+          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
+          chmod +x {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64
+          ln -sf {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64 {{.DUMMY__INSTALL_DIR}}/mage
+        platforms: [darwin]
+      - cmd: |
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
+          tar -xzf mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
+          mv mage {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64
+          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
+          chmod +x {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64
+          ln -sf {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64 {{.DUMMY__INSTALL_DIR}}/mage
+        platforms: [linux]
+      - cmd: |
+          $url = "https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip"
+          $output = "$env:TEMP\mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip"
+          $extractPath = "$env:TEMP\mage"
+          
+          Invoke-WebRequest -Uri $url -OutFile $output
+          Expand-Archive -Path $output -DestinationPath $extractPath -Force
+          
+          New-Item -ItemType Directory -Path "{{.DUMMY__INSTALL_DIR}}" -Force
+          Copy-Item "$extractPath\mage.exe" "{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}-windows-amd64.exe" -Force
+          Copy-Item "$extractPath\mage.exe" "{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}.exe" -Force
+          Remove-Item $output -Force
+          Remove-Item $extractPath -Recurse -Force
+        platforms: [windows]
+
+  dep:del:
+    desc: Uninstall the mage CLI
+    prompt: "Are you sure you want to uninstall mage?"
+    cmds:
+      - cmd: |
+          rm -f {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-darwin-amd64 {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-linux-amd64 {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}
+        platforms: [darwin, linux]
+      - cmd: |
+          Remove-Item "{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}-windows-amd64.exe" -Force -ErrorAction SilentlyContinue
+          Remove-Item "{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}.exe" -Force -ErrorAction SilentlyContinue
+        platforms: [windows]
+          

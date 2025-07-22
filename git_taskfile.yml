@@ -95,14 +95,14 @@ tasks:
   ### COMMITS ###
 
   commit:
-    desc: Commit with message (usage task git commit MSG="your message")
+    desc: Commit with message (usage task git:commit MSG="your message")
     vars:
       MSG: '{{.MSG}}'
     cmds:
       - '{{.GIT__BINARY_NAME_NATIVE}} commit -m "{{.MSG}}"'
 
   commit-all:
-    desc: Stage and commit all changes (usage task git commit-all MSG="your message")
+    desc: Stage and commit all changes (usage task git:commit-all MSG="your message")
     vars:
       MSG: '{{.MSG}}'
     cmds:
@@ -117,7 +117,7 @@ tasks:
   ### BRANCHES ###
 
   checkout:
-    desc: Switch to branch (usage task git checkout BRANCH=branch-name)
+    desc: Switch to branch (usage task git:checkout BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
@@ -131,14 +131,14 @@ tasks:
       - '{{.GIT__BINARY_NAME_NATIVE}} checkout -b {{.BRANCH}}'
 
   merge:
-    desc: Merge branch into current (usage task git merge BRANCH=branch-name)
+    desc: Merge branch into current (usage task git:merge BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
       - '{{.GIT__BINARY_NAME_NATIVE}} merge {{.BRANCH}}'
 
   delete-branch:
-    desc: Delete local branch (usage task git delete-branch BRANCH=branch-name)
+    desc: Delete local branch (usage task git:delete-branch BRANCH=branch-name)
     vars:
       BRANCH: '{{.BRANCH}}'
     cmds:
