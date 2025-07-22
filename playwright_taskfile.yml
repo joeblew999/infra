@@ -60,7 +60,7 @@ tasks:
       - docker run --rm -v {{.PROJECT_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test
 
   test-dir:
-    desc: Run tests from specific directory (usage: task playwright:test-dir TEST_DIR=./my-tests)
+    desc: Run tests from specific directory (usage -  task playwright:test-dir TEST_DIR=./my-tests)
     cmds:
       - docker run --rm -v {{.TEST_DIR}}:/workspace -w /workspace {{.PLAYWRIGHT_IMAGE}} npx playwright test
 
@@ -87,7 +87,7 @@ tasks:
       - docker run --rm -it -v {{.PROJECT_DIR}}:/workspace -w /workspace -p 9222:9222 {{.PLAYWRIGHT_IMAGE}} npx playwright codegen
 
   codegen-url:
-    desc: Generate code for specific URL (usage: task playwright:codegen-url URL=https://example.com)
+    desc: Generate code for specific URL (usage - task playwright:codegen-url URL=https://example.com)
     vars:
       URL: https://example.com
     cmds:
@@ -127,7 +127,7 @@ tasks:
   ### CONTAINER MANAGEMENT ###
 
   run:
-    desc: Run custom Playwright command (usage: task playwright:run CMD="npx playwright test --grep 'my test'")
+    desc: Run custom Playwright command (usage - task playwright:run CMD="npx playwright test --grep 'my test'")
     vars:
       CMD: npx playwright --help
     cmds:

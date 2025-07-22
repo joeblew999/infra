@@ -17,13 +17,14 @@
 version: '3'
 
 vars:
+  BINARY_NAME: hcloud
   HCLOUD_VERSION: v1.51.0
-  INSTALL_DIR: /usr/local/bin
+  INSTALL_DIR: "{{.USER_WORKING_DIR}}/.dep"
 
 tasks:
   # Default task to show help
   default:
-    desc: "Show available tasks"
+    desc: Show available tasks
     cmds:
       - task --list-all
 
@@ -31,34 +32,33 @@ tasks:
   
 
   dep:
-    desc: "Install hcloud CLI"
+    desc: Install hcloud CLI
     preconditions:
       - sh: '! command -v hcloud >/dev/null 2>&1'
         msg: 'hcloud is already installed'
     cmds:
       - cmd: |
-          echo "Installing hcloud {{.HCLOUD_VERSION}} for macOS..."
+          mkdir -p {{.INSTALL_DIR}}
           curl -LO https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-darwin-amd64.tar.gz
           tar -xzf hcloud-darwin-amd64.tar.gz
-          sudo mv hcloud {{.INSTALL_DIR}}/hcloud
+          mv hcloud {{.INSTALL_DIR}}/hcloud-darwin-amd64
           rm hcloud-darwin-amd64.tar.gz
-          echo "✅ Hetzner Cloud CLI installed successfully to {{.INSTALL_DIR}}/hcloud"
+          chmod +x {{.INSTALL_DIR}}/hcloud-darwin-amd64
+          ln -sf {{.INSTALL_DIR}}/hcloud-darwin-amd64 {{.INSTALL_DIR}}/hcloud
         platforms: [darwin]
       - cmd: |
-          echo "Installing hcloud {{.HCLOUD_VERSION}} for Linux..."
+          mkdir -p {{.INSTALL_DIR}}
           curl -LO https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-linux-amd64.tar.gz
           tar -xzf hcloud-linux-amd64.tar.gz
-          sudo mv hcloud {{.INSTALL_DIR}}/hcloud
+          mv hcloud {{.INSTALL_DIR}}/hcloud-linux-amd64
           rm hcloud-linux-amd64.tar.gz
-          echo "✅ Hetzner Cloud CLI installed successfully to {{.INSTALL_DIR}}/hcloud"
+          chmod +x {{.INSTALL_DIR}}/hcloud-linux-amd64
+          ln -sf {{.INSTALL_DIR}}/hcloud-linux-amd64 {{.INSTALL_DIR}}/hcloud
         platforms: [linux]
       - cmd: |
-          echo "Installing hcloud {{.HCLOUD_VERSION}} for Windows..."
           if (Get-Command winget -ErrorAction SilentlyContinue) {
-            echo "Using winget to install hcloud..."
             winget install hetznercloud.hcloud-cli
           } else {
-            echo "Winget not available, downloading manually..."
             $url = "https://github.com/hetznercloud/cli/releases/download/{{.HCLOUD_VERSION}}/hcloud-windows-amd64.zip"
             $output = "$env:TEMP\hcloud-windows-amd64.zip"
             $extractPath = "$env:TEMP\hcloud"
@@ -66,80 +66,46 @@ tasks:
             Invoke-WebRequest -Uri $url -OutFile $output
             Expand-Archive -Path $output -DestinationPath $extractPath -Force
             
-            $installDir = "$env:ProgramFiles\hcloud"
-            if (!(Test-Path $installDir)) {
-              New-Item -ItemType Directory -Path $installDir -Force
-            }
-            
-            Copy-Item "$extractPath\hcloud.exe" "$installDir\hcloud.exe" -Force
-            
-            # Add to PATH if not already there
-            $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
-            if ($currentPath -notlike "*$installDir*") {
-              [Environment]::SetEnvironmentVariable("PATH", "$currentPath;$installDir", "Machine")
-              echo "Added $installDir to system PATH"
-            }
-            
+            New-Item -ItemType Directory -Path "{{.INSTALL_DIR}}" -Force
+            Copy-Item "$extractPath\hcloud.exe" "{{.INSTALL_DIR}}\{{.BINARY_NAME}}-windows-amd64.exe" -Force
+            Copy-Item "$extractPath\hcloud.exe" "{{.INSTALL_DIR}}\{{.BINARY_NAME}}.exe" -Force
             Remove-Item $output -Force
             Remove-Item $extractPath -Recurse -Force
           }
-          echo "✅ Hetzner Cloud CLI installed successfully"
-          echo "ℹ️  You may need to restart your terminal or run 'refreshenv' to use hcloud"
         platforms: [windows]
 
   dep:del:
-    desc: "Uninstalls the Hetzner Cloud CLI (hcloud)"
+    desc: Uninstall the Hetzner Cloud CLI
     prompt: "Are you sure you want to uninstall hcloud?"
     cmds:
       - cmd: |
-          sudo rm -f {{.INSTALL_DIR}}/hcloud
-          echo "✅ Hetzner Cloud CLI uninstalled."
+          rm -f {{.INSTALL_DIR}}/{{.BINARY_NAME}}-darwin-amd64 {{.INSTALL_DIR}}/{{.BINARY_NAME}}-linux-amd64 {{.INSTALL_DIR}}/{{.BINARY_NAME}}
         platforms: [darwin, linux]
       - cmd: |
           if (Get-Command winget -ErrorAction SilentlyContinue) {
-            echo "Uninstalling hcloud using winget..."
             winget uninstall hetznercloud.hcloud-cli
           } else {
-            echo "Removing hcloud manually..."
-            $installDir = "$env:ProgramFiles\hcloud"
-            if (Test-Path "$installDir\hcloud.exe") {
-              Remove-Item "$installDir\hcloud.exe" -Force
-              echo "Removed hcloud.exe"
-            }
-            if (Test-Path $installDir) {
-              Remove-Item $installDir -Force
-              echo "Removed installation directory"
-            }
-            
-            # Remove from PATH
-            $currentPath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
-            if ($currentPath -like "*$installDir*") {
-              $newPath = $currentPath -replace [regex]::Escape(";$installDir"), ""
-              $newPath = $newPath -replace [regex]::Escape("$installDir;"), ""
-              $newPath = $newPath -replace [regex]::Escape("$installDir"), ""
-              [Environment]::SetEnvironmentVariable("PATH", $newPath, "Machine")
-              echo "Removed from system PATH"
-            }
+            Remove-Item "{{.INSTALL_DIR}}\{{.BINARY_NAME}}-windows-amd64.exe" -Force -ErrorAction SilentlyContinue
+            Remove-Item "{{.INSTALL_DIR}}\{{.BINARY_NAME}}.exe" -Force -ErrorAction SilentlyContinue
           }
-          echo "✅ Hetzner Cloud CLI uninstalled."
         platforms: [windows]
 
   # Configuration tasks
   config:
-    desc: "Configure hcloud with API token"
+    desc: Configure hcloud with API token
     cmds:
       - cmd: |
           if [ -z "$HCLOUD_TOKEN" ]; then
-            echo "Please set HCLOUD_TOKEN environment variable or run: hcloud context create"
+            printf "Please set HCLOUD_TOKEN environment variable or run - hcloud context create\n"
             hcloud context create
           else
-            echo "Using HCLOUD_TOKEN from environment"
+            printf "Using HCLOUD_TOKEN from environment\n"
             hcloud context create --name default --token "$HCLOUD_TOKEN"
           fi
         platforms: [darwin, linux]
       - cmd: |
           if (-not $env:HCLOUD_TOKEN) {
-            Write-Host "Please set HCLOUD_TOKEN environment variable or run: hcloud context create" -ForegroundColor Yellow
+            Write-Host "Please set HCLOUD_TOKEN environment variable or run - hcloud context create" -ForegroundColor Yellow
             hcloud context create
           } else {
             Write-Host "Using HCLOUD_TOKEN from environment" -ForegroundColor Green
@@ -148,32 +114,32 @@ tasks:
         platforms: [windows]
 
   config:list:
-    desc: "List hcloud contexts"
+    desc: List hcloud contexts
     cmds:
       - hcloud context list
 
   config:active:
-    desc: "Show active context"
+    desc: Show active context
     cmds:
       - hcloud context active
 
   # Server management tasks
   server:list:
-    desc: "List all servers"
+    desc: List all servers
     cmds:
       - hcloud server list
 
   server:create:
-    desc: "Create a new server (interactive)"
+    desc: Create a new server (interactive)
     cmds:
       - cmd: |
-          echo "Creating a new server..."
-          echo "Available server types:"
+          printf "Creating a new server...\n"
+          printf "Available server types:\n"
           hcloud server-type list
-          echo ""
-          echo "Available images:"
+          printf "\n"
+          printf "Available images:\n"
           hcloud image list --type system | head -10
-          echo ""
+          printf "\n"
           read -p "Server name: " name
           read -p "Server type (e.g., cx11): " type
           read -p "Image (e.g., ubuntu-22.04): " image
@@ -196,51 +162,51 @@ tasks:
         platforms: [windows]
 
   server:delete:
-    desc: "Delete a server by name. Usage: task server:delete -- <server-name>"
+    desc: Delete a server by name. Usage - task server:delete -- <server-name>
     cmds:
       - hcloud server delete {{.CLI_ARGS}}
 
   server:ssh:
-    desc: "SSH into a server. Usage: task server:ssh -- <server-name>"
+    desc: SSH into a server. Usage - task server:ssh -- <server-name>
     cmds:
       - hcloud server ssh {{.CLI_ARGS}}
 
   # Network tasks
   network:list:
-    desc: "List all networks"
+    desc: List all networks
     cmds:
       - hcloud network list
 
   # Volume tasks
   volume:list:
-    desc: "List all volumes"
+    desc: List all volumes
     cmds:
       - hcloud volume list
 
   # Firewall tasks
   firewall:list:
-    desc: "List all firewalls"
+    desc: List all firewalls
     cmds:
       - hcloud firewall list
 
   # Load balancer tasks
   lb:list:
-    desc: "List all load balancers"
+    desc: List all load balancers
     cmds:
       - hcloud load-balancer list
 
   # Generic hcloud command runner
   run:
-    desc: "Runs a Hetzner Cloud CLI command. Example: task run -- server list"
+    desc: Runs a Hetzner Cloud CLI command. Example - task run -- server list
     cmds:
       - hcloud {{.CLI_ARGS}}
 
   # Development environment setup
   dev:setup:
-    desc: "Setup development environment with basic server"
+    desc: Setup development environment with basic server
     cmds:
       - cmd: |
-          echo "Setting up development environment..."
+          printf "Setting up development environment...\n"
           SERVER_NAME="dev-$(date +%s)"
           hcloud server create \
             --name "$SERVER_NAME" \
@@ -254,7 +220,7 @@ tasks:
             --type cx11 \
             --image ubuntu-22.04 \
             --location fsn1
-          echo "✅ Development server '$SERVER_NAME' created"
+          printf "✅ Development server '%s' created\n" "$SERVER_NAME"
         platforms: [darwin, linux]
       - cmd: |
           Write-Host "Setting up development environment..." -ForegroundColor Green
@@ -281,16 +247,16 @@ tasks:
         platforms: [windows]
 
   dev:teardown:
-    desc: "Teardown development servers"
-    prompt: "This will delete all servers with 'dev-' prefix. Continue?"
+    desc: Teardown development servers
+    prompt: This will delete all servers with 'dev-' prefix. Continue?
     cmds:
       - cmd: |
-          echo "Deleting development servers..."
+          printf "Deleting development servers...\n"
           hcloud server list -o noheader | grep "^dev-" | awk '{print $1}' | while read server; do
-            echo "Deleting $server..."
+            printf "Deleting %s...\n" "$server"
             hcloud server delete "$server"
           done
-          echo "✅ Development servers deleted"
+          printf "✅ Development servers deleted\n"
         platforms: [darwin, linux]
       - cmd: |
           Write-Host "Deleting development servers..." -ForegroundColor Yellow
@@ -305,46 +271,46 @@ tasks:
 
   # Status and info tasks
   status:
-    desc: "Show overall Hetzner Cloud status"
+    desc: Show overall Hetzner Cloud status
     cmds:
       - cmd: |
-          echo "=== Hetzner Cloud Status ==="
-          echo ""
-          echo "📊 Servers:"
+          printf "=== Hetzner Cloud Status ===\n"
+          printf "\n"
+          printf "📊 Servers:\n"
           hcloud server list
-          echo ""
-          echo "🌐 Networks:"
+          printf "\n"
+          printf "🌐 Networks:\n"
           hcloud network list
-          echo ""
-          echo "💾 Volumes:"
+          printf "\n"
+          printf "💾 Volumes:\n"
           hcloud volume list
-          echo ""
-          echo "🔥 Firewalls:"
+          printf "\n"
+          printf "🔥 Firewalls:\n"
           hcloud firewall list
-          echo ""
-          echo "⚖️  Load Balancers:"
+          printf "\n"
+          printf "⚖️  Load Balancers:\n"
           hcloud load-balancer list
 
   pricing:
-    desc: "Show pricing information"
+    desc: Show pricing information
     cmds:
       - cmd: |
-          echo "=== Server Types & Pricing ==="
+          printf "=== Server Types & Pricing ===\n"
           hcloud server-type list
-          echo ""
-          echo "=== Volume Pricing ==="
-          echo "Volumes: €0.0476/GB/month"
-          echo ""
-          echo "=== Traffic Pricing ==="
-          echo "Outbound traffic: €1.00/TB (first 21TB free per server)"
+          printf "\n"
+          printf "=== Volume Pricing ===\n"
+          printf "Volumes: €0.0476/GB/month\n"
+          printf "\n"
+          printf "=== Traffic Pricing ===\n"
+          printf "Outbound traffic: €1.00/TB (first 21TB free per server)\n"
 
   # Backup and snapshot tasks
   backup:create:
-    desc: "Create backup of server. Usage: task backup:create -- <server-name>"
+    desc: Create backup of server. Usage - task backup:create -- <server-name>
     cmds:
       - hcloud server create-image --description "Backup-$(date +%Y%m%d-%H%M%S)" {{.CLI_ARGS}}
 
   backup:list:
-    desc: "List all backups/images"
+    desc: List all backups/images
     cmds:
       - hcloud image list --type backup
