@@ -30,3 +30,12 @@
 
   This was the actual infrastructure repository README content before it got replaced
   with the Hetzner Cloud CLI documentation.
+
+  ## Task files
+
+  Can run on any device in CI, CD and Production.
+
+  DRY everywhere.
+
+  Designed for any OS.
+  
