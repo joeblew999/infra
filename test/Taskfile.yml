@@ -1,0 +1,74 @@
+# test taskfile
+
+# https://taskfile.dev
+
+# https://taskfile.dev/reference/cli
+
+#
+
+
+version: '3'
+
+includes:
+  task:
+    taskfile: './../taskfiles/task_taskfile.yml'
+  dummy:
+    taskfile: './../taskfiles/dummy_taskfile.yml'
+  
+vars:
+  
+
+tasks:
+  default:
+    desc: List operations and state.
+    cmds:
+      - echo
+      - echo "Runs Incus on a macOS host using Macpine."
+      - echo
+      - task --list-all
+      - echo
+    silent: true
+
+  this:git:push:
+    desc: Push the repo branch to the remote
+    cmds:
+      - echo "Pushing the current branch to the remote repository..."
+      - task git:add
+      - task git:commit:all MSG="default"
+      - task git:push
+
+# NOTE:
+# task this:git:tag TAG=v1.0.0 for a lightweight tag.
+# task this:git:tag TAG=v1.0.0 MSG="Initial release" for an annotated tag.
+
+  this:git:tag:
+    desc: Tag and push the current branch to the remote (usage - task this:git:tag TAG=v1.0.0 [MSG="Release v1.0.0"])
+    vars:
+      TAG:
+        sh: echo "{{.TAG}}"
+        required: true
+      MSG: '{{.MSG | default ""}}'
+    cmds:
+      - echo "Tagging and pushing..."
+      - task git:tag TAG={{.TAG}} MSG="{{.MSG}}"
+      - task git:tags:push
+
+
+  this:git:tags:delete:single:
+    desc: Delete a single tag both locally and remotely (usage - task this:git:tags:delete:single TAG=v1.0.0 [REMOTE=origin])
+    vars:
+      TAG:
+        sh: echo "{{.TAG}}"
+        required: true
+      REMOTE: '{{.REMOTE | default ""}}'
+    cmds:
+      - task git:tags:delete:one TAG={{.TAG}} REMOTE={{.REMOTE}}
+
+  
+
+  
+
+
+  
+
+      

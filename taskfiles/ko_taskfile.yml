@@ -4,6 +4,10 @@
 # ko.taskfile.yml 
 ## doc : https://ko.build/configuration/
 
+
+# task -d taskfiles/ko_taskfile.yml --list-all
+
+
 version: '3'
 
 env:
@@ -11,35 +15,44 @@ env:
   KO_DOCKER_REPO: ghcr.io/joeblew999/pb-stack
 
 vars:
-  
   # https://github.com/ko-build/ko
-  KO_BIN_NAME: 'ko{{.BASE_BINARY_EXTENSION}}'
+  KO__BINARY_NAME: ko
+  KO__BINARY_NAME_NATIVE: '{{if eq OS "windows"}}ko.exe{{else}}ko{{end}}'
   # https://github.com/ko-build/ko/releases/tag/v0.18.0
-  KO_BIN_VERSION: v0.18.0
-  KO_BIN_WHICH: ''
-  KO_BIN_WHICH_VERSION: ''
+  KO__VERSION: v0.18.0
+  KO__INSTALL_DIR: "{{.TASK_DIR}}/.dep"
+  KO__WHICH: ''
+  KO__WHICH_VERSION: ''
   
 
 
 tasks:
   default:
-    desc: ko default print
+    desc: List available tasks
     cmds:
-      - echo ''
-      - echo '- bin'
-      - echo 'KO_BIN_NAME:'                 {{.KO_BIN_NAME}}
-      - echo 'KO_BIN_VERSION:'              {{.KO_BIN_VERSION}}
-      - echo 'KO_BIN_WHICH:'                
-      #- task re:dep:which
-      - echo 'KO_BIN_WHICH_VERSION:'        {{.KO_BIN_WHICH_VERSION}}
-      - echo ''
+      - task --list-all
+    silent: true
+
+  vars:
+    desc: Show taskfile variables
+    cmds:
+      - cmd: |
+          echo ""
+          echo "KO Variables"
+          echo "KO__BINARY_NAME              {{.KO__BINARY_NAME}}"
+          echo "KO__BINARY_NAME_NATIVE       {{.KO__BINARY_NAME_NATIVE}}"
+          echo "KO__VERSION                  {{.KO__VERSION}}"
+          echo "KO__INSTALL_DIR              {{.KO__INSTALL_DIR}}"
+          echo "KO__WHICH                   {{.KO__WHICH}}"
+          echo "KO__WHICH_VERSION           {{.KO__WHICH_VERSION}}"
+          echo ""
     silent: true
 
 ### dep
 
   dep:
     cmds:
-      - go install github.com/google/ko@{{.KO_BIN_VERSION}}
+      - go install github.com/google/ko@{{.KO__VERSION}}
   dep:del:
     cmds:
       - rm -f {{.BASE_DEP_PATH}}/{{.KO_BIN_NAME}}
