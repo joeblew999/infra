@@ -33,7 +33,7 @@ tasks:
     cmds:
       - echo "Pushing the current branch to the remote repository..."
       - task git:add
-      - task git:commit-all MSG="default"
+      - task git:commit:all MSG="default"
       - task git:push
 
 # NOTE:
@@ -43,12 +43,27 @@ tasks:
   this:git:tag:
     desc: Tag and push the current branch to the remote (usage - task this:git:tag TAG=v1.0.0 [MSG="Release v1.0.0"])
     vars:
-      TAG: '{{.TAG}}'
+      TAG:
+        sh: echo "{{.TAG}}"
+        required: true
       MSG: '{{.MSG | default ""}}'
     cmds:
       - echo "Tagging and pushing..."
       - task git:tag TAG={{.TAG}} MSG="{{.MSG}}"
-      - task git:push-tags
+      - task git:tags:push
+
+
+  this:git:tags:delete:single:
+    desc: Delete a single tag both locally and remotely (usage - task this:git:tags:delete:single TAG=v1.0.0 [REMOTE=origin])
+    vars:
+      TAG:
+        sh: echo "{{.TAG}}"
+        required: true
+      REMOTE: '{{.REMOTE | default ""}}'
+    cmds:
+      - task git:tags:delete:one TAG={{.TAG}} REMOTE={{.REMOTE}}
+
+  
 
   
 
