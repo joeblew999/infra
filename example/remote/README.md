@@ -18,6 +18,7 @@ Here are some usage examples:
 # TO allow remote taskfiles and not prompt you.
 TASK_X_REMOTE_TASKFILES=1 task --yes
 
+
 # Cache management:
 # Clear cache. The .task folder will be cleaned.
 TASK_X_REMOTE_TASKFILES=1 task --clear-cache
@@ -29,28 +30,34 @@ TASK_X_REMOTE_TASKFILES=1 task --yes --download
 # List the tasks available.
 TASK_X_REMOTE_TASKFILES=1 task --yes --list-all --sort alphanumeric
 
+# There is "task" taskfile to help with debugging, so lets play with that:
+
+# Dry run, if you are not sure you trust it yet
+TASK_X_REMOTE_TASKFILES=1 task --yes --dry task:vars
+# Dry run, and want to see everything it does.
+TASK_X_REMOTE_TASKFILES=1 task --yes --dry --verbose task:vars
 
 
-# Call the task Taskfile to get its vars to help with debugging.
+
+# Get its vars to help with debugging.
 TASK_X_REMOTE_TASKFILES=1 task --yes task:vars
 
-# call the dummy Taskfile to get its vars.
+# Call dummy too.
 TASK_X_REMOTE_TASKFILES=1 task --yes dummy:vars
 
-# call the git Taskfile to get its vars.
+# Call git 
 TASK_X_REMOTE_TASKFILES=1 task --yes git:vars
 
-# list all tasks it has as json
+# List all git tasks
 TASK_X_REMOTE_TASKFILES=1 task --yes git --list
-# list all tasks it has as json
+# List all git tasks as json
 TASK_X_REMOTE_TASKFILES=1 task --yes git --list --json
 
-# Bypass your Taskfile, to list operations on a specific taskfile.
+# Bypass your local root Taskfile, to list operations on a specific taskfile.
+TASK_X_REMOTE_TASKFILES=1 task --yes --taskfile https://raw.githubusercontent.com/joeblew999/infra/main/taskfiles/git_taskfile.yml --list
 
-TASK_X_REMOTE_TASKFILES=1 task --taskfile https://raw.githubusercontent.com/joeblew999/infra/main/taskfiles/git_taskfile.yml --list
-
-# 
-TASK_X_REMOTE_TASKFILES=1 task --taskfile https://raw.githubusercontent.com/joeblew999/infra/main/example/Taskfile.yml --list
+# Bypass your local root Taskfile, to list operations on a specific root taskfile.
+TASK_X_REMOTE_TASKFILES=1 task --yes --taskfile https://raw.githubusercontent.com/joeblew999/infra/main/example/remote/Taskfile.yml --list
 
 
 ```
