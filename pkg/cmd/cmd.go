@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/joeblew999/infra/web"
 	// "path/to/your/dep" // Placeholder for dep package import
 )
 
@@ -47,7 +49,10 @@ func runCLI() {
 
 func runService() {
 	fmt.Println("Running in Service mode...")
-	// TODO: Implement long-running service logic here (e.g., start a web server, background worker)
+
+	if err := web.StartServer(); err != nil {
+		log.Fatalf("Failed to start web server: %v", err)
+	}
 
 	log.Println("Service started. Press Ctrl+C to exit.")
 

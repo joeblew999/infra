@@ -2,7 +2,7 @@
 
 This document outlines the design for a Go package to manage external binary dependencies. We envision a two-phased approach to dependency management:
 
-1.  **Core Bootstrapping Binaries:** A small, fixed set of essential binaries required for initial developer laptop setup. These will be handled by built-in code within the `dep` package itself for maximum reliability during bootstrapping. Examples include `task` and `tofu`.
+1.  **Core Bootstrapping Binaries:** A small, fixed set of essential binaries required for initial developer laptop setup. These will be handled by built-in code within the `dep` package itself for maximum reliability during bootstrapping.
 2.  **Generic Downloader and Runner:** A flexible, manifest-driven system for managing a wider range of project-specific CLI tools. This system will allow developers to easily integrate binary dependency management directly within their Taskfiles. For instance, a `hetzner_taskfile` could ensure the `hetzner` CLI is present in the `.dep` folder before executing commands that rely on it.
 
 For both phases, the goal is to easily download, manage, and run these binaries.
@@ -20,6 +20,12 @@ To ensure reusability and consistency across the codebase, all core file paths a
 ### Manifest Management
 
 *   **Core Binaries Manifest:** The manifest for core bootstrapping binaries will be **embedded directly within the `dep` package**. This ensures that the `dep` binary is self-contained and portable, allowing it to function correctly across local development, CI/CD pipelines, and production environments without external configuration files.
+
+    The core binaries included in this embedded manifest are:
+    *   `caddy`
+    *   `tofu`
+    *   `task`
+
 *   **Generic Binaries Manifest:** The manifest for generic (secondary) binaries will be an external `dependencies.json` file. This allows other developers to easily extend and manage project-specific tools by importing and configuring this system.
 
 ### 1. Vision
@@ -38,7 +44,7 @@ To create a zero-dependency, self-contained Go package that manages the download
 
 ### 3. Core Bootstrapping Binaries
 
-These are the foundational tools necessary for the initial setup of a developer's environment. Their installation logic will be embedded directly within the `dep` package to ensure minimal external dependencies during the bootstrapping phase. Examples include `task` and `tofu`.
+These are the foundational tools necessary for the initial setup of a developer's environment. Their installation logic will be embedded directly within the `dep` package to ensure minimal external dependencies during the bootstrapping phase. The specific binaries included are listed under the "Core Binaries Manifest" section.
 
 ### 4. Configuration (`dependencies.json` Manifest) - For Generic Binaries
 

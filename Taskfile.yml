@@ -35,6 +35,9 @@ tasks:
   this:dev:
     desc: Run the project (usage - task this:dev [-- <args>])
     cmds:
+      - go mod tidy
+      - go mod download
+      - go mod verify
       - go run . {{.CLI_ARGS}}
 
   this:claude:setup:

@@ -1,4 +1,4 @@
-package main
+package web
 
 import (
 	_ "embed"
@@ -34,16 +34,16 @@ type Message struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func main() {
+func StartServer() error {
 	ctx := context.Background()
 
 	// Initialize embedded NATS server
 	log.Println("Starting embedded NATS server...")
 	natsServer, err := embeddednats.New(ctx, 
-		embeddednats.WithDirectory("./nats-store"), // Store directory
+		embeddednats.WithDirectory("./.data/nats"), // Store directory
 	)
 	if err != nil {
-		log.Fatal("Failed to create embedded NATS server:", err)
+		return fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 	defer natsServer.Close()
 
@@ -54,7 +54,7 @@ func main() {
 	// Get client connection from the embedded server
 	nc, err := natsServer.Client()
 	if err != nil {
-		log.Fatal("Failed to get NATS client:", err)
+		return fmt.Errorf("Failed to get NATS client: %w", err)
 	}
 	defer nc.Close()
 
@@ -70,8 +70,9 @@ func main() {
 	log.Printf("Embedded NATS server running with JetStream enabled")
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.router); err != nil {
-		panic(err)
+		return fmt.Errorf("Failed to start web server: %w", err)
 	}
+	return nil
 }
 
 func (app *App) setupRoutes() {

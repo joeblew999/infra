@@ -62,13 +62,6 @@ tasks:
     cmds:
       - task: run:dev
 
-  clean:
-    desc: "Clean build artifacts and NATS store"
-    cmds:
-      - rm -rf ./nats-store
-      - go clean
-      - echo "🧹 Cleaned build artifacts and NATS store"
-
 ### COMBINED WORKFLOWS
 
   full:dev:

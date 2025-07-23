@@ -5,6 +5,9 @@
 # Where Binaries live
 .bin
 
+# Where are data is stored like databases, etc.
+.data
+
 # Whenre binary dependencies live.
 .dep
 
