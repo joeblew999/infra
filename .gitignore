@@ -1,6 +1,8 @@
 # .gitignore 
 # This file is used to ignore files and directories in a Git repository.
 
+# AI likes to make a binary :)
+infra
 
 # Where Binaries live
 .bin

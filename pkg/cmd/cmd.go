@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"flag"
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -12,32 +12,65 @@ import (
 	"github.com/joeblew999/infra/pkg/mcp"
 	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
+	"github.com/spf13/cobra"
 )
 
+var rootCmd = &cobra.Command{
+	Use:   "infra",
+	Short: "Infra is a tool for managing infrastructure",
+	Long:  `A comprehensive tool for managing infrastructure, including dependencies, services, and more.`,
+	Version: "0.0.1",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Default behavior: run as a service
+		runService()
+	},
+}
+
+var serviceCmd = &cobra.Command{
+	Use:   "service",
+	Short: "Run in service mode",
+	Run: func(cmd *cobra.Command, args []string) {
+		runService()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(serviceCmd)
+	rootCmd.AddCommand(tofuCmd)
+	rootCmd.AddCommand(taskCmd)
+}
+
+var tofuCmd = &cobra.Command{
+	Use:                "tofu",
+	Short:              "Run tofu commands",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return executeBinary(store.GetTofuBinPath(), args...)
+	},
+}
+
+var taskCmd = &cobra.Command{
+	Use:                "task",
+	Short:              "Run task commands",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return executeBinary(store.GetTaskBinPath(), args...)
+	},
+}
+
 // Run executes the infra application based on command-line arguments.
-// It serves as the main entry point for both CLI and service modes.
 func Run() {
-	// Ensure necessary directories exist
 	if err := ensureInfraDirectories(); err != nil {
 		log.Fatalf("Failed to ensure infra directories: %v", err)
 	}
 
-	debug := flag.Bool("debug", false, "Enable debug features (e.g., use gh cli for dep downloads)")
-	mode := flag.String("mode", "service", "Operational mode: 'cli' or 'service'")
-	flag.Parse()
-
-	// Ensure core dependencies are in place
-	if err := dep.Ensure(*debug); err != nil {
+	debug, _ := rootCmd.Flags().GetBool("debug")
+	if err := dep.Ensure(debug); err != nil {
 		log.Fatalf("Failed to ensure core dependencies: %v", err)
 	}
 
-	switch *mode {
-	case "cli":
-		runCLI()
-	case "service":
-		runService()
-	default:
-		fmt.Printf("Invalid mode: %s. Please use 'cli' or 'service'.\n", *mode)
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }
@@ -70,18 +103,6 @@ func ensureInfraDirectories() error {
 	return nil
 }
 
-func runCLI() {
-	fmt.Println("Running in CLI mode...")
-	// TODO: Implement CLI command parsing and execution logic here
-	// Example:
-	// if len(flag.Args()) > 0 {
-	// 	command := flag.Args()[0]
-	// 	fmt.Printf("Executing CLI command: %s\n", command)
-	// } else {
-	// 	fmt.Println("No CLI command specified.")
-	// }
-}
-
 func runService() {
 	fmt.Println("Running in Service mode...")
 
@@ -105,4 +126,11 @@ func runService() {
 	<-sigChan
 
 	log.Println("Shutting down service...")
+}
+
+func executeBinary(binary string, args ...string) error {
+	cmd := exec.Command(binary, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

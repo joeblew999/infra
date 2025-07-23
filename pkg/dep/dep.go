@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"log"
 
-	"path/filepath"
-	"runtime"
-
 	"github.com/joeblew999/infra/pkg/store"
 )
 
@@ -107,5 +104,5 @@ func Ensure(debug bool) error {
 
 // Get returns the absolute path to the requested binary for the current platform.
 func Get(name string) string {
-	return filepath.Join(store.GetDepPath(), fmt.Sprintf(store.BinaryDepNameFormat, name, runtime.GOOS, runtime.GOARCH))
+	return store.Get(name)
 }

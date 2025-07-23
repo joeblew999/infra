@@ -1,7 +1,9 @@
 package store
 
 import (
+	"fmt"
 	"path/filepath"
+	"runtime"
 )
 
 const (
@@ -40,4 +42,18 @@ func GetTaskfilesPath() string {
 // GetDataPath returns the absolute path to the .data directory.
 func GetDataPath() string {
 	return filepath.Join(".", DataDir)
+}
+
+func Get(name string) string {
+	return filepath.Join(GetDepPath(), fmt.Sprintf(BinaryDepNameFormat, name, runtime.GOOS, runtime.GOARCH))
+}
+
+// GetTofuBinPath returns the absolute path to the tofu binary.
+func GetTofuBinPath() string {
+	return Get("tofu")
+}
+
+// GetTaskBinPath returns the absolute path to the task binary.
+func GetTaskBinPath() string {
+	return Get("task")
 }
