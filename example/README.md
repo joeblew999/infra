@@ -8,6 +8,9 @@ You can reference Taskfiels from anywhere: https://taskfile.dev/experiments/remo
 
 In the example Taskfile, we are using "joeblew999/infra", so that it calls this actual repo.
 
+WHen you tag ypour repo, you can then reference by tags also.
+https://github.com/joeblew999/infra/releases/tag/v1.0.0
+
 Here are some usage examples:
 
 ```sh

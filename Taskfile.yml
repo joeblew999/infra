@@ -28,13 +28,17 @@ tasks:
       - echo
     silent: true
 
-  this:git:push:all:
+  this:git:push:
     desc: Push the repo branch to the remote
     cmds:
       - echo "Pushing the current branch to the remote repository..."
       - task git:add
       - task git:commit-all MSG="default"
       - task git:push
+
+# NOTE:
+# task this:git:tag TAG=v1.0.0 for a lightweight tag.
+# task this:git:tag TAG=v1.0.0 MSG="Initial release" for an annotated tag.
 
   this:git:tag:
     desc: Tag and push the current branch to the remote (usage - task this:git:tag TAG=v1.0.0 [MSG="Release v1.0.0"])
