@@ -61,20 +61,12 @@ tasks:
           ln -sf {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64 {{.DUMMY__INSTALL_DIR}}/mage
         platforms: [linux]
       - cmd: |
-          powershell -Command "
-          $$url = 'https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix \"v\"}}_Windows-64bit.zip';
-          $$output = '$$env:TEMP\mage_{{.DUMMY__VERSION | trimPrefix \"v\"}}_Windows-64bit.zip';
-          $$extractPath = '$$env:TEMP\mage';
-          
-          Invoke-WebRequest -Uri $$url -OutFile $$output;
-          Expand-Archive -Path $$output -DestinationPath $$extractPath -Force;
-          
-          New-Item -ItemType Directory -Path '{{.DUMMY__INSTALL_DIR}}' -Force;
-          Copy-Item '$$extractPath\mage.exe' '{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}-windows-amd64.exe' -Force;
-          Copy-Item '$$extractPath\mage.exe' '{{.DUMMY__INSTALL_DIR}}\{{.DUMMY__BINARY_NAME}}.exe' -Force;
-          Remove-Item $$output -Force;
-          Remove-Item $$extractPath -Recurse -Force;
-          "
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
+          unzip -o mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
+          mv mage.exe {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-windows-amd64.exe
+          cp {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-windows-amd64.exe {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}.exe
+          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
         platforms: [windows]
     defer:
       - echo "finished."
