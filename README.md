@@ -22,7 +22,15 @@ It helps to make things DRY. The most important thing is that the Taskfiles and 
 
 ## AI
 
-Is setup for Claude and Gemini, but will add others.
+Is setup for Claude CLI and Gemini CLI.
+
+I find Copilot and the extensions to be really heavy and make VSCOde slow.
+
+Will might add Support for VSCODE Copilot, if requested I find it makes the IDE slow, but https://code.visualstudio.com/mcp support might be good.
+
+If you want another AI setup let me know.
+
+
 
 ## Stack of bits i am using this for.
 

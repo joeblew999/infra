@@ -1,6 +1,6 @@
 # examples
 
-If your using this from your own repo you will want to use Remtoe Taskfiles.
+If your using this from your own repo you will want to use Remote Taskfiles.
 
 ## Remote task files usage
 
