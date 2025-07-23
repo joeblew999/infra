@@ -13,14 +13,23 @@ import (
 
 type tofuInstaller struct{}
 
-func (i *tofuInstaller) Install(binary CoreBinary) error {
+func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
 	log.Printf("Checking %s (version %s) from %s", binary.Name, binary.Version, binary.Repo)
 
 	installPath := Get(binary.Name) // Use Get to determine the expected install path
 	if _, err := os.Stat(installPath); os.IsNotExist(err) {
 		log.Printf("  %s not found. Attempting download and installation...", binary.Name)
 
-		release, err := getGitHubRelease(binary.Repo, binary.Version)
+		var release *GitHubRelease
+		var err error
+
+		if debug && binary.Name == "tofu" {
+			log.Println("  Using gh cli for Tofu release info (debug mode).")
+			release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
+		} else {
+			release, err = getGitHubRelease(binary.Repo, binary.Version)
+		}
+
 		if err != nil {
 			return fmt.Errorf("failed to get GitHub release for %s: %w", binary.Name, err)
 		}

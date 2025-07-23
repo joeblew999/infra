@@ -21,13 +21,14 @@ func Run() {
 		log.Fatalf("Failed to ensure infra directories: %v", err)
 	}
 
-	// Ensure core dependencies are in place
-	if err := dep.Ensure(); err != nil {
-		log.Fatalf("Failed to ensure core dependencies: %v", err)
-	}
-
+	debug := flag.Bool("debug", false, "Enable debug features (e.g., use gh cli for dep downloads)")
 	mode := flag.String("mode", "service", "Operational mode: 'cli' or 'service'")
 	flag.Parse()
+
+	// Ensure core dependencies are in place
+	if err := dep.Ensure(*debug); err != nil {
+		log.Fatalf("Failed to ensure core dependencies: %v", err)
+	}
 
 	switch *mode {
 	case "cli":

@@ -28,7 +28,7 @@ type AssetSelector struct {
 
 // Installer defines the interface for installing a core binary.
 type Installer interface {
-	Install(binary CoreBinary) error
+	Install(binary CoreBinary, debug bool) error
 }
 
 // embeddedCoreBinaries will contain the manifest for core bootstrapping binaries.
@@ -63,11 +63,11 @@ var embeddedCoreBinaries = []CoreBinary{
 	{
 		Name:       "caddy",
 		Repo:       "caddyserver/caddy",
-		Version:    "v2.8.4", // Example version, update as needed
-		ReleaseURL: "https://github.com/caddyserver/caddy/releases/tag/v2.8.4",
+		Version:    "v2.10.0",                                                   // Updated version
+		ReleaseURL: "https://github.com/caddyserver/caddy/releases/tag/v2.10.0", // Updated URL
 		Assets: []AssetSelector{
 			{OS: "darwin", Arch: "amd64", Match: `caddy_.*_darwin_amd64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `caddy_.*_macOS_arm64\.(tar\.gz|zip)$`},
+			{OS: "darwin", Arch: "arm64", Match: `caddy_.*_mac_arm64\.tar\.gz$`},
 			{OS: "linux", Arch: "amd64", Match: `caddy_.*_linux_amd64\.tar\.gz$`},
 			{OS: "linux", Arch: "arm64", Match: `caddy_.*_linux_arm64\.tar\.gz$`},
 			{OS: "windows", Arch: "amd64", Match: `caddy_.*_windows_amd64\.zip$`},
@@ -77,7 +77,7 @@ var embeddedCoreBinaries = []CoreBinary{
 
 // Ensure downloads and prepares all binaries defined in the manifest.
 // This function will handle both core bootstrapping binaries and generic ones.
-func Ensure() error {
+func Ensure(debug bool) error {
 	log.Println("Ensuring core binaries...")
 
 	for _, binary := range embeddedCoreBinaries {
@@ -96,7 +96,7 @@ func Ensure() error {
 			return fmt.Errorf("no installer found for binary: %s", binary.Name)
 		}
 
-		if err := installer.Install(binary); err != nil {
+		if err := installer.Install(binary, debug); err != nil {
 			return fmt.Errorf("failed to install %s: %w", binary.Name, err)
 		}
 	}

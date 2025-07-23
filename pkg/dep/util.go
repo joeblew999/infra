@@ -3,6 +3,7 @@ package dep
 import (
 	"archive/tar"
 	"archive/zip"
+	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -26,7 +28,7 @@ type GitHubRelease struct {
 	Assets []GitHubReleaseAsset `json:"assets"`
 }
 
-// getGitHubRelease fetches release information from GitHub API.
+// getGitHubRelease fetches release information directly from GitHub API using net/http.
 func getGitHubRelease(repo, version string) (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, version)
 	resp, err := http.Get(url)
@@ -42,6 +44,26 @@ func getGitHubRelease(repo, version string) (*GitHubRelease, error) {
 	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, fmt.Errorf("failed to decode GitHub release response: %w", err)
+	}
+
+	return &release, nil
+}
+
+// getGitHubReleaseDebug fetches release information using gh cli.
+func getGitHubReleaseDebug(repo, version string) (*GitHubRelease, error) {
+	cmd := exec.Command("gh", "release", "view", version, "--repo", repo, "--json", "assets")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	log.Printf("Running command: %s", cmd.Args)
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run gh cli: %w\nStderr: %s", err, stderr.String())
+	}
+
+	var release GitHubRelease
+	if err := json.NewDecoder(&stdout).Decode(&release); err != nil {
+		return nil, fmt.Errorf("failed to decode gh cli output: %w", err)
 	}
 
 	return &release, nil
