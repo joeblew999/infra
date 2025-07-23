@@ -15,6 +15,8 @@ includes:
     taskfile: ./taskfiles/task_taskfile.yml
   git:
     taskfile: ./taskfiles/git_taskfile.yml
+  claude:
+    taskfile: ./taskfiles/claude_taskfile.yml
   
 vars:
   
@@ -29,6 +31,25 @@ tasks:
       - task --list-all
       - echo
     silent: true
+
+  this:dev:
+    desc: Run the project (usage - task this:dev [-- <args>])
+    cmds:
+      - go run . {{.CLI_ARGS}}
+
+  this:claude:setup:
+    desc: Setup claude MCP with our MPC.
+    cmds:
+      - task claude:mcp:remove
+      - task claude:mcp:add
+      - task claude:mcp:list
+
+  this:claude:start:
+    desc: Start the claude MCP server.
+    cmds:
+      - task claude:mcp:start
+      # NOPW you can open Claude client
+      
 
   this:git:push:
     desc: Push the repo branch to the remote

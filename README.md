@@ -30,7 +30,25 @@ Will might add Support for VSCODE Copilot, if requested I find it makes the IDE 
 
 If you want another AI setup let me know.
 
+## Deployment
 
+Origin on Hetzner in Germany.
+- to Get European Coverage
+
+Secondaries on OVH in for the rest of the world.
+- https://www.ovhcloud.com/en-au/
+- https://github.com/ovh/terraform-provider-ovh
+
+Supported Resources: The provider supports a wide range of OVH services including:
+
+Public Cloud instances and infrastructure
+Dedicated servers
+Load balancers
+DNS zones and records
+vRack networking
+Kubernetes clusters
+Object storage
+Databases
 
 ## Stack of bits i am using this for.
 

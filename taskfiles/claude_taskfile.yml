@@ -52,12 +52,14 @@ tasks:
       
 
       - echo "MCP installed. Restart Claude Code to activate the GitHub tools."
+  
   mcp:remove:
     desc: "remove installed CLAUDE MCP"
     cmds:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "github"'
-      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "mcp-dap-server"'
-      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "mcp-dap-server"'
+      #- '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "mcp-dap-server"'
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "playwright"'
+  
   mcp:list:
     desc: "List installed CLAUDE MCPs"
     cmds:

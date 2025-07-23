@@ -16,10 +16,10 @@ vars:
 
 tasks:
   default:
-    desc: List available Git tasks
+    desc: List available tasks
     cmds:
       - echo
-      - echo "Basic Git commands for reuse across projects"
+      - echo "Basic commands "
       - echo
       - task --list-all
       - echo
@@ -35,8 +35,39 @@ tasks:
           echo "DUMMY__INSTALL_DIR         {{.DUMMY__INSTALL_DIR}}"
     silent: true
 
+  eget:bootstrap:
+    desc: Bootstrap eget for binary downloads
+    preconditions:
+      - sh: '! command -v eget >/dev/null 2>&1'
+        msg: 'eget is already installed'
+    cmds:
+      - cmd: |
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/zyedidia/eget/releases/latest/download/eget-1.3.4-darwin-amd64.tar.gz
+          tar -xzf eget-1.3.4-darwin-amd64.tar.gz
+          mv eget {{.DUMMY__INSTALL_DIR}}/eget
+          rm eget-1.3.4-darwin-amd64.tar.gz
+          chmod +x {{.DUMMY__INSTALL_DIR}}/eget
+        platforms: [darwin]
+      - cmd: |
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/zyedidia/eget/releases/latest/download/eget-1.3.4-linux-amd64.tar.gz
+          tar -xzf eget-1.3.4-linux-amd64.tar.gz
+          mv eget {{.DUMMY__INSTALL_DIR}}/eget
+          rm eget-1.3.4-linux-amd64.tar.gz
+          chmod +x {{.DUMMY__INSTALL_DIR}}/eget
+        platforms: [linux]
+      - cmd: |
+          mkdir -p {{.DUMMY__INSTALL_DIR}}
+          curl -LO https://github.com/zyedidia/eget/releases/latest/download/eget-1.3.4-windows-amd64.zip
+          unzip -o eget-1.3.4-windows-amd64.zip
+          mv eget.exe {{.DUMMY__INSTALL_DIR}}/eget.exe
+          rm eget-1.3.4-windows-amd64.zip
+        platforms: [windows]
+
   dep:
-    desc: Install mage CLI
+    desc: Install mage CLI using eget
+    deps: [eget:bootstrap]
     preconditions:
       - echo "starting...."
       - sh: '! command -v mage >/dev/null 2>&1'
@@ -44,30 +75,7 @@ tasks:
     cmds:
       - cmd: |
           mkdir -p {{.DUMMY__INSTALL_DIR}}
-          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
-          tar -xzf mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
-          mv mage {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64
-          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_macOS-64bit.tar.gz
-          chmod +x {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64
-          ln -sf {{.DUMMY__INSTALL_DIR}}/mage-darwin-amd64 {{.DUMMY__INSTALL_DIR}}/mage
-        platforms: [darwin]
-      - cmd: |
-          mkdir -p {{.DUMMY__INSTALL_DIR}}
-          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
-          tar -xzf mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
-          mv mage {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64
-          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Linux-64bit.tar.gz
-          chmod +x {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64
-          ln -sf {{.DUMMY__INSTALL_DIR}}/mage-linux-amd64 {{.DUMMY__INSTALL_DIR}}/mage
-        platforms: [linux]
-      - cmd: |
-          mkdir -p {{.DUMMY__INSTALL_DIR}}
-          curl -LO https://github.com/magefile/mage/releases/download/{{.DUMMY__VERSION}}/mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
-          unzip -o mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
-          mv mage.exe {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-windows-amd64.exe
-          cp {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}-windows-amd64.exe {{.DUMMY__INSTALL_DIR}}/{{.DUMMY__BINARY_NAME}}.exe
-          rm mage_{{.DUMMY__VERSION | trimPrefix "v"}}_Windows-64bit.zip
-        platforms: [windows]
+          {{.DUMMY__INSTALL_DIR}}/eget magefile/mage --to {{.DUMMY__INSTALL_DIR}} --file {{.DUMMY__BINARY_NAME_NATIVE}}
     defer:
       - echo "finished."
       - ls -al {{.DUMMY__INSTALL_DIR}}
