@@ -38,6 +38,7 @@ tasks:
   dep:
     desc: Install mage CLI
     preconditions:
+      - echo "starting...."
       - sh: '! command -v mage >/dev/null 2>&1'
         msg: 'mage is already installed'
     cmds:
@@ -73,6 +74,9 @@ tasks:
           Remove-Item $output -Force
           Remove-Item $extractPath -Recurse -Force
         platforms: [windows]
+    defer:
+      - echo "finished."
+      - ls -al {{.DUMMY__INSTALL_DIR}}
 
   dep:del:
     desc: Uninstall the mage CLI
