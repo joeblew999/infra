@@ -1,5 +1,14 @@
-terraform
+# .gitignore 
+# This file is used to ignore files and directories in a Git repository.
 
+
+# Where Binaries live
+.bin
+
+# Whenre binary dependencies live.
 .dep
 
-.bin
+# Remote taskfiles store
+.task
+
+terraform

@@ -22,7 +22,15 @@ includes:
   #  taskfile: '{{.GIT_ROOT}}./taskfiles/task_taskfile.yml'
   #git:
   #  taskfile: '{{.GIT_ROOT}}./taskfiles/git_taskfile.yml'
-  
+
+  #task: https://raw.githubusercontent.com/joeblew999/infra/main/taskfiles/task_taskfile.yml
+  task: https://{{.TOKEN}}@raw.githubusercontent.com/joeblew999/infra/main/taskfiles/task_taskfile.yml
+
+  dummy: https://raw.githubusercontent.com/joeblew999/infra/main/taskfiles/dummy_taskfile.yml
+
+  git: https://raw.githubusercontent.com/joeblew999/infra/main/taskfiles/git_taskfile.yml
+
+
   
 tasks:
   default:
@@ -35,39 +43,6 @@ tasks:
     silent: true
 
   
-  vars:
-    desc:  Print all Task built-in variables
-    cmds:
-      - echo ""
-      - echo "Task Information"
-      - echo "TASK                {{.TASK}}"
-      - echo "GIT_ROOT            {{.GIT_ROOT}}"
-      - echo "TASK_DIR            {{.TASK_DIR}}"
-      - echo "TASK_FILE           {{.TASK_FILE}}"
-      - echo "ROOT_TASKFILE       {{.ROOT_TASKFILE}}"
-      - echo "ROOT_DIR            {{.ROOT_DIR}}"
-      - echo "USER_WORKING_DIR    {{.USER_WORKING_DIR}}"
-      - echo ""
-      - echo "Environment and System Information"
-      - echo "OS                  {{.OS}}"
-      - echo "ARCH                {{.ARCH}}"
-      - echo "CLI_ARGS            {{.CLI_ARGS}}"
-      - echo "CLI_ARGS_ARRAY      {{.CLI_ARGS_ARRAY}}"
-      - echo "CLI_ARGS_LIST       {{.CLI_ARGS_LIST}}"
-      - echo ""
-      - echo "GO Information"
-      - echo "GO_ARCH             {{.GO_ARCH}}"
-      - echo "GO_OS               {{.GO_OS}}"
-      - echo ""
-    silent: true
-
-  version:
-    desc: Show Task version
-    cmds:
-      - task --version  
-
-  
-
   
 
 

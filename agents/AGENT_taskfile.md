@@ -36,7 +36,7 @@ Unless an exclusion is in a Taskfile, this is the way to code taskfiles.
 
 dummy_taskfile.yml is our best practice reference example.
 
-Testing directly:
+Testing directly and locally:
 ```sh
 task -d taskfiles/dummy_taskfile.yml --list-all
 
