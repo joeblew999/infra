@@ -1,25 +1,32 @@
 # https://taskfile.dev
-# Tofu for Incus.
-# terraform: https://github.com/lxc/terraform-provider-incus
+# Generic OpenTofu Taskfile.
 version: '3'
 
 vars:
-  TF_DIR: "{{.TF_DIR | default \"./terraform\"}}"
-  INCUS_REMOTE: "{{.INCUS_REMOTE | default \"local\"}}"
+  TOFU__BINARY_NAME: "tofu"
+  TOFU__BINARY_NAME_NATIVE: '{{.TOFU__BINARY_NAME}}{{if eq OS "windows"}}.exe{{end}}'
+  TOFU__INSTALL_DIR: "{{.TASK_DIR}}/.dep"
+  TOFU__TF_DIR: '{{.TOFU__TF_DIR | default "./terraform"}}'
 
 tasks:
   default:
-    desc: List operations and state.
+    desc: List all available tasks.
     cmds:
-      - echo
-      - echo "Runs Incus on a macOS host using Macpine."
-      - echo
       - task --list-all
-      - echo
+    silent: true
+
+  vars:
+    desc: Show taskfile variables
+    cmds:
+      - cmd: |
+          echo "TOFU__BINARY_NAME         {{.TOFU__BINARY_NAME}}"
+          echo "TOFU__BINARY_NAME_NATIVE  {{.TOFU__BINARY_NAME_NATIVE}}"
+          echo "TOFU__INSTALL_DIR         {{.TOFU__INSTALL_DIR}}"
+          echo "TOFU__TF_DIR              {{.TOFU__TF_DIR}}"
     silent: true
 
   dep:
-    desc: Install OpenTofu CLI and Incus provider dependencies
+    desc: Install OpenTofu CLI
     cmds:
       - cmd: |
           # macOS via Homebrew (recommended)
@@ -51,39 +58,10 @@ tasks:
           }
         platforms: [windows]
         sh: powershell
-      - cmd: tofu version
+      - cmd: "{{.TOFU__BINARY_NAME_NATIVE}} version"
         desc: "Verify OpenTofu installation"
 
-  dep-provider:
-    desc: Install Incus provider for OpenTofu
-    dir: "{{.TF_DIR}}"
-    deps: [dep]
-    cmds:
-      - cmd: |
-          # Create terraform directory if it doesn't exist
-          mkdir -p "$(pwd)"
-          
-          # Create basic terraform configuration if it doesn't exist
-          if [ ! -f "versions.tf" ] && [ ! -f "main.tf" ] && [ ! -f "*.tf" ]; then
-            cat > versions.tf << 'EOF'
-          terraform {
-            required_version = ">= 1.0"
-            required_providers {
-              incus = {
-                source  = "lxc/incus"
-                version = "~> 0.1"
-              }
-            }
-          }
-          EOF
-            echo "Created versions.tf with Incus provider configuration"
-          fi
-          
-          # Initialize with provider
-          tofu init
-        desc: "Initialize OpenTofu and install Incus provider"
-
-  dep-del:
+  dep:del:
     desc: Uninstall OpenTofu CLI
     cmds:
       - cmd: |
@@ -122,114 +100,81 @@ tasks:
 
   init:
     desc: Initialize OpenTofu configuration
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     deps: [dep]
     cmds:
-      - tofu init
+      - "{{.TOFU__BINARY_NAME_NATIVE}} init"
 
   validate:
     desc: Validate OpenTofu configuration
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     deps: [init]
     cmds:
-      - tofu validate
+      - "{{.TOFU__BINARY_NAME_NATIVE}} validate"
 
   plan:
     desc: Create and show an execution plan
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     deps: [validate]
     cmds:
-      - tofu plan
+      - "{{.TOFU__BINARY_NAME_NATIVE}} plan"
 
   apply:
     desc: Apply the configuration to create/update infrastructure
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     deps: [validate]
     cmds:
-      - tofu apply
+      - "{{.TOFU__BINARY_NAME_NATIVE}} apply"
 
   apply:auto:
     desc: Apply the configuration automatically (non-interactive)
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     deps: [validate]
     cmds:
-      - tofu apply -auto-approve
+      - "{{.TOFU__BINARY_NAME_NATIVE}} apply -auto-approve"
 
   destroy:
     desc: Destroy the managed infrastructure
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     cmds:
-      - tofu destroy
+      - "{{.TOFU__BINARY_NAME_NATIVE}} destroy"
 
   destroy:auto:
     desc: Destroy the managed infrastructure automatically (non-interactive)
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     cmds:
-      - tofu destroy -auto-approve
+      - "{{.TOFU__BINARY_NAME_NATIVE}} destroy -auto-approve"
 
   state:
     desc: Show current state
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     cmds:
-      - tofu state list
+      - "{{.TOFU__BINARY_NAME_NATIVE}} state list"
       - echo "---"
-      - tofu show
+      - "{{.TOFU__BINARY_NAME_NATIVE}} show"
 
   output:
     desc: Show output values
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     cmds:
-      - tofu output
+      - "{{.TOFU__BINARY_NAME_NATIVE}} output"
 
   clean:
     desc: Clean up temporary files and state locks
-    dir: "{{.TF_DIR}}"
+    dir: "{{.TOFU__TF_DIR}}"
     cmds:
       - rm -rf .terraform.lock.hcl .terraform/
       - echo "Cleaned up OpenTofu temporary files"
 
-  incus:status:
-    desc: Show Incus status and containers
-    cmds:
-      - incus info
-      - echo "---"
-      - "incus list {{.INCUS_REMOTE}}:"
-
-  incus:images:
-    desc: List available Incus images
-    cmds:
-      - "incus image list {{.INCUS_REMOTE}}:"
-
-  logs:
-    desc: Show recent logs for a container
-    cmds:
-      - cmd: |
-          if [ -z "{{.CONTAINER}}" ]; then
-            echo "Usage: task logs CONTAINER=container-name"
-            exit 1
-          fi
-          incus info "{{.INCUS_REMOTE}}:{{.CONTAINER}}" --show-log
-
-  shell:
-    desc: Open shell in a container
-    cmds:
-      - cmd: |
-          if [ -z "{{.CONTAINER}}" ]; then
-            echo "Usage: task shell CONTAINER=container-name"
-            exit 1
-          fi
-          incus exec "{{.INCUS_REMOTE}}:{{.CONTAINER}}" -- /bin/bash
-
   dev:
-    desc: Development workflow - validate, plan, and show status
+    desc: Development workflow - validate and plan
     deps: [validate]
     cmds:
       - task: plan
-      - task: incus:status
 
   ci:
     desc: CI workflow - init, validate, plan
     cmds:
       - task: init
-      - task: validate  
+      - task: validate
       - task: plan
