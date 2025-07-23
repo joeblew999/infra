@@ -31,8 +31,8 @@ tasks:
       - cmd: |
           echo "DUMMY__BINARY_NAME         {{.DUMMY__BINARY_NAME}}"
           echo "DUMMY__BINARY_NAME_NATIVE  {{.DUMMY__BINARY_NAME_NATIVE}}"
-          echo "DUMMY__DEFAULT_BRANCH      {{.DUMMY__DEFAULT_BRANCH}}"
-          echo "DUMMY__DEFAULT_REMOTE      {{.DUMMY__DEFAULT_REMOTE}}"
+          echo "DUMMY__VERSION             {{.DUMMY__VERSION}}"
+          echo "DUMMY__INSTALL_DIR         {{.DUMMY__INSTALL_DIR}}"
     silent: true
 
   dep:

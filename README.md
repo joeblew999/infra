@@ -1,5 +1,32 @@
 # README
 
+https://github.com/joeblew999/infra
+
+AI and Task fiels to help with many golang thngs.
+
+## Concept
+
+Taskfiles can be included, just like a golang package, allowing reusing across your projects.
+
+See: https://taskfile.dev/next/experiments/remote-taskfiles/#including-remote-taskfiles
+
+```yaml
+version: '3'
+includes:
+  remote: https://:{{.TOKEN}}@{{.REDACTED_URL}}.git/Taskfile.dist.yml?ref=master
+```
+
+Also they can run on your laptop, in CI ( github actions), in CD ( tarraform via taskfile ) and also in Production.
+
+It helps to make things DRY. The most important thing is that the Taskfiles and golang is versioned, so if this repo changes, it will not break your repo using it. Just use git hashs or git tags as you please.
+
+## AI
+
+Is setup for Claude and Gemini, but will add others.
+
+## Stack of bits i am using this for.
+
+
 
 
  infra

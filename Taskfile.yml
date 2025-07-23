@@ -11,18 +11,9 @@
 version: '3'
 
 includes:
-  incus:
-    taskfile: ./incus_taskfile.yml
-  tofu:
-    taskfile: ./tofu_taskfile.yml
-  hetzner:
-    taskfile: ./hetzner_taskfile.yml
-  playwright:
-    taskfile: ./playwright_taskfile.yml
   git:
-    taskfile: ./git_taskfile.yml
-  atlantis:
-    taskfile: ./atlantis_taskfile.yml
+    taskfile: ./taskfiles/git_taskfile.yml
+  
 
 vars:
   

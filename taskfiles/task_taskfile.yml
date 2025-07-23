@@ -12,7 +12,7 @@ tasks:
     desc:  Show available tasks
     cmds:
       - task --list-all
-    silent  true
+    silent: true
 
 
   vars:
@@ -36,4 +36,4 @@ tasks:
       - echo "GO_ARCH             {{.GO_ARCH}}"
       - echo "GO_OS               {{.GO_OS}}"
       - echo ""
-    silent  true
+    silent: true

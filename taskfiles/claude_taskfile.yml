@@ -25,8 +25,7 @@ tasks:
       - cmd: |
           echo "CLAUDE__BINARY_NAME         {{.CLAUDE__BINARY_NAME}}"
           echo "CLAUDE__BINARY_NAME_NATIVE  {{.CLAUDE__BINARY_NAME_NATIVE}}"
-          echo "CLAUDE__DEFAULT_BRANCH      {{.CLAUDE__DEFAULT_BRANCH}}"
-          echo "CLAUDE__DEFAULT_REMOTE      {{.CLAUDE__DEFAULT_REMOTE}}"
+          echo "CLAUDE__VERSION             {{.CLAUDE__VERSION}}"
     silent: true
 
 ### MCP: https://docs.anthropic.com/en/docs/claude-code/mcp
@@ -37,14 +36,28 @@ tasks:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp serve --verbose'
 
   mcp:add:
-    desc: "Install many standard MCP to allow CLAUDE to interact with GitHub"
+    desc: "Install many standard MCP to allow CLAUDE to interact with GitHub. Usage: task -d claude_taskfile.yml mcp:add"
     cmds:
+      # GITHUB : https://github.com/github/github-mcp-server
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add github npx @modelcontextprotocol/server-github'
-      - echo "GitHub MCP installed. Restart Claude Code to activate the GitHub tools."
+
+      # Golang debuhgging: https://github.com/go-delve/mcp-dap-server
+      # https://github.com/go-delve/mcp-dap-server?tab=readme-ov-file#example-configuration-using-claude-code
+      #- go install github.com/go-delve/mcp-dap-server@latest
+      #- mcp-dap-server
+      #- '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add --transport sse mcp-dap-server http://localhost:8080'
+
+      ## Playwright:  
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add playwright npx @playwright/mcp@latest'
+      
+
+      - echo "MCP installed. Restart Claude Code to activate the GitHub tools."
   mcp:remove:
     desc: "remove installed CLAUDE MCP"
     cmds:
       - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "github"'
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "mcp-dap-server"'
+      - '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp remove "mcp-dap-server"'
   mcp:list:
     desc: "List installed CLAUDE MCPs"
     cmds:

@@ -1,14 +1,46 @@
 # CLAUDE_taskfile.md
 
+All the reusable taskfiles live in the taskfiles folder.
+
+Reusable taskfiles start with the NAME_taskfile.yml pattern.
+Non reusable ones, as per Taskfile conventions, are called Taskfile.yml
+
+The taskfiles are designed to be included using remote taskfiles feature.
+
+## Useful flags when calling taskfiles
+
+```sh
+# List tasks as JSON
+task --list --json
+
+# CLI_ARGS_LIST array variable which contains the arguments passed to Task after the -- (the same as CLI_ARGS, but an array instead of a string).
+task --CLI_ARGS_LIST=for,bar vars 
+
+# CLI_ARGS usage
+task CLI_ARGS=for vars 
+
+
+```
+
+
+## AI agents
+
+The following Taskfiles are designed to help configure AI Agents:
+
+- gemini_taskfile.yml
+- claude_taskfile.yml
+
 Unless an exclusion is in a Taskfile, this is the way to code taskfiles.
+
+## Best pratice example
 
 dummy_taskfile.yml is our best practice reference example.
 
 Testing directly:
 ```sh
-task -d dummy_taskfile.yml --list-all
+task -d taskfiles/dummy_taskfile.yml --list-all
 
-task -d dummy_taskfile.yml vars
+task -d taskfiles/dummy_taskfile.yml vars
 ```
 
 ## File Naming Conventions
@@ -28,6 +60,8 @@ Examples:
 - ❌ `server-create`, `server-delete`
 
 ## Taskfile Tasks and Vars
+
+All taskfiles should have a "vars" task for pinting the vars. This is to help with discovery and debuggings.
 
 ### Variable Naming Convention
 

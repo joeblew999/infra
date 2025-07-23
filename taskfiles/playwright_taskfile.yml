@@ -4,6 +4,8 @@
 # Official docs: https://playwright.dev/docs/docker
 # Official image: mcr.microsoft.com/playwright
 
+# See claude_taskfile.yml for installing the Playwright MCP.
+
 version: '3'
 
 vars:
