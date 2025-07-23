@@ -10,9 +10,6 @@ Prefer golang based MCP Servers because they are small.
 Example of Claude being given a new MCP Server to help it debug the golang.
 
 
-
-
-
 ```sh
 # Golang debuhgging: https://github.com/go-delve/mcp-dap-server
 # https://github.com/go-delve/mcp-dap-server?tab=readme-ov-file#example-configuration-using-claude-code
@@ -27,6 +24,23 @@ There is along of dancing of processes required too with Claude. I have not trie
 - start it
 - start the Claude MCP server itself
 - close and update claude.
+
+
+### implementations
+
+This is what we want to focus on:
+
+https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md has the ones for gemini
+
+https://github.com/modelcontextprotocol/go-sdk is the golang MCP SDK
+
+https://github.com/modelcontextprotocol/go-sdk/network/dependents lists many great examples like
+
+- https://github.com/go-delve/mcp-dap-server
+
+
+
+
 
 ### 1. Vision
 

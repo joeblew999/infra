@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/mcp"
 	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
 )
@@ -84,8 +85,14 @@ func runCLI() {
 func runService() {
 	fmt.Println("Running in Service mode...")
 
+	// Start the web server
 	if err := web.StartServer(); err != nil {
 		log.Fatalf("Failed to start web server: %v", err)
+	}
+
+	// Start the MCP server
+	if err := mcp.StartServer(); err != nil {
+		log.Fatalf("Failed to start MCP server: %v", err)
 	}
 
 	log.Println("Service started. Press Ctrl+C to exit.")
