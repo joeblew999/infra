@@ -18,11 +18,20 @@ Here are some usage examples:
 # TO allow remote taskfiles and not prompt you.
 TASK_X_REMOTE_TASKFILES=1 task --yes
 
+# Cache management:
+# Clear cache. The .task folder will be cleaned.
+TASK_X_REMOTE_TASKFILES=1 task --clear-cache
 
-# With sorting for easier reading.
-TASK_X_REMOTE_TASKFILES=1 task --yes --sort alphanumeric
+# Force refresh of remote includes. The .task folder will be populated.
+TASK_X_REMOTE_TASKFILES=1 task --yes --download
 
-# call the task Taskfile to get its vars to help with debugging.
+
+# List the tasks available.
+TASK_X_REMOTE_TASKFILES=1 task --yes --list-all --sort alphanumeric
+
+
+
+# Call the task Taskfile to get its vars to help with debugging.
 TASK_X_REMOTE_TASKFILES=1 task --yes task:vars
 
 # call the dummy Taskfile to get its vars.

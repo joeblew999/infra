@@ -35,16 +35,14 @@ tasks:
       - echo "USER_WORKING_DIR    {{.USER_WORKING_DIR}}"
       - echo ""
       - echo "Environment and System Information"
-      - echo "OS                  {{.OS}}"
-      - echo "ARCH                {{.ARCH}}"
+      - echo "OS                  {{OS}}"
+      - echo "ARCH                {{ARCH}}"
       - echo "CLI_ARGS            {{.CLI_ARGS}}"
       - echo "CLI_ARGS_ARRAY      {{.CLI_ARGS_ARRAY}}"
       - echo "CLI_ARGS_LIST       {{.CLI_ARGS_LIST}}"
+      - echo "CLI_FORCE           {{.CLI_FORCE}}"
       - echo ""
-      - echo "GO Information"
-      - echo "GO_ARCH             {{.GO_ARCH}}"
-      - echo "GO_OS               {{.GO_OS}}"
-      - echo ""
+
     silent: true
 
   version:

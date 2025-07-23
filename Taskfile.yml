@@ -11,6 +11,8 @@
 version: '3'
 
 includes:
+  task:
+    taskfile: ./taskfiles/task_taskfile.yml
   git:
     taskfile: ./taskfiles/git_taskfile.yml
   
