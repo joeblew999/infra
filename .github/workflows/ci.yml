@@ -27,6 +27,10 @@ jobs:
         version: 3.x
         repo-token: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Run test taskfile
+    - name: Run vars tasks
       run: task task:vars
+      working-directory: ./test
+
+    - name: Run ci tasks
+      run: task this:ci:run
       working-directory: ./test

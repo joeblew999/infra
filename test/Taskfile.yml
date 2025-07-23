@@ -29,7 +29,7 @@ tasks:
       - echo
     silent: true
 
-  this:dummy:run:
+  this:ci:run:
     desc: Run the dummy taskfile
     cmds:
       - echo "Running the dummy taskfile..."
