@@ -4,16 +4,29 @@ This document outlines the design and integration of various Multi-Cloud Platfor
 
 Prefer golang based MCP Servers because they are small.
 
+
+## Examples
+
 Example of Claude being given a new MCP Server to help it debug the golang.
+
+
+
+
 
 ```sh
 # Golang debuhgging: https://github.com/go-delve/mcp-dap-server
 # https://github.com/go-delve/mcp-dap-server?tab=readme-ov-file#example-configuration-using-claude-code
 go install github.com/go-delve/mcp-dap-server@latest
-- mcp-dap-server
+# start it
+mcp-dap-server
 '{{.CLAUDE__BINARY_NAME_NATIVE}} mcp add --transport sse mcp-dap-server http://localhost:8080'
 ```
 
+There is along of dancing of processes required too with Claude. I have not tried Gemini cli and adding MCP yet.
+- add the MCP
+- start it
+- start the Claude MCP server itself
+- close and update claude.
 
 ### 1. Vision
 

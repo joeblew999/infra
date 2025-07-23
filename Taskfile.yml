@@ -38,6 +38,7 @@ tasks:
       - go mod tidy
       - go mod download
       - go mod verify
+      - go fmt ./...
       - go run . {{.CLI_ARGS}}
 
   this:cli:
@@ -46,6 +47,7 @@ tasks:
       - go mod tidy
       - go mod download
       - go mod verify
+      - go fmt ./...
       - go run . --mode cli {{.CLI_ARGS}}
 
   this:test:all:

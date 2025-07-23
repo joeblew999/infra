@@ -94,7 +94,7 @@ func runService() {
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Block until a signal is received
-	<-	sigChan
+	<-sigChan
 
 	log.Println("Shutting down service...")
 }

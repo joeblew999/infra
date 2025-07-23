@@ -1,8 +1,8 @@
 package web
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -39,7 +39,7 @@ func StartServer() error {
 
 	// Initialize embedded NATS server
 	log.Println("Starting embedded NATS server...")
-	natsServer, err := embeddednats.New(ctx, 
+	natsServer, err := embeddednats.New(ctx,
 		embeddednats.WithDirectory("./.data/nats"), // Store directory
 	)
 	if err != nil {
@@ -144,9 +144,9 @@ func (app *App) handleNATSStream(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Send the message to the browser via DataStar
-		html := fmt.Sprintf(`<div id="messages" data-store='{"timestamp":"%s"}'>%s</div>`, 
+		html := fmt.Sprintf(`<div id="messages" data-store='{"timestamp":"%s"}'>%s</div>`,
 			message.Timestamp.Format(time.RFC3339), message.Content)
-		
+
 		if err := sse.PatchElements(html); err != nil {
 			log.Printf("Error sending SSE: %v", err)
 		}

@@ -16,6 +16,10 @@ const (
 
 	// DataDir is the root directory for all application data (e.g., databases, NATS stores).
 	DataDir = ".data"
+
+	// BinaryDepNameFormat is the format string for naming downloaded binary dependencies.
+	// It uses placeholders for name, OS, and architecture.
+	BinaryDepNameFormat = "%s_%s_%s"
 )
 
 // GetDepPath returns the absolute path to the .dep directory.

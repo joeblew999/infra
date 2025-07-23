@@ -23,7 +23,7 @@ To ensure reusability and consistency across the codebase, all core file paths a
 *   **Core Binaries Manifest:** The manifest for core bootstrapping binaries will be **embedded directly within the `dep` package**. This ensures that the `dep` binary is self-contained and portable, allowing it to function correctly across local development, CI/CD pipelines, and production environments without external configuration files.
 
     The core binaries included in this embedded manifest are:
-    *   `caddy`
+    *   `caddy` https://github.com/caddyserver/caddy/releases/tag/v2.10.0
     *   `tofu`
     *   `task`
 

@@ -1,0 +1,81 @@
+package dep
+
+import (
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+
+	"github.com/joeblew999/infra/pkg/store"
+)
+
+type taskInstaller struct{}
+
+func (i *taskInstaller) Install(binary CoreBinary) error {
+	log.Printf("Checking %s (version %s) from %s", binary.Name, binary.Version, binary.Repo)
+
+	installPath := Get(binary.Name) // Use Get to determine the expected install path
+	if _, err := os.Stat(installPath); os.IsNotExist(err) {
+		log.Printf("  %s not found. Attempting download and installation...", binary.Name)
+
+		release, err := getGitHubRelease(binary.Repo, binary.Version)
+		if err != nil {
+			return fmt.Errorf("failed to get GitHub release for %s: %w", binary.Name, err)
+		}
+
+		asset, err := selectAsset(release, binary.Assets)
+		if err != nil {
+			return fmt.Errorf("failed to select asset for %s: %w", binary.Name, err)
+		}
+
+		tmpDir := filepath.Join(store.GetDepPath(), "tmp", binary.Name)
+		if err := os.MkdirAll(tmpDir, 0755); err != nil {
+			return fmt.Errorf("failed to create temporary directory %s: %w", tmpDir, err)
+		}
+		defer os.RemoveAll(tmpDir) // Clean up temporary directory
+
+		assetPath, err := downloadFile(asset.BrowserDownloadURL, tmpDir, asset.Name)
+		if err != nil {
+			return fmt.Errorf("failed to download asset %s: %w", asset.Name, err)
+		}
+
+		log.Printf("  Downloaded %s to %s", asset.Name, assetPath)
+
+		if strings.HasSuffix(asset.Name, ".zip") {
+			if err := unzip(assetPath, tmpDir); err != nil {
+				return fmt.Errorf("failed to unzip %s: %w", asset.Name, err)
+			}
+		} else if strings.HasSuffix(asset.Name, ".tar.gz") {
+			if err := untarGz(assetPath, tmpDir); err != nil {
+				return fmt.Errorf("failed to untar.gz %s: %w", asset.Name, err)
+			}
+		} else {
+			return fmt.Errorf("unsupported archive format for %s", asset.Name)
+		}
+
+		// Move the extracted binary to its final destination
+		// For now, assume the binary is directly in the extracted folder with the same name as binary.Name
+		// This will need to be refined with in_archive_path later.
+		srcPath := filepath.Join(tmpDir, binary.Name)
+		if runtime.GOOS == "windows" {
+			srcPath += ".exe"
+		}
+
+		if err := os.Rename(srcPath, installPath); err != nil {
+			return fmt.Errorf("failed to move binary from %s to %s: %w", srcPath, installPath, err)
+		}
+
+		if err := os.Chmod(installPath, 0755); err != nil {
+			return fmt.Errorf("failed to set executable permissions for %s: %w", installPath, err)
+		}
+
+		log.Printf("  Successfully installed %s to %s", binary.Name, installPath)
+	} else if err != nil {
+		return fmt.Errorf("error checking existence of %s: %w", binary.Name, err)
+	} else {
+		log.Printf("  %s already exists at %s. Skipping download.", binary.Name, installPath)
+	}
+	return nil
+}
