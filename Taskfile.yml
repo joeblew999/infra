@@ -36,6 +36,16 @@ tasks:
       - task git:commit-all MSG="default"
       - task git:push
 
+  this:git:tag:
+    desc: Tag and push the current branch to the remote (usage - task this:git:tag TAG=v1.0.0 [MSG="Release v1.0.0"])
+    vars:
+      TAG: '{{.TAG}}'
+      MSG: '{{.MSG | default ""}}'
+    cmds:
+      - echo "Tagging and pushing..."
+      - task git:tag TAG={{.TAG}} MSG="{{.MSG}}"
+      - task git:push-tags
+
   
 
 

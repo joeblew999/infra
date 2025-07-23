@@ -223,11 +223,17 @@ tasks:
       - '{{.GIT__BINARY_NAME_NATIVE}} clone {{.URL}}'
 
   tag:
-    desc: Create tag (usage task git tag TAG=v1.0.0)
+    desc: Create tag (usage task git tag TAG=v1.0.0 MSG="Release v1.0.0")
     vars:
       TAG: '{{.TAG}}'
+      MSG: '{{.MSG | default ""}}'
     cmds:
-      - '{{.GIT__BINARY_NAME_NATIVE}} tag {{.TAG}}'
+      - cmd: |
+          if [ -n "{{.MSG}}" ]; then
+            {{.GIT__BINARY_NAME_NATIVE}} tag -a {{.TAG}} -m "{{.MSG}}"
+          else
+            {{.GIT__BINARY_NAME_NATIVE}} tag {{.TAG}}
+          fi
 
   push-tags:
     desc: Push all tags to remote
