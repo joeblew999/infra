@@ -8,21 +8,26 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
-	// "path/to/your/dep" // Placeholder for dep package import
 )
 
 // Run executes the infra application based on command-line arguments.
 // It serves as the main entry point for both CLI and service modes.
 func Run() {
+	// Ensure necessary directories exist
+	if err := ensureInfraDirectories(); err != nil {
+		log.Fatalf("Failed to ensure infra directories: %v", err)
+	}
+
+	// Ensure core dependencies are in place
+	if err := dep.Ensure(); err != nil {
+		log.Fatalf("Failed to ensure core dependencies: %v", err)
+	}
+
 	mode := flag.String("mode", "service", "Operational mode: 'cli' or 'service'")
 	flag.Parse()
-
-	// Placeholder for dep integration
-	// err := dep.Ensure()
-	// if err != nil {
-	// 	log.Fatalf("Failed to ensure dependencies: %v", err)
-	// }
 
 	switch *mode {
 	case "cli":
@@ -33,6 +38,34 @@ func Run() {
 		fmt.Printf("Invalid mode: %s. Please use 'cli' or 'service'.\n", *mode)
 		os.Exit(1)
 	}
+}
+
+func ensureInfraDirectories() error {
+	// Create .dep directory
+	if err := os.MkdirAll(store.GetDepPath(), 0755); err != nil {
+		return fmt.Errorf("failed to create .dep directory: %w", err)
+	}
+	log.Printf("Ensured directory exists: %s", store.GetDepPath())
+
+	// Create .bin directory
+	if err := os.MkdirAll(store.GetBinPath(), 0755); err != nil {
+		return fmt.Errorf("failed to create .bin directory: %w", err)
+	}
+	log.Printf("Ensured directory exists: %s", store.GetBinPath())
+
+	// Create .data directory
+	if err := os.MkdirAll(store.GetDataPath(), 0755); err != nil {
+		return fmt.Errorf("failed to create .data directory: %w", err)
+	}
+	log.Printf("Ensured directory exists: %s", store.GetDataPath())
+
+	// Create taskfiles directory
+	if err := os.MkdirAll(store.GetTaskfilesPath(), 0755); err != nil {
+		return fmt.Errorf("failed to create taskfiles directory: %w", err)
+	}
+	log.Printf("Ensured directory exists: %s", store.GetTaskfilesPath())
+
+	return nil
 }
 
 func runCLI() {

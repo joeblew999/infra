@@ -32,13 +32,26 @@ tasks:
       - echo
     silent: true
 
-  this:dev:
+  this:serve:
     desc: Run the project (usage - task this:dev [-- <args>])
     cmds:
       - go mod tidy
       - go mod download
       - go mod verify
       - go run . {{.CLI_ARGS}}
+
+  this:cli:
+    desc: Run the project in CLI mode (usage - task this:cli [-- <args>])
+    cmds:
+      - go mod tidy
+      - go mod download
+      - go mod verify
+      - go run . --mode cli {{.CLI_ARGS}}
+
+  this:test:all:
+    desc: Run all Go tests in the project.
+    cmds:
+      - go test ./...
 
   this:claude:setup:
     desc: Setup claude MCP with our MPC.

@@ -11,11 +11,12 @@ For both phases, the goal is to easily download, manage, and run these binaries.
 
 ### Constants and Paths
 
-To ensure reusability and consistency across the codebase, all core file paths and types will be defined as constants within a dedicated `pkg/store` Go package. This includes:
+To ensure reusability and consistency across the codebase, all core file paths and types will be defined as constants within a dedicated `pkg/store` Go package. These constants will be used to programmatically determine the locations of various project assets.
 
-*   `.dep` folder: The designated location for all downloaded and managed external binary dependencies.
-*   `.bin` folder: The location for the project's own compiled binaries, which will also adhere to the `name_OS_ARCH` naming pattern.
-*   `taskfiles` folder: The directory containing Taskfiles for various project automation tasks.
+*   `.dep` folder: The designated location for all downloaded and managed external binary dependencies. Its path can be retrieved using `store.GetDepPath()`.
+*   `.bin` folder: The location for the project's own compiled binaries, which will also adhere to the `name_OS_ARCH` naming pattern. Its path can be retrieved using `store.GetBinPath()`.
+*   `taskfiles` folder: The directory containing Taskfiles for various project automation tasks. Its path can be retrieved using `store.GetTaskfilesPath()`.
+*   `.data` folder: The root directory for all application data (e.g., databases, NATS stores). Its path can be retrieved using `store.GetDataPath()`.
 
 ### Manifest Management
 
@@ -105,6 +106,8 @@ For a given dependency, the `dep` tool determines the user's current OS and arch
 *   **Binary Naming Convention:** The final binaries will be stored in `./.dep/` using the format: `{{name}}_{{os}}_{{arch}}{{extension}}`.
     *   Example on an M1 Mac: `.dep/tofu_darwin_arm64`
     *   Example on Windows: `.dep/tofu_windows_amd64.exe`
+
+**Security Note on File Handling:** Where applicable, the implementation will leverage new Go 1.24 APIs like `os.Root` and `os.OpenInRoot` to enhance security and prevent path traversal vulnerabilities during file operations.
 
 ### 6. Go Package API (Conceptual)
 
