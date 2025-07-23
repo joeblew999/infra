@@ -5,6 +5,12 @@
 
 version: '3'
 
+
+vars:
+  GIT_ROOT:
+    # This is in task taskfile because its useful for where oyu want to know the where the Git repository is on the file systme.
+    sh: git rev-parse --show-toplevel
+
 tasks:
   
   # Default task to show help

@@ -12,10 +12,6 @@ dotenv:
   - '{{.HOME}}/.env_global' # Looks for .env_global in your home directory
 
 
-vars:
-  GIT_ROOT:
-    # Use the 'sh' attribute to execute a shell command and capture its output
-    sh: git rev-parse --show-toplevel
 
 includes:
   #task:
