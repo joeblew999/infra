@@ -41,6 +41,8 @@ func init() {
 	rootCmd.AddCommand(tofuCmd)
 	rootCmd.AddCommand(taskCmd)
 	rootCmd.AddCommand(caddyCmd)
+
+	rootCmd.PersistentFlags().String("mode", "", "Set the operating mode (e.g., cli, service)")
 }
 
 var caddyCmd = &cobra.Command{
@@ -53,9 +55,8 @@ var caddyCmd = &cobra.Command{
 }
 
 var tofuCmd = &cobra.Command{
-	Use:                "tofu",
-	Short:              "Run tofu commands",
-	DisableFlagParsing: true,
+	Use:   "tofu",
+	Short: "Run tofu commands",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return executeBinary(store.GetTofuBinPath(), args...)
 	},

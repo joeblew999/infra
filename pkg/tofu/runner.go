@@ -42,6 +42,12 @@ func (r *Runner) Run(args ...string) error {
 	return nil
 }
 
+// RunTofu executes the tofu command with the given arguments
+func RunTofu(args []string) error {
+	runner := New()
+	return runner.Run(args...)
+}
+
 // RunWithOutput executes a tofu command and returns the output
 func (r *Runner) RunWithOutput(args ...string) ([]byte, error) {
 	cmd := exec.Command(r.binaryPath, args...)
