@@ -25,6 +25,9 @@ const (
 	// DocsHTTPPath is the HTTP path prefix for serving documentation.
 	DocsHTTPPath = "/docs/"
 
+	// TerraformDir is the directory containing Terraform/OpenTofu configuration files.
+	TerraformDir = "terraform"
+
 	// BinaryDepNameFormat is the format string for naming downloaded binary dependencies.
 	// It uses placeholders for name, OS, and architecture.
 	BinaryDepNameFormat = "%s_%s_%s"
@@ -67,4 +70,9 @@ func GetTaskBinPath() string {
 // GetCaddyBinPath returns the absolute path to the caddy binary.
 func GetCaddyBinPath() string {
 	return Get("caddy")
+}
+
+// GetTerraformPath returns the absolute path to the terraform directory.
+func GetTerraformPath() string {
+	return filepath.Join(".", TerraformDir)
 }

@@ -2,7 +2,12 @@
 
 https://github.com/joeblew999/infra
 
-AI and Task fiels to help with many golang thngs.
+# Endponts
+
+http://localhost:1337/
+http://localhost:1337/docs/
+
+
 
 ## Concept
 
