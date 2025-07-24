@@ -56,6 +56,11 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 		.content { flex: 1; }
 		pre, code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
 		pre { padding: 10px; overflow-x: auto; }
+		
+		@media (max-width: 768px) {
+			body { flex-direction: column; }
+			.nav { width: 100%; }
+		}
 	</style>
 </head>
 <body>

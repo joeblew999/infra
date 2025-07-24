@@ -1,4 +1,4 @@
-## `proto`: Protocol Buffers for Version Compatibility
+# Protocol Buffers
 
 This document outlines the strategic use of Protocol Buffers (Protobufs) within the `infra` system.
 

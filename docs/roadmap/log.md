@@ -1,4 +1,4 @@
-# `log`: Logging Strategy
+# Logging Strategy
 
 This document outlines the logging approach for `infra`.
 

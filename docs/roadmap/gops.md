@@ -1,4 +1,4 @@
-# `pkg/gops`: Process Management and System Introspection
+# Process Management
 
 This document outlines the design for the `pkg/gops` Go package, which will provide utilities for interacting with and monitoring system processes.
 

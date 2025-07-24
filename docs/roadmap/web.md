@@ -1,4 +1,4 @@
-# `web`: Web Application Component
+# Web Interface
 
 This document outlines the design for the `web` component of the `infra` system, which primarily serves a web application using the Datastar framework and enables Add to Home Screen (A2HS) functionality. It leverages an embedded NATS server for internal messaging and a Chi router for HTTP handling.
 

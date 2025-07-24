@@ -1,4 +1,4 @@
-# `cmd`: Go Command and Service Entry Point
+# Command Interface
 
 This document outlines the design for the `pkg/cmd` Go package, which will serve as the primary entry point for the `infra` system, providing both command-line interface (CLI) and long-running service functionalities.
 

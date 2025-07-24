@@ -1,4 +1,4 @@
-# `dep`: Go Binary Dependency Manager
+# Dependency Management
 
 This document outlines the design for a Go package to manage external binary dependencies.
 

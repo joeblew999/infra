@@ -1,4 +1,4 @@
-# `mcp`: Model Context Protocol (MCP) Servers
+# MCP Servers
 
 This document outlines the role of Model Context Protocol (MCP) servers within `infra`, focusing on their integration with AI agents and their management.
 

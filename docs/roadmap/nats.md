@@ -1,4 +1,4 @@
-## NATS: Security and Federated System
+# NATS Security
 
 This document outlines the role of NATS in providing a secure and federated system within `infra`.
 
