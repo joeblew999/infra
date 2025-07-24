@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/joeblew999/infra/pkg/dep"
-
+	"github.com/joeblew999/infra/pkg/gops"
 	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
@@ -117,6 +117,16 @@ func ensureInfraDirectories() error {
 
 func runService(devDocs bool) {
 	fmt.Println("Running in Service mode...")
+
+	// Check web server port availability
+	if !gops.IsPortAvailable(1337) {
+		log.Fatalf("Web server port 1337 is already in use. Please free the port and try again.")
+	}
+
+	// Check MCP server port availability
+	if !gops.IsPortAvailable(8080) {
+		log.Fatalf("MCP server port 8080 is already in use. Please free the port and try again.")
+	}
 
 	// Start the web server in a goroutine
 	go func() {

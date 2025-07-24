@@ -104,6 +104,29 @@ tasks:
     cmds:
       - task git:tags:delete:one TAG={{.TAG}} REMOTE={{.REMOTE}}
 
+### PORTS
+
+  this:port:free:
+    desc: Frees up the default port 8080 by killing the process using it.
+    cmds:
+      - task this:port:free:generic PORT=1337 
+
+  this:port:free:generic:
+    desc: Frees up a specified port by killing the process using it (usage - task this:port:free:generic PORT=8080)
+    vars:
+      PORT:
+        sh: echo "{{.PORT}}"
+        required: true
+    cmds:
+      - |-
+        PID=$(lsof -t -i :{{.PORT}})
+        if [ -n "$PID" ]; then
+          echo "Killing process $PID using port {{.PORT}}..."
+          kill -9 $PID
+        else
+          echo "No process found using port {{.PORT}}."
+        fi
+
   
 
   

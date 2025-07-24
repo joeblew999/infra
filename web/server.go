@@ -156,7 +156,7 @@ func (app *App) handleDocs(devDocs bool) http.HandlerFunc {
 			log.Printf("Serving from disk. Full path: %s", fullPath)
 			content, err = os.ReadFile(fullPath)
 		} else {
-			log.Printf("Serving from embedded. FilePath: %s", filePath)
+			log.Printf("Serving from embedded. Attempting to read: %s", filePath)
 			docsFS, subErr := fs.Sub(embeds.RootFS, store.DocsDir)
 			if subErr != nil {
 				log.Printf("Error getting sub-filesystem: %v", subErr)
