@@ -5,30 +5,18 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
-
 	"github.com/go-chi/chi/v5"
-
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
-
 	"github.com/starfederation/datastar-go/datastar"
 
-	"github.com/yuin/goldmark"
-	goldmark_parser "github.com/yuin/goldmark/parser"
-	goldmark_renderer_html "github.com/yuin/goldmark/renderer/html"
-
+	"github.com/joeblew999/infra/pkg/docs"
 	"github.com/joeblew999/infra/pkg/store"
-
-	embeds "github.com/joeblew999/infra/docs"
 )
 
 //go:embed index.html
@@ -37,8 +25,10 @@ var helloWorldHTML []byte
 const port = 1337
 
 type App struct {
-	natsConn *nats.Conn
-	router   *chi.Mux
+	natsConn     *nats.Conn
+	router       *chi.Mux
+	docsService  *docs.Service
+	docsRenderer *docs.Renderer
 }
 
 type Store struct {
@@ -83,11 +73,13 @@ func StartServer(devDocs bool) error {
 	defer nc.Close()
 
 	app := &App{
-		natsConn: nc,
-		router:   chi.NewRouter(),
+		natsConn:     nc,
+		router:       chi.NewRouter(),
+		docsService:  docs.New(devDocs, store.DocsDir),
+		docsRenderer: docs.NewRenderer(),
 	}
 
-	app.setupRoutes(devDocs)
+	app.setupRoutes()
 	if err := app.setupNATSStreams(ctx); err != nil {
 		return fmt.Errorf("Failed to setup NATS streams: %w", err)
 	}
@@ -101,7 +93,7 @@ func StartServer(devDocs bool) error {
 	return nil
 }
 
-func (app *App) setupRoutes(devDocs bool) {
+func (app *App) setupRoutes() {
 	app.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write(helloWorldHTML)
 	})
@@ -117,7 +109,7 @@ func (app *App) setupRoutes(devDocs bool) {
 		sse := datastar.NewSSE(w, r)
 		const message = "Hello, world!"
 
-		for i := 0; i < len(message); i++ {
+		for i := range len(message) {
 			if err := sse.PatchElements(`<div id="message">` + message[:i+1] + `</div>`); err != nil {
 				return
 			}
@@ -136,70 +128,37 @@ func (app *App) setupRoutes(devDocs bool) {
 	})
 
 	// Docs handler
-	app.router.Get(store.DocsHTTPPath+"*", app.handleDocs(devDocs))
+	app.router.Get(store.DocsHTTPPath+"*", app.handleDocs)
 }
 
-func (app *App) handleDocs(devDocs bool) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		filePath := r.URL.Path[len(store.DocsHTTPPath):]
-		log.Printf("Requested filePath: %s", filePath)
+func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
+	filePath := r.URL.Path[len(store.DocsHTTPPath):]
+	log.Printf("Requested filePath: %s", filePath)
 
-		// If no specific file is requested, serve the main roadmap
-		if filePath == "" {
-			filePath = "roadmap/ROADMAP.md"
-		}
-
-		// Debugging: List files in embeds.EmbeddedFS
-		fs.WalkDir(embeds.EmbeddedFS, ".", func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			log.Printf("RootFS contains: %s", path)
-			return nil
-		})
-
-		var content []byte
-		var err error
-
-		if devDocs {
-			fullPath := filepath.Join(store.DocsDir, filePath)
-			log.Printf("Serving from disk. Full path: %s", fullPath)
-			content, err = os.ReadFile(fullPath)
-		} else {
-			log.Printf("Serving from embedded. Attempting to read: %s", filePath)
-			// Since the embedded files are already at the root level, read directly
-			content, err = fs.ReadFile(embeds.EmbeddedFS, filePath)
-		}
-
-		if err != nil {
-			log.Printf("Error reading document %s: %v", filePath, err)
-			http.Error(w, "Document not found", http.StatusNotFound)
-			return
-		}
-
-		// Render Markdown to HTML
-		md := goldmark.New(
-			goldmark.WithParserOptions(
-				goldmark_parser.WithAutoHeadingID(),
-			),
-			goldmark.WithRendererOptions(
-				goldmark_renderer_html.WithUnsafe(),
-			),
-		)
-		var buf strings.Builder
-		if err := md.Convert(content, &buf); err != nil {
-			http.Error(w, "Failed to render document", http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte("<!DOCTYPE html><html><head><title>Docs</title></head><body>"))
-		w.Write([]byte(buf.String()))
-		w.Write([]byte("</body></html>"))
+	// Read document content
+	content, err := app.docsService.ReadFile(filePath)
+	if err != nil {
+		log.Printf("Error reading document %s: %v", filePath, err)
+		http.Error(w, "Document not found", http.StatusNotFound)
+		return
 	}
+
+	// Convert markdown to HTML
+	htmlContent, err := app.docsRenderer.RenderToHTML(content)
+	if err != nil {
+		log.Printf("Error rendering document %s: %v", filePath, err)
+		http.Error(w, "Failed to render document", http.StatusInternalServerError)
+		return
+	}
+
+	// Wrap in HTML page structure
+	fullHTML := app.docsRenderer.RenderToHTMLPage("Docs", htmlContent)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(fullHTML))
 }
 
-func (app *App) setupNATSStreams(ctx context.Context) error {
+func (app *App) setupNATSStreams(_ context.Context) error {
 	// Create JetStream context
 	js, err := app.natsConn.JetStream()
 	if err != nil {
