@@ -1,0 +1,23 @@
+2025/07/23 22:39:19 Ensured directory exists: .dep
+2025/07/23 22:39:19 Ensured directory exists: .bin
+2025/07/23 22:39:19 Ensured directory exists: .data
+2025/07/23 22:39:19 Ensured directory exists: taskfiles
+2025/07/23 22:39:19 Ensuring core binaries...
+2025/07/23 22:39:19 Checking task (version v3.37.0) from go-task/task
+2025/07/23 22:39:19 Checking task (version v3.37.0) from go-task/task
+2025/07/23 22:39:19   task already exists at .dep/task_darwin_arm64. Skipping download.
+2025/07/23 22:39:19 Checking tofu (version v1.7.2) from opentofu/opentofu
+2025/07/23 22:39:19 Checking tofu (version v1.7.2) from opentofu/opentofu
+2025/07/23 22:39:19   tofu already exists at .dep/tofu_darwin_arm64. Skipping download.
+2025/07/23 22:39:19 Checking caddy (version v2.10.0) from caddyserver/caddy
+2025/07/23 22:39:19 Checking caddy (version v2.10.0) from caddyserver/caddy
+2025/07/23 22:39:19   caddy already exists at .dep/caddy_darwin_arm64. Skipping download.
+2025/07/23 22:39:19 Core binaries ensured.
+2025/07/23 22:39:19 Service started. Press Ctrl+C to exit.
+2025/07/23 22:39:19 Starting embedded NATS server...
+2025/07/23 22:39:19 MCP server starting on :8080
+2025/07/23 22:39:19 Embedded NATS server started
+2025/07/23 22:39:19 Stream may already exist: nats: no responders available for request
+2025/07/23 22:39:19 NATS JetStream setup complete - Stream: MESSAGES
+2025/07/23 22:39:19 Starting web server on http://localhost:1337
+2025/07/23 22:39:19 Embedded NATS server running with JetStream enabled

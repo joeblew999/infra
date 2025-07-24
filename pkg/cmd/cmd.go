@@ -10,15 +10,16 @@ import (
 
 	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/mcp"
+
 	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "infra",
-	Short: "Infra is a tool for managing infrastructure",
-	Long:  `A comprehensive tool for managing infrastructure, including dependencies, services, and more.`,
+	Use:     "infra",
+	Short:   "Infra is a tool for managing infrastructure",
+	Long:    `A comprehensive tool for managing infrastructure, including dependencies, services, and more.`,
 	Version: "0.0.1",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Default behavior: run as a service
@@ -38,6 +39,16 @@ func init() {
 	rootCmd.AddCommand(serviceCmd)
 	rootCmd.AddCommand(tofuCmd)
 	rootCmd.AddCommand(taskCmd)
+	rootCmd.AddCommand(caddyCmd)
+}
+
+var caddyCmd = &cobra.Command{
+	Use:                "caddy",
+	Short:              "Run caddy commands",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return executeBinary(store.GetCaddyBinPath(), args...)
+	},
 }
 
 var tofuCmd = &cobra.Command{
@@ -106,17 +117,23 @@ func ensureInfraDirectories() error {
 func runService() {
 	fmt.Println("Running in Service mode...")
 
-	// Start the web server
-	if err := web.StartServer(); err != nil {
-		log.Fatalf("Failed to start web server: %v", err)
-	}
+	// Start the web server in a goroutine
+	go func() {
+		if err := web.StartServer(); err != nil {
+			log.Fatalf("Failed to start web server: %v", err)
+		}
+	}()
 
-	// Start the MCP server
-	if err := mcp.StartServer(); err != nil {
-		log.Fatalf("Failed to start MCP server: %v", err)
-	}
+	// Start the MCP server in a goroutine
+	go func() {
+		if err := mcp.StartServer(); err != nil {
+			log.Fatalf("Failed to start MCP server: %v", err)
+		}
+	}()
 
 	log.Println("Service started. Press Ctrl+C to exit.")
+
+	
 
 	// Set up a channel to listen for OS signals
 	sigChan := make(chan os.Signal, 1)

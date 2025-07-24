@@ -34,8 +34,8 @@ var embeddedCoreBinaries = []CoreBinary{
 	{
 		Name:       "task",
 		Repo:       "go-task/task",
-		Version:    "v3.37.0", // Example version, update as needed
-		ReleaseURL: "https://github.com/go-task/task/releases/tag/v3.37.0",
+		Version:    "v3.44.1", // Example version, update as needed
+		ReleaseURL: "https://github.com/go-task/task/releases/tag/v3.44.1",
 		Assets: []AssetSelector{
 			{OS: "darwin", Arch: "amd64", Match: `task_darwin_amd64\.tar\.gz$`},
 			{OS: "darwin", Arch: "arm64", Match: `task_darwin_arm64\.tar\.gz$`},

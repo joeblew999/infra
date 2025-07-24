@@ -11,6 +11,7 @@ import (
 
 	"github.com/delaneyj/toolbelt/embeddednats"
 	"github.com/go-chi/chi/v5"
+	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/starfederation/datastar-go/datastar"
 )
@@ -37,12 +38,20 @@ type Message struct {
 func StartServer() error {
 	ctx := context.Background()
 
+	// Configure NATS server options for logging
+	natsOpts := &server.Options{
+		Debug: true, // Enable debug logging
+		Trace: true, // Enable trace logging
+	}
+
 	// Initialize embedded NATS server
 	log.Println("Starting embedded NATS server...")
 	natsServer, err := embeddednats.New(ctx,
 		embeddednats.WithDirectory("./.data/nats"), // Store directory
+		embeddednats.WithNATSServerOptions(natsOpts),
 	)
 	if err != nil {
+		log.Printf("Failed to create embedded NATS server: %v", err)
 		return fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 	defer natsServer.Close()
@@ -64,7 +73,9 @@ func StartServer() error {
 	}
 
 	app.setupRoutes()
-	app.setupNATSStreams(ctx)
+	if err := app.setupNATSStreams(ctx); err != nil {
+		return fmt.Errorf("Failed to setup NATS streams: %w", err)
+	}
 
 	log.Printf("Starting web server on http://localhost:%d", port)
 	log.Printf("Embedded NATS server running with JetStream enabled")
@@ -110,11 +121,12 @@ func (app *App) setupRoutes() {
 	})
 }
 
-func (app *App) setupNATSStreams(ctx context.Context) {
+func (app *App) setupNATSStreams(ctx context.Context) error {
 	// Create JetStream context
 	js, err := app.natsConn.JetStream()
 	if err != nil {
-		log.Fatal("Failed to create JetStream context:", err)
+		log.Printf("Failed to create JetStream context: %v", err)
+		return fmt.Errorf("Failed to create JetStream context: %w", err)
 	}
 
 	// Create a stream for messages
@@ -130,6 +142,7 @@ func (app *App) setupNATSStreams(ctx context.Context) {
 	}
 
 	log.Printf("NATS JetStream setup complete - Stream: %s", streamName)
+	return nil
 }
 
 func (app *App) handleNATSStream(w http.ResponseWriter, r *http.Request) {

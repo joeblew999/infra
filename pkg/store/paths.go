@@ -57,3 +57,8 @@ func GetTofuBinPath() string {
 func GetTaskBinPath() string {
 	return Get("task")
 }
+
+// GetCaddyBinPath returns the absolute path to the caddy binary.
+func GetCaddyBinPath() string {
+	return Get("caddy")
+}

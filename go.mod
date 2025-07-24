@@ -6,6 +6,7 @@ require (
 	github.com/delaneyj/toolbelt v0.5.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/nats-io/nats.go v1.43.0
+	github.com/spf13/cobra v1.9.1
 	github.com/starfederation/datastar-go v1.0.1
 )
 
@@ -21,7 +22,6 @@ require (
 	github.com/nats-io/nats-server/v2 v2.11.6 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
