@@ -48,6 +48,8 @@ MCP servers act as the bridge between AI agents and specific functionalities or 
 
 *   **Delve DAP MCP Server:** https://github.com/go-delve/mcp-dap-server
 
+- uses https://github.com/google/go-dap 
+
 #### User-Contributed MCPs
 
 <!-- IMPORTANT: Do not remove these links. They are intentionally added by the user. -->

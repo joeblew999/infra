@@ -32,6 +32,10 @@ tasks:
       - echo
     silent: true
 
+### SERVER
+
+# docs on: # http://localhost:1337/docs/roadmap/dep.md
+
   this:serve:
     desc: Run the project (usage - task this:dev [-- <args>])
     cmds:
@@ -104,12 +108,19 @@ tasks:
     cmds:
       - task git:tags:delete:one TAG={{.TAG}} REMOTE={{.REMOTE}}
 
+### LOGS
+
+
 ### PORTS
 
   this:port:free:
     desc: Frees up the default port 8080 by killing the process using it.
     cmds:
+      # web server.
       - task this:port:free:generic PORT=1337 
+      # MCP server.
+      - task this:port:free:generic PORT=8080
+
 
   this:port:free:generic:
     desc: Frees up a specified port by killing the process using it (usage - task this:port:free:generic PORT=8080)

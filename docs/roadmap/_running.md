@@ -4,13 +4,24 @@ just for me.
 
 !! AI should not touch this !!
 
-cmd needs to be refactored as its getting too big.
+---
+
+pkg/cmd.go is too big too ? ask gemini for advice.  
 
 ---
 
+web/server.go is too big too ? ask gemini for advice. 
+
+---
+
+Need a good MCP to Help gemini to write and debig golang.  See MCP docs.
+
+---
+
+
 We need an easy way for nodejs, deno and bun devs be able to run my golang binary. 
 
-there are standard way to do this. this is really part of packaging.md 
+I have a prototype in pack foolder.   ask gemini for advice on it, but do not change anything yet. Claude made this for us.
 
 ---
 

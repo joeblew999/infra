@@ -6,6 +6,8 @@ This document outlines the design for a Go package to manage external binary dep
 
 <!-- This section tracks, in a KISS way, what is still missing or needs attention. -->
 
+caddy, task, tofu is done.
+
 
 
 ## What we dep
@@ -14,15 +16,31 @@ This document outlines the design for a Go package to manage external binary dep
 
 task: https://github.com/go-task/task, https://github.com/go-task/task/releases/tag/v3.44.1
 
+- so we can have task locally
+
+gh: https://github.com/cli/cli, https://github.com/cli/cli/releases/tag/v2.76.1
+
+- so the deps debugger works.
+
 caddy: https://github.com/caddyserver/caddy, https://github.com/caddyserver/caddy/releases/tag/v2.10.0
+
+- so we can wrap it all with caddy and have local https, so that things like Service works and A2HS can works
 
 tofu: https://github.com/tofuutils, https://github.com/tofuutils/tenv
 
+- SO we can do deployments.
+
 digger: https://github.com/diggerhq/digger, https://github.com/diggerhq/digger/releases/tag/v0.6.110
+
+- Later to see how we can use github CI to help with the tofu / terraform.
 
 bento: https://github.com/warpstreamlabs/bento, https://github.com/warpstreamlabs/bento/releases/tag/v1.9.0
 
+- So we can use it for reactive workflows
+
 incus: https://github.com/lxc/incus, https://github.com/lxc/incus/releases/tag/v6.14.0
+
+- MUCH later, so we can run dockers on dedciaetd hardware in the cloud. this needs linux.
 
 ### 1. Vision & Motivation
 To provide a reliable, self-contained mechanism for `infra` to manage its essential external binary dependencies (like `tofu`, `task`, `caddy`). This ensures that these tools are always available and correctly versioned, simplifying development and deployment across different environments.

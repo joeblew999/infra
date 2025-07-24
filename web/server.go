@@ -14,16 +14,21 @@ import (
 	"time"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
+
 	"github.com/go-chi/chi/v5"
+
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
+
 	"github.com/starfederation/datastar-go/datastar"
+
 	"github.com/yuin/goldmark"
 	goldmark_parser "github.com/yuin/goldmark/parser"
 	goldmark_renderer_html "github.com/yuin/goldmark/renderer/html"
 
-	"github.com/joeblew999/infra/pkg/embeds"
 	"github.com/joeblew999/infra/pkg/store"
+
+	embeds "github.com/joeblew999/infra/docs"
 )
 
 //go:embed index.html
@@ -139,8 +144,13 @@ func (app *App) handleDocs(devDocs bool) http.HandlerFunc {
 		filePath := r.URL.Path[len(store.DocsHTTPPath):]
 		log.Printf("Requested filePath: %s", filePath)
 
-		// Debugging: List files in embeds.RootFS
-		fs.WalkDir(embeds.RootFS, ".", func(path string, d fs.DirEntry, err error) error {
+		// If no specific file is requested, serve the main roadmap
+		if filePath == "" {
+			filePath = "roadmap/ROADMAP.md"
+		}
+
+		// Debugging: List files in embeds.EmbeddedFS
+		fs.WalkDir(embeds.EmbeddedFS, ".", func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -157,21 +167,8 @@ func (app *App) handleDocs(devDocs bool) http.HandlerFunc {
 			content, err = os.ReadFile(fullPath)
 		} else {
 			log.Printf("Serving from embedded. Attempting to read: %s", filePath)
-			docsFS, subErr := fs.Sub(embeds.RootFS, store.DocsDir)
-			if subErr != nil {
-				log.Printf("Error getting sub-filesystem: %v", subErr)
-				http.Error(w, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-			// Debugging: List files in docsFS
-			fs.WalkDir(docsFS, ".", func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				log.Printf("docsFS contains: %s", path)
-				return nil
-			})
-			content, err = fs.ReadFile(docsFS, filePath)
+			// Since the embedded files are already at the root level, read directly
+			content, err = fs.ReadFile(embeds.EmbeddedFS, filePath)
 		}
 
 		if err != nil {
