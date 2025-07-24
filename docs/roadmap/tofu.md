@@ -23,11 +23,17 @@ Providers required by configuration:
 ```
 
 
-## Providers
+## Core Providers
 
-- fly to run this server.
+- fly.io to run this server: https://registry.terraform.io/providers/fly-apps/fly/latest/docs
 
-- cloudflare for domains and tunnels.
+- cloudflare for domains and tunnels: https://registry.terraform.io/providers/cloudflare/cloudflare/latest/docs 
+
+- incus: https://registry.terraform.io/providers/lxc/incus/latest/docs
+
+- null: https://registry.terraform.io/providers/hashicorp/null/latest/docs
+
+
 
 
 
