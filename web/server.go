@@ -151,8 +151,9 @@ func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Wrap in HTML page structure
-	fullHTML := app.docsRenderer.RenderToHTMLPage("Docs", htmlContent)
+	// Wrap in HTML page structure with navigation
+	nav := app.docsService.GetNavigation()
+	fullHTML := app.docsRenderer.RenderToHTMLPage("Docs", htmlContent, nav)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(fullHTML))
