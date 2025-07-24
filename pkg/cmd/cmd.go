@@ -9,7 +9,6 @@ import (
 	"syscall"
 
 	"github.com/joeblew999/infra/pkg/dep"
-	"github.com/joeblew999/infra/pkg/mcp"
 
 	"github.com/joeblew999/infra/pkg/store"
 	"github.com/joeblew999/infra/web"
@@ -23,7 +22,7 @@ var rootCmd = &cobra.Command{
 	Version: "0.0.1",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Default behavior: run as a service
-		runService()
+		runService(false)
 	},
 }
 
@@ -31,12 +30,14 @@ var serviceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Run in service mode",
 	Run: func(cmd *cobra.Command, args []string) {
-		runService()
+		devDocs, _ := cmd.Flags().GetBool("dev-docs")
+		runService(devDocs)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(serviceCmd)
+	serviceCmd.Flags().Bool("dev-docs", false, "Enable development mode for docs (serve from disk)")
 	rootCmd.AddCommand(tofuCmd)
 	rootCmd.AddCommand(taskCmd)
 	rootCmd.AddCommand(caddyCmd)
@@ -114,22 +115,22 @@ func ensureInfraDirectories() error {
 	return nil
 }
 
-func runService() {
+func runService(devDocs bool) {
 	fmt.Println("Running in Service mode...")
 
 	// Start the web server in a goroutine
 	go func() {
-		if err := web.StartServer(); err != nil {
+		if err := web.StartServer(devDocs); err != nil {
 			log.Fatalf("Failed to start web server: %v", err)
 		}
 	}()
 
 	// Start the MCP server in a goroutine
-	go func() {
-		if err := mcp.StartServer(); err != nil {
-			log.Fatalf("Failed to start MCP server: %v", err)
-		}
-	}()
+	// go func() {
+	// 	if err := mcp.StartServer(); err != nil {
+	// 		log.Fatalf("Failed to start MCP server: %v", err)
+	// 	}
+	// }()
 
 	log.Println("Service started. Press Ctrl+C to exit.")
 

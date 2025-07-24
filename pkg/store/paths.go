@@ -19,6 +19,12 @@ const (
 	// DataDir is the root directory for all application data (e.g., databases, NATS stores).
 	DataDir = ".data"
 
+	// DocsDir is the directory containing Markdown documentation files.
+	DocsDir = "docs"
+
+	// DocsHTTPPath is the HTTP path prefix for serving documentation.
+	DocsHTTPPath = "/docs/"
+
 	// BinaryDepNameFormat is the format string for naming downloaded binary dependencies.
 	// It uses placeholders for name, OS, and architecture.
 	BinaryDepNameFormat = "%s_%s_%s"

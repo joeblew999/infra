@@ -9,6 +9,7 @@ require (
 	github.com/nats-io/nats.go v1.43.0
 	github.com/spf13/cobra v1.9.1
 	github.com/starfederation/datastar-go v1.0.1
+	github.com/yuin/goldmark v1.7.13
 )
 
 require (

@@ -1,0 +1,37 @@
+{
+  "name": "your-go-tool",
+  "version": "1.0.0",
+  "description": "Your Go binary packaged for Node.js/Deno/Bun",
+  "main": "index.js",
+  "bin": {
+    "your-tool": "./bin/your-tool"
+  },
+  "scripts": {
+    "postinstall": "node install.js",
+    "preuninstall": "node uninstall.js"
+  },
+  "files": [
+    "index.js",
+    "install.js",
+    "uninstall.js",
+    "bin/"
+  ],
+  "keywords": [
+    "golang",
+    "binary",
+    "cli"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/your-go-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/your-go-tool/issues"
+  },
+  "homepage": "https://github.com/yourusername/your-go-tool#readme"
+}

@@ -18,66 +18,66 @@ func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
 
 	installPath := Get(binary.Name)
 
-		var release *GitHubRelease
-		var err error
+	var release *GitHubRelease
+	var err error
 
-		if debug && binary.Name == "caddy" {
-			log.Println("  Using gh cli for Caddy release info (debug mode).")
-			release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
-		} else {
-			release, err = getGitHubRelease(binary.Repo, binary.Version)
+	if debug && binary.Name == "caddy" {
+		log.Println("  Using gh cli for Caddy release info (debug mode).")
+		release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
+	} else {
+		release, err = getGitHubRelease(binary.Repo, binary.Version)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to get GitHub release for %s: %w", binary.Name, err)
+	}
+
+	asset, err := selectAsset(release, binary.Assets)
+	if err != nil {
+		return fmt.Errorf("failed to select asset for %s: %w", binary.Name, err)
+	}
+
+	tmpDir := filepath.Join(store.GetDepPath(), "tmp", binary.Name)
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return fmt.Errorf("failed to create temporary directory %s: %w", tmpDir, err)
+	}
+	defer os.RemoveAll(tmpDir) // Clean up temporary directory
+
+	assetPath, err := downloadFile(asset.BrowserDownloadURL, tmpDir, asset.Name)
+	if err != nil {
+		return fmt.Errorf("failed to download asset %s: %w", asset.Name, err)
+	}
+
+	log.Printf("  Downloaded %s to %s", asset.Name, assetPath)
+
+	if strings.HasSuffix(asset.Name, ".zip") {
+		if err := unzip(assetPath, tmpDir); err != nil {
+			return fmt.Errorf("failed to unzip %s: %w", asset.Name, err)
 		}
-
-		if err != nil {
-			return fmt.Errorf("failed to get GitHub release for %s: %w", binary.Name, err)
+	} else if strings.HasSuffix(asset.Name, ".tar.gz") {
+		if err := untarGz(assetPath, tmpDir); err != nil {
+			return fmt.Errorf("failed to untar.gz %s: %w", asset.Name, err)
 		}
+	} else {
+		return fmt.Errorf("unsupported archive format for %s", asset.Name)
+	}
 
-		asset, err := selectAsset(release, binary.Assets)
-		if err != nil {
-			return fmt.Errorf("failed to select asset for %s: %w", binary.Name, err)
-		}
+	// Move the extracted binary to its final destination
+	// For now, assume the binary is directly in the extracted folder with the same name as binary.Name
+	// This will need to be refined with in_archive_path later.
+	srcPath := filepath.Join(tmpDir, binary.Name)
+	if runtime.GOOS == "windows" {
+		srcPath += ".exe"
+	}
 
-		tmpDir := filepath.Join(store.GetDepPath(), "tmp", binary.Name)
-		if err := os.MkdirAll(tmpDir, 0755); err != nil {
-			return fmt.Errorf("failed to create temporary directory %s: %w", tmpDir, err)
-		}
-		defer os.RemoveAll(tmpDir) // Clean up temporary directory
+	if err := os.Rename(srcPath, installPath); err != nil {
+		return fmt.Errorf("failed to move binary from %s to %s: %w", srcPath, installPath, err)
+	}
 
-		assetPath, err := downloadFile(asset.BrowserDownloadURL, tmpDir, asset.Name)
-		if err != nil {
-			return fmt.Errorf("failed to download asset %s: %w", asset.Name, err)
-		}
+	if err := os.Chmod(installPath, 0755); err != nil {
+		return fmt.Errorf("failed to set executable permissions for %s: %w", installPath, err)
+	}
 
-		log.Printf("  Downloaded %s to %s", asset.Name, assetPath)
-
-		if strings.HasSuffix(asset.Name, ".zip") {
-			if err := unzip(assetPath, tmpDir); err != nil {
-				return fmt.Errorf("failed to unzip %s: %w", asset.Name, err)
-			}
-		} else if strings.HasSuffix(asset.Name, ".tar.gz") {
-			if err := untarGz(assetPath, tmpDir); err != nil {
-				return fmt.Errorf("failed to untar.gz %s: %w", asset.Name, err)
-			}
-		} else {
-			return fmt.Errorf("unsupported archive format for %s", asset.Name)
-		}
-
-		// Move the extracted binary to its final destination
-		// For now, assume the binary is directly in the extracted folder with the same name as binary.Name
-		// This will need to be refined with in_archive_path later.
-		srcPath := filepath.Join(tmpDir, binary.Name)
-		if runtime.GOOS == "windows" {
-			srcPath += ".exe"
-		}
-
-		if err := os.Rename(srcPath, installPath); err != nil {
-			return fmt.Errorf("failed to move binary from %s to %s: %w", srcPath, installPath, err)
-		}
-
-		if err := os.Chmod(installPath, 0755); err != nil {
-			return fmt.Errorf("failed to set executable permissions for %s: %w", installPath, err)
-		}
-
-		log.Printf("  Successfully installed %s to %s", binary.Name, installPath)
+	log.Printf("  Successfully installed %s to %s", binary.Name, installPath)
 	return nil
 }

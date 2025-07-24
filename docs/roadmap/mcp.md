@@ -64,3 +64,6 @@ MCP servers act as the bridge between AI agents and specific functionalities or 
 *   **`dep` Package:** The `dep` package will be responsible for managing the binaries for these MCP tools.
 *   **`pkg/cmd`:** The `pkg/cmd` package will provide CLI commands to interact with MCP servers.
 *   **Taskfiles:** Taskfiles will be used to orchestrate the execution of these tools, providing a consistent interface for developers.
+
+
+

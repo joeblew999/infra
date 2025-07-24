@@ -5,8 +5,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
@@ -14,6 +18,12 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 	"github.com/nats-io/nats.go"
 	"github.com/starfederation/datastar-go/datastar"
+	"github.com/yuin/goldmark"
+	goldmark_parser "github.com/yuin/goldmark/parser"
+	goldmark_renderer_html "github.com/yuin/goldmark/renderer/html"
+
+	"github.com/joeblew999/infra/pkg/embeds"
+	"github.com/joeblew999/infra/pkg/store"
 )
 
 //go:embed index.html
@@ -35,7 +45,7 @@ type Message struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func StartServer() error {
+func StartServer(devDocs bool) error {
 	ctx := context.Background()
 
 	// Configure NATS server options for logging
@@ -72,7 +82,7 @@ func StartServer() error {
 		router:   chi.NewRouter(),
 	}
 
-	app.setupRoutes()
+	app.setupRoutes(devDocs)
 	if err := app.setupNATSStreams(ctx); err != nil {
 		return fmt.Errorf("Failed to setup NATS streams: %w", err)
 	}
@@ -86,7 +96,7 @@ func StartServer() error {
 	return nil
 }
 
-func (app *App) setupRoutes() {
+func (app *App) setupRoutes(devDocs bool) {
 	app.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write(helloWorldHTML)
 	})
@@ -119,6 +129,77 @@ func (app *App) setupRoutes() {
 	app.router.Post("/publish", func(w http.ResponseWriter, r *http.Request) {
 		app.handlePublish(w, r)
 	})
+
+	// Docs handler
+	app.router.Get(store.DocsHTTPPath+"*", app.handleDocs(devDocs))
+}
+
+func (app *App) handleDocs(devDocs bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		filePath := r.URL.Path[len(store.DocsHTTPPath):]
+		log.Printf("Requested filePath: %s", filePath)
+
+		// Debugging: List files in embeds.RootFS
+		fs.WalkDir(embeds.RootFS, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			log.Printf("RootFS contains: %s", path)
+			return nil
+		})
+
+		var content []byte
+		var err error
+
+		if devDocs {
+			fullPath := filepath.Join(store.DocsDir, filePath)
+			log.Printf("Serving from disk. Full path: %s", fullPath)
+			content, err = os.ReadFile(fullPath)
+		} else {
+			log.Printf("Serving from embedded. FilePath: %s", filePath)
+			docsFS, subErr := fs.Sub(embeds.RootFS, store.DocsDir)
+			if subErr != nil {
+				log.Printf("Error getting sub-filesystem: %v", subErr)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+			// Debugging: List files in docsFS
+			fs.WalkDir(docsFS, ".", func(path string, d fs.DirEntry, err error) error {
+				if err != nil {
+					return err
+				}
+				log.Printf("docsFS contains: %s", path)
+				return nil
+			})
+			content, err = fs.ReadFile(docsFS, filePath)
+		}
+
+		if err != nil {
+			log.Printf("Error reading document %s: %v", filePath, err)
+			http.Error(w, "Document not found", http.StatusNotFound)
+			return
+		}
+
+		// Render Markdown to HTML
+		md := goldmark.New(
+			goldmark.WithParserOptions(
+				goldmark_parser.WithAutoHeadingID(),
+			),
+			goldmark.WithRendererOptions(
+				goldmark_renderer_html.WithUnsafe(),
+			),
+		)
+		var buf strings.Builder
+		if err := md.Convert(content, &buf); err != nil {
+			http.Error(w, "Failed to render document", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write([]byte("<!DOCTYPE html><html><head><title>Docs</title></head><body>"))
+		w.Write([]byte(buf.String()))
+		w.Write([]byte("</body></html>"))
+	}
 }
 
 func (app *App) setupNATSStreams(ctx context.Context) error {
