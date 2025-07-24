@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/joeblew999/infra/pkg/store"
 )
@@ -38,8 +39,33 @@ func EnsureInfraDirectories() error {
 }
 
 func ExecuteBinary(binary string, args ...string) error {
-	cmd := exec.Command(binary, args...)
+	// Save current working directory
+	oldDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %w", err)
+	}
+
+	// Get absolute path of the binary before changing directory
+	absoluteBinaryPath, err := filepath.Abs(binary)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path of binary: %w", err)
+	}
+
+	// Change to the terraform directory
+	if err := os.Chdir(store.GetTerraformPath()); err != nil {
+		return fmt.Errorf("failed to change directory to terraform: %w", err)
+	}
+
+	cmd := exec.Command(absoluteBinaryPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+
+	err = cmd.Run()
+
+	// Change back to the original working directory
+	if err := os.Chdir(oldDir); err != nil {
+		return fmt.Errorf("failed to change back to original directory: %w", err)
+	}
+
+	return err
 }

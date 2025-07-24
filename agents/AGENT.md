@@ -8,6 +8,10 @@ Use the Taskfiles as much as possible.
 
 Use the installed MCP Servers as much as possible.
 
+## Golang Debugging
+
+The main.go runs everything. There is no Config to manage. So it is easy for you to always debug from their.
+
 
 
 ## AI Context Files
