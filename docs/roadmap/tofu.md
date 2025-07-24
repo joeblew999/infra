@@ -10,10 +10,8 @@ Configs are held in the terraform folder.
 
 pkg/dep ensures tofu binary is download.
 pkg/tofu in place to run the tofu binary.
+pkg/cmd is hooked up to pkg/tofu, so we can run tofu commands.
 
-## CLI
-
-Add to CLI for easy calling for devs. 
 
 
 ## Providers
