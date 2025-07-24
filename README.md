@@ -32,15 +32,9 @@ If you want another AI setup let me know.
 
 ## Deps
 
-task: https://github.com/go-task/task, https://github.com/go-task/task/releases/tag/v3.44.1
+See ./roadmap/dep.md
 
-caddy: https://github.com/caddyserver/caddy, https://github.com/caddyserver/caddy/releases/tag/v2.10.0
 
-tofu: https://github.com/tofuutils, https://github.com/tofuutils/tenv
-
-bento: https://github.com/warpstreamlabs/bento, https://github.com/warpstreamlabs/bento/releases/tag/v1.9.0
-
-incus: https://github.com/lxc/incus, https://github.com/lxc/incus/releases/tag/v6.14.0
 
 ## Deployment
 

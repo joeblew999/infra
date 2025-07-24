@@ -14,11 +14,9 @@ import (
 type tofuInstaller struct{}
 
 func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
-	log.Printf("Checking %s (version %s) from %s", binary.Name, binary.Version, binary.Repo)
+	log.Printf("  Attempting download and installation of %s...", binary.Name)
 
-	installPath := Get(binary.Name) // Use Get to determine the expected install path
-	if _, err := os.Stat(installPath); os.IsNotExist(err) {
-		log.Printf("  %s not found. Attempting download and installation...", binary.Name)
+	installPath := Get(binary.Name)
 
 		var release *GitHubRelease
 		var err error
@@ -81,10 +79,5 @@ func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
 		}
 
 		log.Printf("  Successfully installed %s to %s", binary.Name, installPath)
-	} else if err != nil {
-		return fmt.Errorf("error checking existence of %s: %w", binary.Name, err)
-	} else {
-		log.Printf("  %s already exists at %s. Skipping download.", binary.Name, installPath)
-	}
 	return nil
 }

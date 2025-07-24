@@ -8,6 +8,15 @@ To provide simple, structured, and centralized logging for all `infra` component
 
 ### 2. Core Components
 
+!! DO not remove these links
+
+https://github.com/samber/slog-nats so that we can send logs into NATS. MCP NATS will latter allow AI to see everything globally to help with distributed debugging.
+
+https://github.com/samber?tab=repositories has all the slog adapters. We might leverage them latetr to surface logs into other systems. 
+
+https://github.com/samber/do looks interesting for later. We can more easily manage Services within Infra with this ?
+
+
 *   **`slog`:** All Go code will use Go's built-in `slog` package for structured logging.
 *   **`slog-nats`:** The `github.com/samber/slog-nats` adapter will send `slog` output to NATS. This allows logs from distributed `infra` services to be collected centrally.
 

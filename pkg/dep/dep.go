@@ -1,11 +1,53 @@
 package dep
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/joeblew999/infra/pkg/store"
 )
+
+// BinaryMeta stores metadata about an installed binary.
+type BinaryMeta struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+// getMetaPath returns the expected path for the metadata file.
+func getMetaPath(binaryPath string) string {
+	return binaryPath + "_meta.json"
+}
+
+// readMeta reads the metadata file for a given binary path.
+func readMeta(binaryPath string) (*BinaryMeta, error) {
+	metaPath := getMetaPath(binaryPath)
+	data, err := os.ReadFile(metaPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var meta BinaryMeta
+	if err := json.Unmarshal(data, &meta); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal metadata for %s: %w", binaryPath, err)
+	}
+	return &meta, nil
+}
+
+// writeMeta writes the metadata file for a given binary path.
+func writeMeta(binaryPath string, meta *BinaryMeta) error {
+	metaPath := getMetaPath(binaryPath)
+	data, err := json.MarshalIndent(meta, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal metadata for %s: %w", binaryPath, err)
+	}
+
+	if err := os.WriteFile(metaPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write metadata for %s: %w", binaryPath, err)
+	}
+	return nil
+}
 
 // CoreBinary represents a core bootstrapping binary.
 type CoreBinary struct {
@@ -80,6 +122,19 @@ func Ensure(debug bool) error {
 	for _, binary := range embeddedCoreBinaries {
 		log.Printf("Checking %s (version %s) from %s", binary.Name, binary.Version, binary.Repo)
 
+		installPath := Get(binary.Name)
+		currentMeta, err := readMeta(installPath)
+		if err == nil && currentMeta.Version == binary.Version {
+			log.Printf("  %s (version %s) already exists and is up to date. Skipping download.", binary.Name, binary.Version)
+			continue
+		} else if err != nil && !os.IsNotExist(err) {
+			log.Printf("  Error reading metadata for %s: %v. Attempting re-download.", binary.Name, err)
+		} else if currentMeta != nil && currentMeta.Version != binary.Version {
+			log.Printf("  %s exists but version mismatch (expected %s, got %s). Attempting re-download.", binary.Name, binary.Version, currentMeta.Version)
+		} else {
+			log.Printf("  %s not found or metadata missing. Attempting download and installation...", binary.Name)
+		}
+
 		// Determine the correct installer based on binary name
 		var installer Installer
 		switch binary.Name {
@@ -95,6 +150,11 @@ func Ensure(debug bool) error {
 
 		if err := installer.Install(binary, debug); err != nil {
 			return fmt.Errorf("failed to install %s: %w", binary.Name, err)
+		}
+
+		// Write metadata after successful installation
+		if err := writeMeta(installPath, &BinaryMeta{Name: binary.Name, Version: binary.Version}); err != nil {
+			return fmt.Errorf("failed to write metadata for %s: %w", binary.Name, err)
 		}
 	}
 

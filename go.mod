@@ -5,6 +5,7 @@ go 1.24.5
 require (
 	github.com/delaneyj/toolbelt v0.5.0
 	github.com/go-chi/chi/v5 v5.2.2
+	github.com/nats-io/nats-server/v2 v2.11.6
 	github.com/nats-io/nats.go v1.43.0
 	github.com/spf13/cobra v1.9.1
 	github.com/starfederation/datastar-go v1.0.1
@@ -19,7 +20,6 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/jwt/v2 v2.7.4 // indirect
-	github.com/nats-io/nats-server/v2 v2.11.6 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect

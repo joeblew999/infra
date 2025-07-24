@@ -133,8 +133,6 @@ func runService() {
 
 	log.Println("Service started. Press Ctrl+C to exit.")
 
-	
-
 	// Set up a channel to listen for OS signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
