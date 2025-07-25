@@ -23,6 +23,7 @@ const (
 // Hardcoded for simplicity, can be made dynamic if needed, like using git reflection.
 
 const (
+	binaryName     = "infra"
 	packageName    = "@joeblew99/infra"
 	packageVersion = "1.0.0"
 	repositoryURL  = "https://github.com/joeblew99/infra.git"
@@ -42,9 +43,9 @@ var buildMatrix = []struct {
 }
 
 var rootCmd = &cobra.Command{
-	Use:   "your-tool",
+	Use:   binaryName,
 	Short: "A CLI tool for managing your Go project's npm package.",
-	Long:  `your-tool is a command-line interface for building, testing, and publishing your Go project as an npm package.`,
+	Long:  `A command-line interface for building, testing, and publishing your Go project as an npm package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Default behavior if no subcommand is given
 		cmd.Help()
@@ -110,10 +111,11 @@ var buildCmd = &cobra.Command{
 	Short: "Builds the Go binary for the classic matrix of OS and architectures.",
 	Long:  `This command compiles the main.go file into binaries for Windows, Darwin, and Linux across amd64 and arm64 (and arm for Linux).`,
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Building Go binaries...")
 		for _, target := range buildMatrix {
 			fmt.Printf("Building Go binary for OS: %s, Arch: %s...\n", target.OS, target.Arch)
 
-			outputFileName := fmt.Sprintf("your-tool-%s-%s", target.OS, target.Arch)
+			outputFileName := fmt.Sprintf("%s-%s-%s", binaryName, target.OS, target.Arch)
 			if target.OS == "windows" {
 				outputFileName += ".exe"
 			}
@@ -143,7 +145,7 @@ var cleanCmd = &cobra.Command{
 		fmt.Println("Cleaning up artifacts...")
 
 		// Remove compiled Go binaries
-		_ = os.RemoveAll("your-tool-*")  // Remove all binaries matching pattern
+		_ = os.RemoveAll(binaryName + "-*")  // Remove all binaries matching pattern
 		_ = os.RemoveAll("bin")          // Remove the bin directory
 		_ = os.RemoveAll("node_modules") // Remove node_modules
 
@@ -196,13 +198,48 @@ var unpublishCmd = &cobra.Command{
 var releaseCmd = &cobra.Command{
 	Use:   "release",
 	Short: "Automates GitHub release creation and asset upload.",
-	Long:  `This command will build binaries for all supported platforms, create a GitHub release, and upload the binaries as assets. (Not yet implemented)`,
+	Long:  `This command will build binaries for all supported platforms, create a GitHub release, and upload the binaries as assets.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Release command is not yet implemented.")
-		fmt.Println("This command would typically:")
-		fmt.Println("- Build binaries for all supported platforms.")
-		fmt.Println("- Create a GitHub release.")
-		fmt.Println("- Upload the compiled binaries as release assets.")
+		fmt.Println("Running release process...")
+
+		// 1. Clean old builds
+		cleanCmd.Run(cmd, args)
+
+		// 2. Build binaries
+		buildCmd.Run(cmd, args)
+
+		// 3. Create GitHub Release using gh CLI
+		fmt.Println("Creating GitHub release...")
+		tag := "v" + packageVersion
+		
+		// Find all built binaries
+		files, err := os.ReadDir(".")
+		if err != nil {
+			log.Fatalf("Failed to read current directory: %v", err)
+		}
+
+		var assetArgs []string
+		for _, file := range files {
+			if strings.HasPrefix(file.Name(), binaryName + "-") && !file.IsDir() {
+				assetArgs = append(assetArgs, file.Name())
+			}
+		}
+
+		if len(assetArgs) == 0 {
+			log.Fatalf("No binaries found to upload. Please ensure build command ran successfully.")
+		}
+
+		ghArgs := []string{"release", "create", tag, "--generate-notes"}
+		ghArgs = append(ghArgs, assetArgs...)
+
+		ghCmd := exec.Command("gh", ghArgs...)
+		ghCmd.Stdout = os.Stdout
+		ghCmd.Stderr = os.Stderr
+		err = ghCmd.Run()
+		if err != nil {
+			log.Fatalf("gh release create failed: %v\n", err)
+		}
+		fmt.Println("GitHub release created successfully!")
 	},
 }
 
@@ -233,12 +270,14 @@ var generateCmd = &cobra.Command{
 			RepoURL     string
 			BugsURL     string
 			HomepageURL string
+			BinName     string
 		}{
 			Name:        packageName,
 			Version:     packageVersion,
 			RepoURL:     repositoryURL,
 			BugsURL:     bugsURL,
 			HomepageURL: homepageURL,
+			BinName:     binaryName,
 		}
 
 		var processedTemplate bytes.Buffer
@@ -253,6 +292,18 @@ var generateCmd = &cobra.Command{
 		}
 
 		fmt.Println("Successfully generated package.json.")
+	},
+}
+
+var infoCmd = &cobra.Command{
+	Use:   "info",
+	Short: "Displays package information.",
+	Long:  `This command displays the package name, version, and repository URL.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("Package Name: %s\n", packageName)
+		fmt.Printf("Package Version: %s\n", packageVersion)
+		fmt.Printf("Repository URL: %s\n", repositoryURL)
+		fmt.Printf("Binary Name: %s\n", binaryName)
 	},
 }
 
@@ -292,6 +343,7 @@ func init() {
 	rootCmd.AddCommand(releaseCmd)
 	rootCmd.AddCommand(allCmd)
 	rootCmd.AddCommand(generateCmd)
+	rootCmd.AddCommand(infoCmd)
 }
 
 func main() {

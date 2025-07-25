@@ -4,7 +4,7 @@
   "description": "Your Go binary packaged for Node.js/Deno/Bun",
   "main": "index.js",
   "bin": {
-    "your-tool": "./bin/your-tool"
+    "infra": "./bin/infra"
   },
   "scripts": {
     "postinstall": "node install.js",
