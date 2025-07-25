@@ -72,8 +72,16 @@ func handleCaddyProxy(args []string) error {
 		from = fmt.Sprintf("localhost:%d", fromPort)
 	}
 	
+	var url string
+	if config.ShouldUseHTTPS() {
+		url = fmt.Sprintf("https://localhost:%d", fromPort)
+	} else {
+		url = fmt.Sprintf("http://localhost:%d", fromPort)
+	}
+	
 	fmt.Printf("Starting Caddy reverse proxy: %s -> %s (HTTPS: %v)\n", 
 		from, to, config.ShouldUseHTTPS())
+	fmt.Printf("🌐 URL: %s\n", url)
 	
 	return runner.ReverseProxy(from, to)
 }
