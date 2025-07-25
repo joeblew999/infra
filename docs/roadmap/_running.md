@@ -12,9 +12,15 @@ what is devs have deps installed on path ? we are fine, because we ONLY use .dep
 
 ---
 
+ko
+
+do we need a ko config ?
+
 caddy
 
 do we need a caddyfile in root for running our self ?
+
+
 
 will the docker running on fly be ok with pulling down the caddy binary and running it ? i dont know. I know dockers are meant to be immutable, but i am fine with it.
 

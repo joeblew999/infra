@@ -83,6 +83,16 @@ func GetCaddyBinPath() string {
 	return Get("caddy")
 }
 
+// GetKoBinPath returns the absolute path to the ko binary.
+func GetKoBinPath() string {
+	return Get("ko")
+}
+
+// GetFlyctlBinPath returns the absolute path to the flyctl binary.
+func GetFlyctlBinPath() string {
+	return Get("flyctl")
+}
+
 // GetTerraformPath returns the absolute path to the terraform directory.
 func GetTerraformPath() string {
 	return filepath.Join(".", TerraformDir)
@@ -106,4 +116,46 @@ func IsDevelopment() bool {
 // Local dev: use HTTPS, Production (Fly.io): no HTTPS (Cloudflare terminates SSL)
 func ShouldUseHTTPS() bool {
 	return IsDevelopment()
+}
+
+// GetKoConfigPath returns the path to the ko configuration file
+func GetKoConfigPath() string {
+	return filepath.Join(".", ".ko.yaml")
+}
+
+// GetKoDefaultBaseImage returns the appropriate base image for the environment
+func GetKoDefaultBaseImage() string {
+	if IsProduction() {
+		return "cgr.dev/chainguard/static:latest" // Minimal for production
+	}
+	return "cgr.dev/chainguard/go:latest" // Debug-friendly for development
+}
+
+// GetKoDockerRepo returns the appropriate Docker repository for the environment
+func GetKoDockerRepo() string {
+	// Check if explicitly set via environment variable
+	if repo := os.Getenv("KO_DOCKER_REPO"); repo != "" {
+		return repo
+	}
+	
+	if IsProduction() {
+		// Use Fly.io registry in production (assuming FLY_APP_NAME is set)
+		if appName := os.Getenv("FLY_APP_NAME"); appName != "" {
+			return "registry.fly.io/" + appName
+		}
+		return "registry.fly.io/infra" // fallback
+	}
+	
+	// Local development - use local registry or ko.local
+	return "ko.local"
+}
+
+// GetKoDefaultPlatforms returns the platforms to build for
+func GetKoDefaultPlatforms() []string {
+	if IsProduction() {
+		// Multi-platform for production
+		return []string{"linux/amd64", "linux/arm64"}
+	}
+	// Single platform for development (faster builds)
+	return []string{"linux/amd64"}
 }

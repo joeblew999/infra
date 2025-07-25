@@ -1,0 +1,37 @@
+# Ko build configuration for infrastructure management system
+# Note: Use environment variables for runtime config:
+# - KO_DOCKER_REPO: Docker registry (e.g., registry.fly.io/your-app)
+# - ENVIRONMENT: production|development
+
+# Secure minimal base image for production
+defaultBaseImage: cgr.dev/chainguard/static:latest
+
+# Base image overrides for debug builds in development
+baseImageOverrides:
+  github.com/joeblew99/infra: cgr.dev/chainguard/static:latest
+
+# Multi-platform builds (override with KO_DEFAULTPLATFORMS env var)
+defaultPlatforms:
+- linux/amd64
+- linux/arm64
+
+# Build configuration for optimized binaries
+builds:
+- id: infra-app
+  main: ./
+  env:
+  - CGO_ENABLED=0
+  - GOOS=linux
+  flags:
+  - -trimpath
+  - -buildvcs=false
+  ldflags:
+  - -s -w
+  - -X main.version={{.Version}}
+  - -X main.buildTime={{.Date}}
+  - -extldflags=-static
+
+# Security and optimization settings
+defaultEnv:
+- CGO_ENABLED=0
+- GOOS=linux

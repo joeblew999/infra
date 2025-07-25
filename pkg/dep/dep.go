@@ -112,6 +112,32 @@ var embeddedCoreBinaries = []CoreBinary{
 			{OS: "windows", Arch: "amd64", Match: `caddy_.*_windows_amd64\.zip$`},
 		},
 	},
+	{
+		Name:       "ko",
+		Repo:       "ko-build/ko",
+		Version:    "v0.18.0",
+		ReleaseURL: "https://github.com/ko-build/ko/releases/tag/v0.18.0",
+		Assets: []AssetSelector{
+			{OS: "darwin", Arch: "amd64", Match: `ko_.*_Darwin_x86_64\.tar\.gz$`},
+			{OS: "darwin", Arch: "arm64", Match: `ko_.*_Darwin_arm64\.tar\.gz$`},
+			{OS: "linux", Arch: "amd64", Match: `ko_.*_Linux_x86_64\.tar\.gz$`},
+			{OS: "linux", Arch: "arm64", Match: `ko_.*_Linux_arm64\.tar\.gz$`},
+			{OS: "windows", Arch: "amd64", Match: `ko_.*_Windows_x86_64\.tar\.gz$`},
+		},
+	},
+	{
+		Name:       "flyctl",
+		Repo:       "superfly/flyctl",
+		Version:    "v0.3.159",
+		ReleaseURL: "https://github.com/superfly/flyctl/releases/tag/v0.3.159",
+		Assets: []AssetSelector{
+			{OS: "darwin", Arch: "amd64", Match: `flyctl_.*_macOS_x86_64\.tar\.gz$`},
+			{OS: "darwin", Arch: "arm64", Match: `flyctl_.*_macOS_arm64\.tar\.gz$`},
+			{OS: "linux", Arch: "amd64", Match: `flyctl_.*_Linux_x86_64\.tar\.gz$`},
+			{OS: "linux", Arch: "arm64", Match: `flyctl_.*_Linux_arm64\.tar\.gz$`},
+			{OS: "windows", Arch: "amd64", Match: `flyctl_.*_Windows_x86_64\.zip$`},
+		},
+	},
 }
 
 // Ensure downloads and prepares all binaries defined in the manifest.
@@ -144,6 +170,10 @@ func Ensure(debug bool) error {
 			installer = &tofuInstaller{}
 		case "caddy":
 			installer = &caddyInstaller{}
+		case "ko":
+			installer = &koInstaller{}
+		case "flyctl":
+			installer = &flyctlInstaller{}
 		default:
 			return fmt.Errorf("no installer found for binary: %s", binary.Name)
 		}

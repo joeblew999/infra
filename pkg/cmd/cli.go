@@ -48,6 +48,24 @@ var taskCmd = &cobra.Command{
 	},
 }
 
+var koCmd = &cobra.Command{
+	Use:                "ko",
+	Short:              "Run ko commands",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return ExecuteBinary(config.GetKoBinPath(), args...)
+	},
+}
+
+var flyctlCmd = &cobra.Command{
+	Use:                "flyctl",
+	Short:              "Run flyctl commands",
+	DisableFlagParsing: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return ExecuteBinary(config.GetFlyctlBinPath(), args...)
+	},
+}
+
 // handleCaddyProxy handles environment-aware reverse proxy setup
 func handleCaddyProxy(args []string) error {
 	if len(args) < 2 {
@@ -123,4 +141,6 @@ func RunCLI() {
 	rootCmd.AddCommand(tofuCmd)
 	rootCmd.AddCommand(taskCmd)
 	rootCmd.AddCommand(caddyCmd)
+	rootCmd.AddCommand(koCmd)
+	rootCmd.AddCommand(flyctlCmd)
 }
