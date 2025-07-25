@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 )
@@ -37,6 +38,10 @@ const (
 	MetricsHTTPPath = "/metrics"
 	LogsHTTPPath    = "/logs"
 	StatusHTTPPath  = "/status"
+
+	// Environment detection
+	EnvProduction = "production"
+	EnvDevelopment = "development"
 )
 
 // GetDepPath returns the absolute path to the .dep directory.
@@ -81,4 +86,24 @@ func GetCaddyBinPath() string {
 // GetTerraformPath returns the absolute path to the terraform directory.
 func GetTerraformPath() string {
 	return filepath.Join(".", TerraformDir)
+}
+
+// IsProduction returns true if running in production environment
+func IsProduction() bool {
+	env := os.Getenv("ENVIRONMENT")
+	if env == "" {
+		env = os.Getenv("FLY_APP_NAME") // Fly.io sets this
+	}
+	return env == EnvProduction || os.Getenv("FLY_APP_NAME") != ""
+}
+
+// IsDevelopment returns true if running in development environment
+func IsDevelopment() bool {
+	return !IsProduction()
+}
+
+// ShouldUseHTTPS returns true if HTTPS should be enabled
+// Local dev: use HTTPS, Production (Fly.io): no HTTPS (Cloudflare terminates SSL)
+func ShouldUseHTTPS() bool {
+	return IsDevelopment()
 }

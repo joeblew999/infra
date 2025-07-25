@@ -6,6 +6,36 @@ just for me.
 
 ---
 
+deps
+
+what is devs have deps installed on path ? we are fine, because we ONLY use .deps folder fully.
+
+---
+
+caddy
+
+do we need a caddyfile in root for running our self ?
+
+will the docker running on fly be ok with pulling down the caddy binary and running it ? i dont know. I know dockers are meant to be immutable, but i am fine with it.
+
+so we deploy to fly and have many things beind it.
+- infra can then pull in other binaries, and run them
+- can get fancy later and have those other binaries tell nats, and then have caddyfile configure to the port they are running on.
+
+can use ko ? 
+
+need pkg/caddy ?
+
+can amp cloudflare through
+
+can use nats wrapper so we can see everything from my laptop ?
+- the runner will need to log to slog nats in that case.
+
+
+
+
+---
+
 pkg/mcp needs to write to the claude and gemini file, so we can setup MCP servers automatically. 
 
 - Ask AI for help.
@@ -15,7 +45,25 @@ https://github.com/modelcontextprotocol/registry
 https://github.com/ravitemer/mcp-registry types might be cool for us to use ?
 Is there officla one ?
 
+---
 
+claude connectors
+
+https://support.anthropic.com/en/articles/11175166-getting-started-with-custom-connectors-using-remote-mcp
+
+exisitng
+https://support.anthropic.com/en/articles/11176164-pre-built-integrations-using-remote-mcp
+
+
+---
+
+tofu to deplyo to fly.io.
+
+after a deploy, we want out .deploy folder to update, so we always have a record of where stuff is running.
+
+we will also need cloudlfare tofu to configure one of our domaains.
+
+we should also make caddy work, so then we can run many Domains --> Caddy --> the infra setup with different data driving it. 
 
 ---
 
