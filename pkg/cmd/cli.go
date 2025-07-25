@@ -104,8 +104,16 @@ func handleCaddyServe(args []string) error {
 	
 	runner := caddy.New()
 	
+	var url string
+	if config.ShouldUseHTTPS() {
+		url = fmt.Sprintf("https://localhost:%d", port)
+	} else {
+		url = fmt.Sprintf("http://localhost:%d", port)
+	}
+	
 	fmt.Printf("Starting Caddy file server: %s on port %d (HTTPS: %v)\n", 
 		root, port, config.ShouldUseHTTPS())
+	fmt.Printf("🌐 URL: %s\n", url)
 	
 	return runner.FileServer(root, port)
 }
