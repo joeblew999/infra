@@ -61,28 +61,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Setup Fly.io CLI
-      uses: superfly/flyctl-actions/setup-flyctl@master
-
-    - name: Install ko
+    - name: Deploy with idempotent workflow
       run: |
-        go run . ko version || echo "Ko will be installed on first use"
-
-    - name: Build and deploy with ko
-      run: |
-        export KO_DOCKER_REPO=registry.fly.io/${{ env.FLY_APP_NAME }}
+        export FLY_APP_NAME=${{ env.FLY_APP_NAME }}
         export ENVIRONMENT=production
         
-        # Build container image
-        echo "Building container image..."
-        IMAGE=$(go run . ko build --platform=linux/amd64 github.com/joeblew999/infra)
-        echo "Built image: $IMAGE"
-        
-        # Deploy to Fly.io
-        echo "Deploying to Fly.io..."
-        flyctl deploy --image "$IMAGE" --app ${{ env.FLY_APP_NAME }}
+        # Use built-in idempotent deployment workflow
+        go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
 
     - name: Verify deployment
       run: |
-        flyctl status --app ${{ env.FLY_APP_NAME }}
+        go run . flyctl status --app ${{ env.FLY_APP_NAME }}
         echo "Deployment complete! App available at: https://${{ env.FLY_APP_NAME }}.fly.dev"

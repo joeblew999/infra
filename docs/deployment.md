@@ -10,10 +10,16 @@ This guide covers deploying the Infrastructure Management System to Fly.io using
 
 ## Quick Start Deployment
 
-### Option 1: Automated Script (Recommended)
+### Option 1: Idempotent Workflow (Recommended)
 ```bash
-# Run the automated deployment script
-./scripts/deploy.sh
+# Test deployment without executing
+go run . deploy --dry-run
+
+# Run full idempotent deployment
+go run . deploy
+
+# Deploy to specific app and region
+go run . deploy --app my-app --region syd
 ```
 
 ### Option 2: Manual Step-by-Step
