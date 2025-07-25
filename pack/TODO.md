@@ -1,11 +1,21 @@
 # TODO
 
-the gh cli release can be part of our deps.
+AI: this file is a game plan for what we need to do:
 
-everything in main.go, needs to be a new pkg/pack
 
-then the pkg/cmd, will need a pack, that is basically a copy of what the main.go in this folder is, but adjusted.
+Gameplan:
 
-also the constants in this main.go, need obviously be adjsuted too.
+ONLY do each step on it own.
 
-the 2 things in the .env, need to be in in root.
+   1. pkg/pack/npm needs to have the code we have in main.go. 
+
+   2. pkg/config needs most of the constants we have in main.go. make sure pkg/pack/npm uses them
+
+   3. pkg/dep needs to install the gh cli. make sure pkg/pack/npm uses them.
+
+   4. Move the `.env` variables to root.
+
+
+AFTER
+
+The existing cli command "build", can then incorporate all this, because it a workflow.

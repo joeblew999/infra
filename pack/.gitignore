@@ -2,3 +2,6 @@ bin
 node_modules
 dist
 .env
+
+# this is generatd
+package.json
