@@ -11,15 +11,16 @@ http://localhost:1337/docs/
 
 ## Concept
 
-Taskfiles can be included, just like a golang package, allowing reusing across your projects.
+Its Self Similar design. 
 
-See: https://taskfile.dev/next/experiments/remote-taskfiles/#including-remote-taskfiles
+At Dev time, you and the AI can easily do complex flows, because we are using binaries and their CLI to loop. We then formalsie common workflows looping through many binaries in the workflows, ensuring idempotency.    
 
-```yaml
-version: '3'
-includes:
-  remote: https://:{{.TOKEN}}@{{.REDACTED_URL}}.git/Taskfile.dist.yml?ref=master
-```
+At Runtime, in Dev and Prod, we do the same thing. There is no shifting in thinking or Architetcure.
+
+When things run, they log, but they can log to NATS too, and so we can self reflect on it at runtime from anywhere. 
+
+We can also publish events to nats when thigns happen to help workflows works well.
+
 
 Also they can run on your laptop, in CI ( github actions), in CD ( tarraform via taskfile ) and also in Production.
 

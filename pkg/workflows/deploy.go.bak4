@@ -215,17 +215,12 @@ func (d *DeployWorkflow) buildImage() (string, error) {
 		return "registry.fly.io/" + d.opts.AppName + ":latest", nil
 	}
 
-	// Authenticate with Fly.io registry
-	if err := runBinary(config.GetFlyctlBinPath(), "auth", "docker"); err != nil {
-		return "", fmt.Errorf("failed to authenticate with Fly.io registry: %w", err)
-	}
-
 	// Set ko environment
 	os.Setenv("KO_DOCKER_REPO", fmt.Sprintf("registry.fly.io/%s", d.opts.AppName))
 	os.Setenv("ENVIRONMENT", d.opts.Environment)
 
 	// Build image
-	image, err := runBinaryWithOutput(config.GetKoBinPath(), "build", "--platform=linux/amd64", "github.com/joeblew99/infra")
+	image, err := runBinaryWithOutput(config.GetKoBinPath(), "build", "--platform=linux/amd64", "github.com/joeblew999/infra")
 	if err != nil {
 		return "", fmt.Errorf("ko build failed: %w", err)
 	}
