@@ -9,9 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/delaneyj/toolbelt/embeddednats"
 	"github.com/go-chi/chi/v5"
-	"github.com/nats-io/nats-server/v2/server"
+
 	"github.com/nats-io/nats.go"
 	"github.com/starfederation/datastar-go/datastar"
 
@@ -40,35 +39,13 @@ type Message struct {
 	Timestamp time.Time `json:"timestamp"`
 }
 
-func StartServer(devDocs bool) error {
+func StartServer(natsAddr string, devDocs bool) error {
 	ctx := context.Background()
 
-	// Configure NATS server options for logging
-	natsOpts := &server.Options{
-		Debug: true, // Enable debug logging
-		Trace: true, // Enable trace logging
-	}
-
-	// Initialize embedded NATS server
-	log.Println("Starting embedded NATS server...")
-	natsServer, err := embeddednats.New(ctx,
-		embeddednats.WithDirectory("./.data/nats"), // Store directory
-		embeddednats.WithNATSServerOptions(natsOpts),
-	)
+	// Connect to NATS server
+	nc, err := nats.Connect(natsAddr)
 	if err != nil {
-		log.Printf("Failed to create embedded NATS server: %v", err)
-		return fmt.Errorf("Failed to create embedded NATS server: %w", err)
-	}
-	defer natsServer.Close()
-
-	// Wait for the server to be ready
-	natsServer.WaitForServer()
-	log.Printf("Embedded NATS server started")
-
-	// Get client connection from the embedded server
-	nc, err := natsServer.Client()
-	if err != nil {
-		return fmt.Errorf("Failed to get NATS client: %w", err)
+		return fmt.Errorf("Failed to connect to NATS: %w", err)
 	}
 	defer nc.Close()
 
@@ -85,7 +62,7 @@ func StartServer(devDocs bool) error {
 	}
 
 	log.Printf("Starting web server on http://localhost:%d", port)
-	log.Printf("Embedded NATS server running with JetStream enabled")
+	log.Printf("Connected to NATS at %s", natsAddr)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.router); err != nil {
 		return fmt.Errorf("Failed to start web server: %w", err)

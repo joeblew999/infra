@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/joeblew999/infra/pkg/gops"
+	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +31,15 @@ func init() {
 func RunService(devDocs bool) {
 	fmt.Println("Running in Service mode...")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Start embedded NATS server
+	natsAddr, err := nats.StartEmbeddedNATS(ctx)
+	if err != nil {
+		log.Fatalf("Failed to start embedded NATS server: %v", err)
+	}
+
 	// Check web server port availability
 	if !gops.IsPortAvailable(1337) {
 		log.Fatalf("Web server port 1337 is already in use. Please free the port and try again.")
@@ -41,7 +52,7 @@ func RunService(devDocs bool) {
 
 	// Start the web server in a goroutine
 	go func() {
-		if err := web.StartServer(devDocs); err != nil {
+		if err := web.StartServer(natsAddr, devDocs); err != nil {
 			log.Fatalf("Failed to start web server: %v", err)
 		}
 	}()
