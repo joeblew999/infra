@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // Runner executes tofu commands
@@ -17,8 +17,8 @@ type Runner struct {
 // New creates a new tofu runner
 func New() *Runner {
 	// Convert to absolute paths
-	binaryPath, _ := filepath.Abs(store.GetTofuBinPath())
-	workingDir, _ := filepath.Abs(store.GetTerraformPath())
+	binaryPath, _ := filepath.Abs(config.GetTofuBinPath())
+	workingDir, _ := filepath.Abs(config.GetTerraformPath())
 
 	return &Runner{
 		binaryPath: binaryPath,

@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 type caddyInstaller struct{}
@@ -37,7 +37,7 @@ func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
 		return fmt.Errorf("failed to select asset for %s: %w", binary.Name, err)
 	}
 
-	tmpDir := filepath.Join(store.GetDepPath(), "tmp", binary.Name)
+	tmpDir := filepath.Join(config.GetDepPath(), "tmp", binary.Name)
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
 		return fmt.Errorf("failed to create temporary directory %s: %w", tmpDir, err)
 	}

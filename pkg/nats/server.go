@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats-server/v2/server"
 
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // StartEmbeddedNATS starts an embedded NATS server and returns its client URL.
@@ -24,7 +24,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	log.Info("Starting embedded NATS server...")
 
 	// Use pkg/store for the data path
-	natsDataPath := filepath.Join(store.GetDataPath(), "nats")
+	natsDataPath := filepath.Join(config.GetDataPath(), "nats")
 
 	natsServer, err := embeddednats.New(ctx,
 		embeddednats.WithDirectory(natsDataPath),

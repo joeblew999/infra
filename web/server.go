@@ -15,7 +15,7 @@ import (
 
 	"github.com/joeblew999/infra/pkg/docs"
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 //go:embed index.html
@@ -52,7 +52,7 @@ func StartServer(natsAddr string, devDocs bool) error {
 	app := &App{
 		natsConn:     nc,
 		router:       chi.NewRouter(),
-		docsService:  docs.New(devDocs, store.DocsDir),
+		docsService:  docs.New(devDocs, config.DocsDir),
 		docsRenderer: docs.NewRenderer(),
 	}
 
@@ -92,7 +92,7 @@ func (app *App) setupRoutes() {
 				log.Error("Error patching elements", "error", err)
 				return
 			}
-			time.Sleep(store.Delay * time.Millisecond)
+			time.Sleep(100 * time.Millisecond) // 100ms delay for typing effect
 		}
 	})
 
@@ -107,11 +107,11 @@ func (app *App) setupRoutes() {
 	})
 
 	// Docs handler
-	app.router.Get(store.DocsHTTPPath+"*", app.handleDocs)
+	app.router.Get(config.DocsHTTPPath+"*", app.handleDocs)
 }
 
 func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
-	filePath := r.URL.Path[len(store.DocsHTTPPath):]
+	filePath := r.URL.Path[len(config.DocsHTTPPath):]
 	log.Info("Requested filePath", "path", filePath)
 
 	// Read document content

@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // BinaryMeta stores metadata about an installed binary.
@@ -163,5 +163,5 @@ func Ensure(debug bool) error {
 
 // Get returns the absolute path to the requested binary for the current platform.
 func Get(name string) string {
-	return store.Get(name)
+	return config.Get(name)
 }

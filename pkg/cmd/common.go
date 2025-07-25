@@ -7,33 +7,33 @@ import (
 	"path/filepath"
 
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/store"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 func EnsureInfraDirectories() error {
 	// Create .dep directory
-	if err := os.MkdirAll(store.GetDepPath(), 0755); err != nil {
+	if err := os.MkdirAll(config.GetDepPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .dep directory: %w", err)
 	}
-	log.Info("Ensured directory exists", "path", store.GetDepPath())
+	log.Info("Ensured directory exists", "path", config.GetDepPath())
 
 	// Create .bin directory
-	if err := os.MkdirAll(store.GetBinPath(), 0755); err != nil {
+	if err := os.MkdirAll(config.GetBinPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .bin directory: %w", err)
 	}
-	log.Info("Ensured directory exists", "path", store.GetBinPath())
+	log.Info("Ensured directory exists", "path", config.GetBinPath())
 
 	// Create .data directory
-	if err := os.MkdirAll(store.GetDataPath(), 0755); err != nil {
+	if err := os.MkdirAll(config.GetDataPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .data directory: %w", err)
 	}
-	log.Info("Ensured directory exists", "path", store.GetDataPath())
+	log.Info("Ensured directory exists", "path", config.GetDataPath())
 
 	// Create taskfiles directory
-	if err := os.MkdirAll(store.GetTaskfilesPath(), 0755); err != nil {
+	if err := os.MkdirAll(config.GetTaskfilesPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create taskfiles directory: %w", err)
 	}
-	log.Info("Ensured directory exists", "path", store.GetTaskfilesPath())
+	log.Info("Ensured directory exists", "path", config.GetTaskfilesPath())
 
 	return nil
 }
@@ -52,7 +52,7 @@ func ExecuteBinary(binary string, args ...string) error {
 	}
 
 	// Change to the terraform directory
-	if err := os.Chdir(store.GetTerraformPath()); err != nil {
+	if err := os.Chdir(config.GetTerraformPath()); err != nil {
 		return fmt.Errorf("failed to change directory to terraform: %w", err)
 	}
 
