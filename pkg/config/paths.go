@@ -31,6 +31,12 @@ const (
 	// BinaryDepNameFormat is the format string for naming downloaded binary dependencies.
 	// It uses placeholders for name, OS, and architecture.
 	BinaryDepNameFormat = "%s_%s_%s"
+
+	// Navigation paths for web interface
+	HomeHTTPPath    = "/"
+	MetricsHTTPPath = "/metrics"
+	LogsHTTPPath    = "/logs"
+	StatusHTTPPath  = "/status"
 )
 
 // GetDepPath returns the absolute path to the .dep directory.

@@ -126,6 +126,7 @@ func Ensure(debug bool) error {
 		currentMeta, err := readMeta(installPath)
 		if err == nil && currentMeta.Version == binary.Version {
 			log.Info("Binary up to date", "name", binary.Name, "version", binary.Version)
+			continue // Skip installation
 		} else if err != nil && !os.IsNotExist(err) {
 			log.Warn("Error reading metadata", "name", binary.Name, "error", err, "action", "attempting re-download")
 		} else if currentMeta != nil && currentMeta.Version != binary.Version {

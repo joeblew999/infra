@@ -76,12 +76,10 @@ func RunService(devDocs bool, mode string) {
 			os.Exit(1)
 		}
 
-		// Start the web server in a goroutine
-		go func() {
-			if err := web.StartServer(natsAddr, devDocs); err != nil {
-				log.Error("Failed to start web server", "error", err)
-				os.Exit(1)
-			}
-		}()
+		// Start the web server (blocking)
+		if err := web.StartServer(natsAddr, devDocs); err != nil {
+			log.Error("Failed to start web server", "error", err)
+			os.Exit(1)
+		}
 	}
 }
