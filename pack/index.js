@@ -4,7 +4,8 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const BINARY_NAME = 'your-tool';
+const pkg = require('./package.json');
+const BINARY_NAME = Object.keys(pkg.bin)[0];
 
 function getBinaryPath() {
   const platform = process.platform;

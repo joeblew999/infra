@@ -23,10 +23,11 @@ const (
 // Hardcoded for simplicity, can be made dynamic if needed, like using git reflection.
 
 const (
-	binaryName     = "infra"
-	packageName    = "@joeblew99/infra"
-	packageVersion = "1.0.0"
-	repositoryURL  = "https://github.com/joeblew99/infra.git"
+	binaryName        = "infra"
+	packageName       = "@joeblew99/infra"
+	packageVersion    = "1.0.0"
+	repositoryURL     = "https://github.com/joeblew99/infra.git"
+	packageDescription = "A CLI tool for managing your Go project's npm package."
 )
 
 var buildMatrix = []struct {
@@ -35,7 +36,7 @@ var buildMatrix = []struct {
 }{
 	{"windows", "amd64"},
 	{"windows", "arm64"},
-	{"darwin", "amd64"},
+	{"darwin", "amd664"},
 	{"darwin", "arm64"},
 	{"linux", "amd64"},
 	{"linux", "arm64"},
@@ -44,7 +45,7 @@ var buildMatrix = []struct {
 
 var rootCmd = &cobra.Command{
 	Use:   binaryName,
-	Short: "A CLI tool for managing your Go project's npm package.",
+	Short: packageDescription,
 	Long:  `A command-line interface for building, testing, and publishing your Go project as an npm package.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Default behavior if no subcommand is given
@@ -248,6 +249,8 @@ var generateCmd = &cobra.Command{
 	Short: "Generates package.json from the template.",
 	Long:  `This command reads package.json.template, performs variable substitutions, and writes the output to package.json.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		// IMPORTANT: package.json.template is required for this command to function.
+		// Do not delete package.json.template.
 		fmt.Println("Generating package.json from template...")
 
 		templateBytes, err := os.ReadFile("package.json.template")
@@ -271,6 +274,7 @@ var generateCmd = &cobra.Command{
 			BugsURL     string
 			HomepageURL string
 			BinName     string
+			Description string
 		}{
 			Name:        packageName,
 			Version:     packageVersion,
@@ -278,6 +282,7 @@ var generateCmd = &cobra.Command{
 			BugsURL:     bugsURL,
 			HomepageURL: homepageURL,
 			BinName:     binaryName,
+			Description: packageDescription,
 		}
 
 		var processedTemplate bytes.Buffer
@@ -304,6 +309,7 @@ var infoCmd = &cobra.Command{
 		fmt.Printf("Package Version: %s\n", packageVersion)
 		fmt.Printf("Repository URL: %s\n", repositoryURL)
 		fmt.Printf("Binary Name: %s\n", binaryName)
+		fmt.Printf("Description: %s\n", packageDescription)
 	},
 }
 

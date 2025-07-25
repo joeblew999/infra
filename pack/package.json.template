@@ -1,7 +1,7 @@
 {
   "name": "{{.Name}}",
   "version": "{{.Version}}",
-  "description": "Your Go binary packaged for Node.js/Deno/Bun",
+  "description": "{{.Description}}",
   "main": "index.js",
   "bin": {
     "{{.BinName}}": "./bin/{{.BinName}}"

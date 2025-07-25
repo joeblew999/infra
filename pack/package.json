@@ -1,7 +1,7 @@
 {
   "name": "@joeblew99/infra",
   "version": "1.0.0",
-  "description": "Your Go binary packaged for Node.js/Deno/Bun",
+  "description": "A CLI tool for managing your Go project's npm package.",
   "main": "index.js",
   "bin": {
     "infra": "./bin/infra"
