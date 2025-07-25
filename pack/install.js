@@ -9,10 +9,11 @@ const { promisify } = require('util');
 
 const pipelineAsync = promisify(pipeline);
 
-// Configuration
-const BINARY_NAME = 'your-tool';
-const GITHUB_REPO = 'yourusername/your-go-tool'; // Change this to your repo
-const VERSION = require('./package.json').version;
+// Read configuration from package.json
+const pkg = require('./package.json');
+const BINARY_NAME = pkg.name.split('/').pop(); // a scoped package name like @user/repo becomes 'repo'
+const GITHUB_REPO = new URL(pkg.repository.url).pathname.substring(1).replace('.git', '');
+const VERSION = pkg.version;
 
 // Platform mappings
 const PLATFORM_MAPPING = {

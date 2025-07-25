@@ -1,6 +1,6 @@
 {
-  "name": "@joeblew99/infra",
-  "version": "1.0.0",
+  "name": "{{.Name}}",
+  "version": "{{.Version}}",
   "description": "Your Go binary packaged for Node.js/Deno/Bun",
   "main": "index.js",
   "bin": {
@@ -30,10 +30,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/joeblew99/infra.git"
+    "url": "{{.RepoURL}}"
   },
   "bugs": {
-    "url": "https://github.com/joeblew99/infra/issues"
+    "url": "{{.BugsURL}}"
   },
-  "homepage": "https://github.com/joeblew99/infra#readme"
+  "homepage": "{{.HomepageURL}}"
 }
