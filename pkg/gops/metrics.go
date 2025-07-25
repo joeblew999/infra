@@ -1,13 +1,18 @@
 package gops
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/nats-io/nats.go"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
 	"github.com/shirou/gopsutil/v3/mem"
+
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // SystemMetrics represents the overall system metrics collected from a server.
@@ -89,4 +94,45 @@ func GetSystemMetrics() (SystemMetrics, error) {
 	}
 
 	return metrics, nil
+}
+
+// StartMetricCollection starts a goroutine to periodically collect and publish system metrics to NATS.
+func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Duration) {
+	log.Info("Starting metric collection", "interval", interval)
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		log.Error("Failed to get hostname for metric collection", "error", err)
+		return
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Metric collection stopped")
+			return
+		case <-ticker.C:
+			metrics, err := GetSystemMetrics()
+			if err != nil {
+				log.Error("Failed to collect system metrics", "error", err)
+				continue
+			}
+
+			jsonMetrics, err := json.Marshal(metrics)
+			if err != nil {
+				log.Error("Failed to marshal metrics to JSON", "error", err)
+				continue
+			}
+
+			topic := fmt.Sprintf("metrics.server.%s", hostname)
+			if err := nc.Publish(topic, jsonMetrics); err != nil {
+				log.Error("Failed to publish metrics to NATS", "topic", topic, "error", err)
+				continue
+			}
+			log.Debug("Metrics published", "topic", topic, "server_id", hostname)
+		}
+	}
 }

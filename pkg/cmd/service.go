@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
+
+	gonats "github.com/nats-io/nats.go"
 
 	"github.com/joeblew999/infra/pkg/gops"
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ var serviceCmd = &cobra.Command{
 	Short: "Run in service mode",
 	Run: func(cmd *cobra.Command, args []string) {
 		devDocs, _ := cmd.Flags().GetBool("dev-docs")
-		RunService(devDocs)
+		RunService(devDocs, "") // Mode will be determined inside RunService
 	},
 }
 
@@ -28,8 +28,8 @@ func init() {
 	serviceCmd.Flags().Bool("dev-docs", false, "Enable development mode for docs (serve from disk)")
 }
 
-func RunService(devDocs bool) {
-	fmt.Println("Running in Service mode...")
+func RunService(devDocs bool, mode string) {
+	log.Info("Running in Service mode...")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -37,41 +37,51 @@ func RunService(devDocs bool) {
 	// Start embedded NATS server
 	natsAddr, err := nats.StartEmbeddedNATS(ctx)
 	if err != nil {
-		log.Fatalf("Failed to start embedded NATS server: %v", err)
+		log.Error("Failed to start embedded NATS server", "error", err)
+		os.Exit(1)
 	}
 
-	// Check web server port availability
-	if !gops.IsPortAvailable(1337) {
-		log.Fatalf("Web server port 1337 is already in use. Please free the port and try again.")
+	// Connect to NATS for client operations
+	nc, err := gonats.Connect(natsAddr)
+	if err != nil {
+		log.Error("Failed to connect to NATS client", "error", err)
+		os.Exit(1)
+	}
+	defer nc.Close()
+
+	// Determine the service role based on the mode flag
+	if mode == "" {
+		mode = "service" // Default to service mode if not specified
 	}
 
-	// Check MCP server port availability
-	if !gops.IsPortAvailable(8080) {
-		log.Fatalf("MCP server port 8080 is already in use. Please free the port and try again.")
-	}
-
-	// Start the web server in a goroutine
-	go func() {
-		if err := web.StartServer(natsAddr, devDocs); err != nil {
-			log.Fatalf("Failed to start web server: %v", err)
+	switch mode {
+	case "metric-agent":
+		log.Info("Starting as Metric Agent")
+		// Start metric collection in a goroutine
+		go gops.StartMetricCollection(ctx, nc, 5*time.Second) // Collect every 5 seconds
+	case "autoscaling-orchestrator":
+		log.Info("Starting as Autoscaling Orchestrator")
+		// TODO: Implement autoscaling orchestration logic here
+	default:
+		log.Info("Starting as default service (Web Server)")
+		// Check web server port availability
+		if !gops.IsPortAvailable(1337) {
+			log.Error("Web server port 1337 is already in use. Please free the port and try again.")
+			os.Exit(1)
 		}
-	}()
 
-	// Start the MCP server in a goroutine
-	// go func() {
-	// 	if err := mcp.StartServer(); err != nil {
-	// 		log.Fatalf("Failed to start MCP server: %v", err)
-	// 	}
-	// }()
+		// Check MCP server port availability
+		if !gops.IsPortAvailable(8080) {
+			log.Error("MCP server port 8080 is already in use. Please free the port and try again.")
+			os.Exit(1)
+		}
 
-	log.Println("Service started. Press Ctrl+C to exit.")
-
-	// Set up a channel to listen for OS signals
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-
-	// Block until a signal is received
-	<-sigChan
-
-	log.Println("Shutting down service...")
+		// Start the web server in a goroutine
+		go func() {
+			if err := web.StartServer(natsAddr, devDocs); err != nil {
+				log.Error("Failed to start web server", "error", err)
+				os.Exit(1)
+			}
+		}()
+	}
 }

@@ -12,10 +12,10 @@ func StartServer() error {
 		fmt.Fprintf(w, "Hello from infra MCP server! Path: %s", r.URL.Path)
 	})))
 
-	log.Println("MCP server starting on :8080")
+	log.Info("MCP server starting", "port", 8080)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
-		log.Printf("MCP server failed to start: %v", err)
+		log.Error("MCP server failed to start", "error", err)
 	}
 	return err
 }

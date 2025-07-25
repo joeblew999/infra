@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -20,10 +20,10 @@ var rootCmd = &cobra.Command{
 		case "cli":
 			// Cobra will handle the subcommands
 		case "service":
-			RunService(false) // dev-docs flag will be handled in service.go
+			RunService(false, mode) // Pass mode to RunService
 		default:
 			// Default to service mode if no mode or invalid mode is specified
-			RunService(false)
+			RunService(false, "service") // Default to "service" mode
 		}
 	},
 }
@@ -32,12 +32,14 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := EnsureInfraDirectories(); err != nil {
-		log.Fatalf("Failed to ensure infra directories: %v", err)
+		log.Error("Failed to ensure infra directories", "error", err)
+		os.Exit(1)
 	}
 
 	debug, _ := rootCmd.Flags().GetBool("debug")
 	if err := dep.Ensure(debug); err != nil {
-		log.Fatalf("Failed to ensure core dependencies: %v", err)
+		log.Error("Failed to ensure core dependencies", "error", err)
+		os.Exit(1)
 	}
 
 	// Add subcommands from other files

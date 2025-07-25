@@ -8,13 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // GitHubReleaseAsset represents a single asset in a GitHub release.
@@ -56,7 +57,7 @@ func getGitHubReleaseDebug(repo, version string) (*GitHubRelease, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Printf("Running command: %s", cmd.Args)
+	log.Info("Running command", "command", cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("failed to run gh cli: %w\nStderr: %s", err, stderr.String())
 	}
@@ -196,7 +197,7 @@ func untarGz(src, dest string) error {
 				return fmt.Errorf("failed to copy content from tar to file: %w", err)
 			}
 		default:
-			log.Printf("Skipping unsupported tar entry type %v: %s", header.Typeflag, header.Name)
+			log.Warn("Skipping unsupported tar entry type", "type", header.Typeflag, "name", header.Name)
 		}
 	}
 	return nil

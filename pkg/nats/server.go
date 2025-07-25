@@ -3,12 +3,12 @@ package nats
 import (
 	"context"
 	"fmt"
-	"log"
 	"path/filepath"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
 	"github.com/nats-io/nats-server/v2/server"
 
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/store"
 )
 
@@ -21,7 +21,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	}
 
 	// Initialize embedded NATS server
-	log.Println("Starting embedded NATS server...")
+	log.Info("Starting embedded NATS server...")
 
 	// Use pkg/store for the data path
 	natsDataPath := filepath.Join(store.GetDataPath(), "nats")
@@ -31,13 +31,13 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 		embeddednats.WithNATSServerOptions(natsOpts),
 	)
 	if err != nil {
-		log.Printf("Failed to create embedded NATS server: %v", err)
+		log.Error("Failed to create embedded NATS server", "error", err)
 		return "", fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 
 	// Wait for the server to be ready
 	natsServer.WaitForServer()
-	log.Printf("Embedded NATS server started")
+	log.Info("Embedded NATS server started")
 
 	// Get client connection from the embedded server
 	nc, err := natsServer.Client()

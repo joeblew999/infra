@@ -2,11 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/store"
 )
 
@@ -15,25 +15,25 @@ func EnsureInfraDirectories() error {
 	if err := os.MkdirAll(store.GetDepPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .dep directory: %w", err)
 	}
-	log.Printf("Ensured directory exists: %s", store.GetDepPath())
+	log.Info("Ensured directory exists", "path", store.GetDepPath())
 
 	// Create .bin directory
 	if err := os.MkdirAll(store.GetBinPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .bin directory: %w", err)
 	}
-	log.Printf("Ensured directory exists: %s", store.GetBinPath())
+	log.Info("Ensured directory exists", "path", store.GetBinPath())
 
 	// Create .data directory
 	if err := os.MkdirAll(store.GetDataPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .data directory: %w", err)
 	}
-	log.Printf("Ensured directory exists: %s", store.GetDataPath())
+	log.Info("Ensured directory exists", "path", store.GetDataPath())
 
 	// Create taskfiles directory
 	if err := os.MkdirAll(store.GetTaskfilesPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create taskfiles directory: %w", err)
 	}
-	log.Printf("Ensured directory exists: %s", store.GetTaskfilesPath())
+	log.Info("Ensured directory exists", "path", store.GetTaskfilesPath())
 
 	return nil
 }

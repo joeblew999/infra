@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/joeblew999/infra/pkg/docs"
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/store"
 )
 
@@ -61,8 +61,8 @@ func StartServer(natsAddr string, devDocs bool) error {
 		return fmt.Errorf("Failed to setup NATS streams: %w", err)
 	}
 
-	log.Printf("Starting web server on http://localhost:%d", port)
-	log.Printf("Connected to NATS at %s", natsAddr)
+	log.Info("Starting web server", "address", fmt.Sprintf("http://localhost:%d", port))
+	log.Info("Connected to NATS", "address", natsAddr)
 
 	if err := http.ListenAndServe(fmt.Sprintf(":%d", port), app.router); err != nil {
 		return fmt.Errorf("Failed to start web server: %w", err)
@@ -79,6 +79,7 @@ func (app *App) setupRoutes() {
 	app.router.Get("/hello-world", func(w http.ResponseWriter, r *http.Request) {
 		store := &Store{}
 		if err := datastar.ReadSignals(r, store); err != nil {
+			log.Error("Error reading signals", "error", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -88,6 +89,7 @@ func (app *App) setupRoutes() {
 
 		for i := range len(message) {
 			if err := sse.PatchElements(`<div id="message">` + message[:i+1] + `</div>`); err != nil {
+				log.Error("Error patching elements", "error", err)
 				return
 			}
 			time.Sleep(store.Delay * time.Millisecond)
@@ -110,12 +112,12 @@ func (app *App) setupRoutes() {
 
 func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Path[len(store.DocsHTTPPath):]
-	log.Printf("Requested filePath: %s", filePath)
+	log.Info("Requested filePath", "path", filePath)
 
 	// Read document content
 	content, err := app.docsService.ReadFile(filePath)
 	if err != nil {
-		log.Printf("Error reading document %s: %v", filePath, err)
+		log.Error("Error reading document", "path", filePath, "error", err)
 		http.Error(w, "Document not found", http.StatusNotFound)
 		return
 	}
@@ -123,7 +125,7 @@ func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
 	// Convert markdown to HTML
 	htmlContent, err := app.docsRenderer.RenderToHTML(content)
 	if err != nil {
-		log.Printf("Error rendering document %s: %v", filePath, err)
+		log.Error("Error rendering document", "path", filePath, "error", err)
 		http.Error(w, "Failed to render document", http.StatusInternalServerError)
 		return
 	}
@@ -140,7 +142,7 @@ func (app *App) setupNATSStreams(_ context.Context) error {
 	// Create JetStream context
 	js, err := app.natsConn.JetStream()
 	if err != nil {
-		log.Printf("Failed to create JetStream context: %v", err)
+		log.Error("Failed to create JetStream context", "error", err)
 		return fmt.Errorf("Failed to create JetStream context: %w", err)
 	}
 
@@ -153,10 +155,10 @@ func (app *App) setupNATSStreams(_ context.Context) error {
 		MaxAge:    time.Hour * 24, // Keep messages for 24 hours
 	})
 	if err != nil {
-		log.Printf("Stream may already exist: %v", err)
+		log.Warn("NATS Stream may already exist", "error", err)
 	}
 
-	log.Printf("NATS JetStream setup complete - Stream: %s", streamName)
+	log.Info("NATS JetStream setup complete", "stream", streamName)
 	return nil
 }
 
@@ -167,7 +169,7 @@ func (app *App) handleNATSStream(w http.ResponseWriter, r *http.Request) {
 	sub, err := app.natsConn.Subscribe("messages.demo", func(msg *nats.Msg) {
 		var message Message
 		if err := json.Unmarshal(msg.Data, &message); err != nil {
-			log.Printf("Error unmarshaling message: %v", err)
+			log.Error("Error unmarshaling message", "error", err)
 			return
 		}
 
@@ -176,7 +178,7 @@ func (app *App) handleNATSStream(w http.ResponseWriter, r *http.Request) {
 			message.Timestamp.Format(time.RFC3339), message.Content)
 
 		if err := sse.PatchElements(html); err != nil {
-			log.Printf("Error sending SSE: %v", err)
+			log.Error("Error sending SSE", "error", err)
 		}
 	})
 

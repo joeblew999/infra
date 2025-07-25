@@ -2,19 +2,19 @@ package dep
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/store"
 )
 
 type caddyInstaller struct{}
 
 func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
-	log.Printf("  Attempting download and installation of %s...", binary.Name)
+	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath := Get(binary.Name)
 
@@ -22,7 +22,7 @@ func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
 	var err error
 
 	if debug && binary.Name == "caddy" {
-		log.Println("  Using gh cli for Caddy release info (debug mode).")
+		log.Info("Using gh cli for Caddy release info (debug mode).")
 		release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
 	} else {
 		release, err = getGitHubRelease(binary.Repo, binary.Version)
@@ -48,7 +48,7 @@ func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
 		return fmt.Errorf("failed to download asset %s: %w", asset.Name, err)
 	}
 
-	log.Printf("  Downloaded %s to %s", asset.Name, assetPath)
+	log.Info("Downloaded asset", "asset_name", asset.Name, "path", assetPath)
 
 	if strings.HasSuffix(asset.Name, ".zip") {
 		if err := unzip(assetPath, tmpDir); err != nil {
@@ -78,6 +78,6 @@ func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
 		return fmt.Errorf("failed to set executable permissions for %s: %w", installPath, err)
 	}
 
-	log.Printf("  Successfully installed %s to %s", binary.Name, installPath)
+	log.Info("Successfully installed binary", "binary", binary.Name, "path", installPath)
 	return nil
 }

@@ -3,9 +3,9 @@ package dep
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/store"
 )
 
@@ -117,22 +117,21 @@ var embeddedCoreBinaries = []CoreBinary{
 // Ensure downloads and prepares all binaries defined in the manifest.
 // This function will handle both core bootstrapping binaries and generic ones.
 func Ensure(debug bool) error {
-	log.Println("Ensuring core binaries...")
+	log.Info("Ensuring core binaries...")
 
 	for _, binary := range embeddedCoreBinaries {
-		log.Printf("Checking %s (version %s) from %s", binary.Name, binary.Version, binary.Repo)
+		log.Info("Checking binary", "name", binary.Name, "version", binary.Version, "repo", binary.Repo)
 
 		installPath := Get(binary.Name)
 		currentMeta, err := readMeta(installPath)
 		if err == nil && currentMeta.Version == binary.Version {
-			log.Printf("  %s (version %s) already exists and is up to date. Skipping download.", binary.Name, binary.Version)
-			continue
+			log.Info("Binary up to date", "name", binary.Name, "version", binary.Version)
 		} else if err != nil && !os.IsNotExist(err) {
-			log.Printf("  Error reading metadata for %s: %v. Attempting re-download.", binary.Name, err)
+			log.Warn("Error reading metadata", "name", binary.Name, "error", err, "action", "attempting re-download")
 		} else if currentMeta != nil && currentMeta.Version != binary.Version {
-			log.Printf("  %s exists but version mismatch (expected %s, got %s). Attempting re-download.", binary.Name, binary.Version, currentMeta.Version)
+			log.Warn("Version mismatch", "name", binary.Name, "expected", binary.Version, "got", currentMeta.Version, "action", "attempting re-download")
 		} else {
-			log.Printf("  %s not found or metadata missing. Attempting download and installation...", binary.Name)
+			log.Info("Binary not found or metadata missing", "name", binary.Name, "action", "attempting download and installation")
 		}
 
 		// Determine the correct installer based on binary name
@@ -158,7 +157,7 @@ func Ensure(debug bool) error {
 		}
 	}
 
-	log.Println("Core binaries ensured.")
+	log.Info("Core binaries ensured.")
 	return nil
 }
 

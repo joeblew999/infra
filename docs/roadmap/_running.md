@@ -6,6 +6,59 @@ just for me.
 
 ---
 
+pkg/mcp needs to write to the claude and gemini file, so we can setup MCP servers automatically. 
+
+- Ask AI for help.
+- gemimi cli is always getting "cant do strong replace" errors
+
+https://github.com/modelcontextprotocol/registry
+https://github.com/ravitemer/mcp-registry types might be cool for us to use ?
+Is there officla one ?
+
+--- 
+
+Add a note that the AI knows for the pkg/log to keep the design by contract, so that all other golang code can work, but just needs the log import path changed.
+
+- this will make it easy to do global find and replace on anything else we bring in.
+
+---
+
+Web server home page must show ALL links at the very top.
+
+These links like to docs, metrics, logs are formalise dinthe pkg/store file, so we have core place for them.
+
+--
+
+add pkg/nats
+
+make sure that it dedups, because it is self similar. see below. ask AI for advice.
+for example logging via nats.
+
+-- 
+
+rename pkg/store to pkg/config.
+
+the idea is to NOT need config files at all. 
+
+---
+
+pkg/log neds to use https://github.com/samber/slog-nats
+pkg/config to model options, so that at startup we can put the system into logging to std out, file, or nats. 
+
+then a page to web so we can see the logs of the system itself ! its self similar.
+
+---
+
+pkg/gops shoukd change to metrics ? 
+
+add health endpoint to web server ? so that any other system can see it
+
+add health endpoint to nats, so any nats system can use it.  
+
+add health page to web sever, so we can see the health data via nats and datastar. self simialr :) 
+
+---
+
 pkg/cmd.go is too big too ? ask gemini for advice.  
 
 ---
