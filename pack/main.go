@@ -28,6 +28,7 @@ const (
 	packageVersion    = "1.0.0"
 	repositoryURL     = "https://github.com/joeblew99/infra.git"
 	packageDescription = "A CLI tool for managing your Go project's npm package."
+	packageAuthor     = "Your Name"
 )
 
 var buildMatrix = []struct {
@@ -36,7 +37,7 @@ var buildMatrix = []struct {
 }{
 	{"windows", "amd64"},
 	{"windows", "arm64"},
-	{"darwin", "amd664"},
+	{"darwin", "amd64"},
 	{"darwin", "arm64"},
 	{"linux", "amd64"},
 	{"linux", "arm64"},
@@ -275,6 +276,7 @@ var generateCmd = &cobra.Command{
 			HomepageURL string
 			BinName     string
 			Description string
+			Author      string
 		}{
 			Name:        packageName,
 			Version:     packageVersion,
@@ -283,6 +285,7 @@ var generateCmd = &cobra.Command{
 			HomepageURL: homepageURL,
 			BinName:     binaryName,
 			Description: packageDescription,
+			Author:      packageAuthor,
 		}
 
 		var processedTemplate bytes.Buffer
@@ -310,6 +313,7 @@ var infoCmd = &cobra.Command{
 		fmt.Printf("Repository URL: %s\n", repositoryURL)
 		fmt.Printf("Binary Name: %s\n", binaryName)
 		fmt.Printf("Description: %s\n", packageDescription)
+		fmt.Printf("Author: %s\n", packageAuthor)
 	},
 }
 

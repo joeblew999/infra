@@ -23,7 +23,7 @@
     "binary",
     "cli"
   ],
-  "author": "Your Name",
+  "author": "{{.Author}}",
   "license": "MIT",
   "engines": {
     "node": ">=14.0.0"
