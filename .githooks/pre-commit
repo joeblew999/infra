@@ -1,0 +1,15 @@
+#!/bin/bash
+# Pre-commit hook to check API compatibility
+
+set -e
+
+echo "🔍 Running pre-commit checks via Go CLI..."
+
+# Run pre-commit checks using the unified CLI
+if go run . pre-commit; then
+    echo "✅ All pre-commit checks passed"
+else
+    echo "❌ Pre-commit checks failed"
+    echo "   To skip this check (not recommended): git commit --no-verify"
+    exit 1
+fi

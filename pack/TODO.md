@@ -19,3 +19,8 @@ ONLY do each step on it own.
 AFTER
 
 The existing cli command "build", can then incorporate all this, because it a workflow.
+
+- I think we need to revisit the naming of all the cli commamnds. We are exposing too many commands. We want idempotent and that what workflows do, like build, release, deploy.   cli command "build" does to much ?
+
+Maybe we ONLY need build, test, release ?? 
+

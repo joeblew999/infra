@@ -105,6 +105,46 @@ var initCmd = &cobra.Command{
 	},
 }
 
+// preCommitCmd runs pre-commit checks
+var preCommitCmd = &cobra.Command{
+	Use:   "pre-commit",
+	Short: "Run pre-commit checks",
+	Long: `Run pre-commit checks including:
+- API compatibility check
+- Documentation quality validation
+- Go file formatting and linting`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runPreCommitChecks()
+	},
+}
+
+// ciCmd runs CI checks
+var ciCmd = &cobra.Command{
+	Use:   "ci",
+	Short: "Run CI checks",
+	Long: `Run CI checks including:
+- API compatibility verification
+- Documentation quality check
+- Full test suite`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return runCIChecks()
+	},
+}
+
+// devCmd starts development mode
+var devCmd = &cobra.Command{
+	Use:   "dev",
+	Short: "Start development mode",
+	Long: `Start development mode with:
+- File watching
+- Automatic rebuilds
+- Hot reload capabilities`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		watch, _ := cmd.Flags().GetBool("watch")
+		return runDevMode(watch)
+	},
+}
+
 func init() {
 	// Deploy command flags
 	deployCmd.Flags().StringP("app", "a", "", "Fly.io app name (default: from env FLY_APP_NAME or 'infra-mgmt')")
@@ -128,6 +168,9 @@ func init() {
 	initCmd.Flags().StringP("name", "n", "", "Project name")
 	initCmd.Flags().StringP("template", "t", "web", "Project template (web, api, worker)")
 	initCmd.Flags().Bool("force", false, "Overwrite existing files")
+
+	// Dev command flags
+	devCmd.Flags().Bool("watch", true, "Enable file watching")
 }
 
 // RunWorkflows adds all workflow commands to the root command.
@@ -136,4 +179,60 @@ func RunWorkflows() {
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(preCommitCmd)
+	rootCmd.AddCommand(ciCmd)
+	rootCmd.AddCommand(devCmd)
+}
+
+// runPreCommitChecks implements the pre-commit workflow logic
+func runPreCommitChecks() error {
+	fmt.Println("🔍 Running pre-commit checks...")
+	
+	// Check if we have staged Go files
+	if hasError := checkStagedGoFiles(); hasError != nil {
+		return hasError
+	}
+	
+	// Run API compatibility check
+	if err := runAPICompatibilityCheck("HEAD~1", "HEAD"); err != nil {
+		return err
+	}
+	
+	// Check documentation quality
+	if err := checkDocumentationQuality(); err != nil {
+		return err
+	}
+	
+	fmt.Println("✅ All pre-commit checks passed")
+	return nil
+}
+
+// runCIChecks implements the CI workflow logic
+func runCIChecks() error {
+	fmt.Println("🔍 Running CI checks...")
+	
+	// Run API compatibility check
+	if err := runAPICompatibilityCheck("", ""); err != nil {
+		return err
+	}
+	
+	// Verify documentation quality for all packages
+	if err := verifyAllDocumentationQuality(); err != nil {
+		return err
+	}
+	
+	fmt.Println("✅ All CI checks passed")
+	return nil
+}
+
+// runDevMode starts development mode
+func runDevMode(watch bool) error {
+	fmt.Printf("🚀 Starting development mode (watch: %v)...\n", watch)
+	
+	if watch {
+		fmt.Println("📁 File watching enabled - changes will trigger rebuilds")
+	}
+	
+	// TODO: Implement file watching and hot reload
+	return fmt.Errorf("development mode not fully implemented yet")
 }

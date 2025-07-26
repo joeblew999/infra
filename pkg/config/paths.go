@@ -8,6 +8,28 @@ import (
 )
 
 const (
+	// Environment variables
+	// NOTE: ALL environment variables MUST be declared as constants here and used throughout the code.
+	// This ensures centralized management and prevents hardcoded strings scattered across functions.
+	EnvVarEnvironment   = "ENVIRONMENT"
+	EnvVarFlyAppName    = "FLY_APP_NAME"
+	EnvVarKoDockerRepo  = "KO_DOCKER_REPO"
+
+	// Registry and image constants
+	// NOTE: All registry URLs and image names are constants to prevent obfuscation
+	FlyRegistryURL           = "registry.fly.io/"
+	FlyRegistryFallback      = "registry.fly.io/infra"
+	KoLocalRegistry          = "ko.local"
+	ChainguardStaticImage    = "cgr.dev/chainguard/static:latest"
+	ChainguardGoImage        = "cgr.dev/chainguard/go:latest"
+
+	// Platform constants
+	PlatformLinuxAmd64 = "linux/amd64"
+	PlatformLinuxArm64 = "linux/arm64"
+
+	// Configuration file names
+	KoConfigFileName = ".ko.yaml"
+
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
 
@@ -100,11 +122,11 @@ func GetTerraformPath() string {
 
 // IsProduction returns true if running in production environment
 func IsProduction() bool {
-	env := os.Getenv("ENVIRONMENT")
+	env := os.Getenv(EnvVarEnvironment)
 	if env == "" {
-		env = os.Getenv("FLY_APP_NAME") // Fly.io sets this
+		env = os.Getenv(EnvVarFlyAppName) // Fly.io sets this
 	}
-	return env == EnvProduction || os.Getenv("FLY_APP_NAME") != ""
+	return env == EnvProduction || os.Getenv(EnvVarFlyAppName) != ""
 }
 
 // IsDevelopment returns true if running in development environment
@@ -120,42 +142,42 @@ func ShouldUseHTTPS() bool {
 
 // GetKoConfigPath returns the path to the ko configuration file
 func GetKoConfigPath() string {
-	return filepath.Join(".", ".ko.yaml")
+	return filepath.Join(".", KoConfigFileName)
 }
 
 // GetKoDefaultBaseImage returns the appropriate base image for the environment
 func GetKoDefaultBaseImage() string {
 	if IsProduction() {
-		return "cgr.dev/chainguard/static:latest" // Minimal for production
+		return ChainguardStaticImage // Minimal for production
 	}
-	return "cgr.dev/chainguard/go:latest" // Debug-friendly for development
+	return ChainguardGoImage // Debug-friendly for development
 }
 
 // GetKoDockerRepo returns the appropriate Docker repository for the environment
 func GetKoDockerRepo() string {
 	// Check if explicitly set via environment variable
-	if repo := os.Getenv("KO_DOCKER_REPO"); repo != "" {
+	if repo := os.Getenv(EnvVarKoDockerRepo); repo != "" {
 		return repo
 	}
 	
 	if IsProduction() {
 		// Use Fly.io registry in production (assuming FLY_APP_NAME is set)
-		if appName := os.Getenv("FLY_APP_NAME"); appName != "" {
-			return "registry.fly.io/" + appName
+		if appName := os.Getenv(EnvVarFlyAppName); appName != "" {
+			return FlyRegistryURL + appName
 		}
-		return "registry.fly.io/infra" // fallback
+		return FlyRegistryFallback // fallback
 	}
 	
 	// Local development - use local registry or ko.local
-	return "ko.local"
+	return KoLocalRegistry
 }
 
 // GetKoDefaultPlatforms returns the platforms to build for
 func GetKoDefaultPlatforms() []string {
 	if IsProduction() {
 		// Multi-platform for production
-		return []string{"linux/amd64", "linux/arm64"}
+		return []string{PlatformLinuxAmd64, PlatformLinuxArm64}
 	}
 	// Single platform for development (faster builds)
-	return []string{"linux/amd64"}
+	return []string{PlatformLinuxAmd64}
 }

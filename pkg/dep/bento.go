@@ -11,9 +11,9 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 )
 
-type tofuInstaller struct{}
+type bentoInstaller struct{}
 
-func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *bentoInstaller) Install(binary CoreBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)
@@ -23,8 +23,8 @@ func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
 
 	var release *gitHubRelease
 
-	if debug && binary.Name == "tofu" {
-		log.Info("Using gh cli for Tofu release info (debug mode).")
+	if debug && binary.Name == "bento" {
+		log.Info("Using gh cli for Bento release info (debug mode).")
 		release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
 	} else {
 		release, err = getGitHubRelease(binary.Repo, binary.Version)

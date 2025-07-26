@@ -16,10 +16,12 @@ type taskInstaller struct{}
 func (i *taskInstaller) Install(binary CoreBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
-	installPath := Get(binary.Name)
+	installPath, err := Get(binary.Name)
+	if err != nil {
+		return fmt.Errorf("failed to get install path for %s: %w", binary.Name, err)
+	}
 
-	var release *GitHubRelease
-	var err error
+	var release *gitHubRelease
 
 	if debug && binary.Name == "task" {
 		log.Info("Using gh cli for Task release info (debug mode).")

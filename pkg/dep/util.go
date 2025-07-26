@@ -18,19 +18,19 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// GitHubReleaseAsset represents a single asset in a GitHub release.
-type GitHubReleaseAsset struct {
+// gitHubReleaseAsset represents a single asset in a GitHub release.
+type gitHubReleaseAsset struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 }
 
-// GitHubRelease represents a GitHub release.
-type GitHubRelease struct {
-	Assets []GitHubReleaseAsset `json:"assets"`
+// gitHubRelease represents a GitHub release.
+type gitHubRelease struct {
+	Assets []gitHubReleaseAsset `json:"assets"`
 }
 
 // getGitHubRelease fetches release information directly from GitHub API using net/http.
-func getGitHubRelease(repo, version string) (*GitHubRelease, error) {
+func getGitHubRelease(repo, version string) (*gitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/tags/%s", repo, version)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -42,7 +42,7 @@ func getGitHubRelease(repo, version string) (*GitHubRelease, error) {
 		return nil, fmt.Errorf("GitHub API returned status %d for %s", resp.StatusCode, url)
 	}
 
-	var release GitHubRelease
+	var release gitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
 		return nil, fmt.Errorf("failed to decode GitHub release response: %w", err)
 	}
@@ -50,8 +50,14 @@ func getGitHubRelease(repo, version string) (*GitHubRelease, error) {
 	return &release, nil
 }
 
-// getGitHubReleaseDebug fetches release information using gh cli.
-func getGitHubReleaseDebug(repo, version string) (*GitHubRelease, error) {
+// getGitHubReleaseDebug fetches release information using gh cli, with fallback to API.
+func getGitHubReleaseDebug(repo, version string) (*gitHubRelease, error) {
+	// Check if gh CLI is available
+	if _, err := exec.LookPath("gh"); err != nil {
+		log.Warn("gh CLI not found, falling back to GitHub API", "repo", repo, "version", version)
+		return getGitHubRelease(repo, version)
+	}
+
 	cmd := exec.Command("gh", "release", "view", version, "--repo", repo, "--json", "assets")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -59,19 +65,21 @@ func getGitHubReleaseDebug(repo, version string) (*GitHubRelease, error) {
 
 	log.Info("Running command", "command", cmd.Args)
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run gh cli: %w\nStderr: %s", err, stderr.String())
+		log.Warn("gh CLI failed, falling back to GitHub API", "error", err, "stderr", stderr.String())
+		return getGitHubRelease(repo, version)
 	}
 
-	var release GitHubRelease
+	var release gitHubRelease
 	if err := json.NewDecoder(&stdout).Decode(&release); err != nil {
-		return nil, fmt.Errorf("failed to decode gh cli output: %w", err)
+		log.Warn("Failed to decode gh CLI output, falling back to GitHub API", "error", err)
+		return getGitHubRelease(repo, version)
 	}
 
 	return &release, nil
 }
 
 // selectAsset selects the appropriate asset from a GitHub release based on OS, Arch, and regex match.
-func selectAsset(release *GitHubRelease, selectors []AssetSelector) (*GitHubReleaseAsset, error) {
+func selectAsset(release *gitHubRelease, selectors []AssetSelector) (*gitHubReleaseAsset, error) {
 	for _, selector := range selectors {
 		if selector.OS == runtime.GOOS && selector.Arch == runtime.GOARCH {
 			for _, asset := range release.Assets {

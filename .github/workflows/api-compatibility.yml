@@ -1,0 +1,32 @@
+name: API Compatibility Check
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  api-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Need full history for comparison
+        
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install apidiff
+      run: go install golang.org/x/exp/cmd/apidiff@latest
+      
+    - name: Run CI Checks
+      run: go run . ci
+        
+    - name: Check for Breaking Changes in PR
+      if: github.event_name == 'pull_request'
+      run: |
+        # Compare against base branch using the unified CLI
+        go run . api-check --old origin/${{ github.base_ref }} --new HEAD

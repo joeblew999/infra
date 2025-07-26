@@ -1,12 +1,63 @@
+// Package dep provides a design-by-contract binary dependency management system.
+//
+// This package automatically downloads and manages GitHub-released binaries with
+// version tracking and platform-specific asset selection. It follows design by
+// contract principles to ensure API stability for consuming packages.
+//
+// # Public API Guarantees
+//
+// The following functions and types form the stable public API:
+//   - Ensure(debug bool) error - Downloads and ensures all binaries are available
+//   - Get(name string) (string, error) - Returns the path to a binary
+//   - BinaryMeta, CoreBinary, AssetSelector structs - Data structures
+//   - ErrBinaryNotFound, ErrInvalidInput, ErrInstallationFailed - Error types
+//
+// # API Stability Contract
+//
+//   - Function signatures will not change without major version bump
+//   - Error types will remain consistent for error handling
+//   - Struct field names and JSON tags are stable
+//   - Binary name validation rules are stable
+//
+// # Usage Example
+//
+//	// Ensure all binaries are downloaded and up-to-date
+//	if err := dep.Ensure(false); err != nil {
+//	    log.Fatal(err)
+//	}
+//
+//	// Get path to a specific binary
+//	path, err := dep.Get("garble")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//
+// # Supported Binaries
+//
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble
+//
+// Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
+// using regex patterns to match GitHub release assets.
 package dep
 
 import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
+)
+
+// Package errors for better error handling and API stability
+var (
+	// ErrBinaryNotFound is returned when a requested binary is not available
+	ErrBinaryNotFound = fmt.Errorf("binary not found")
+	// ErrInvalidInput is returned when input validation fails
+	ErrInvalidInput = fmt.Errorf("invalid input")
+	// ErrInstallationFailed is returned when binary installation fails
+	ErrInstallationFailed = fmt.Errorf("installation failed")
 )
 
 // BinaryMeta stores metadata about an installed binary.
@@ -74,6 +125,19 @@ type Installer interface {
 // This will be embedded at compile time.
 var embeddedCoreBinaries = []CoreBinary{
 	{
+		Name:       "bento",
+		Repo:       "warpstreamlabs/bento",
+		Version:    "v1.9.0",
+		ReleaseURL: "https://github.com/warpstreamlabs/bento/releases/tag/v1.9.0",
+		Assets: []AssetSelector{
+			{OS: "darwin", Arch: "amd64", Match: `bento_.*_darwin_amd64\.tar\.gz$`},
+			{OS: "darwin", Arch: "arm64", Match: `bento_.*_darwin_arm64\.tar\.gz$`},
+			{OS: "linux", Arch: "amd64", Match: `bento_.*_linux_amd64\.tar\.gz$`},
+			{OS: "linux", Arch: "arm64", Match: `bento_.*_linux_arm64\.tar\.gz$`},
+			{OS: "windows", Arch: "amd64", Match: `bento_.*_windows_amd64\.zip$`},
+		},
+	},
+	{
 		Name:       "task",
 		Repo:       "go-task/task",
 		Version:    "v3.44.1", // Example version, update as needed
@@ -138,6 +202,13 @@ var embeddedCoreBinaries = []CoreBinary{
 			{OS: "windows", Arch: "amd64", Match: `flyctl_.*_Windows_x86_64\.zip$`},
 		},
 	},
+	{
+		Name:       "garble",
+		Repo:       "burrowers/garble",
+		Version:    "v0.14.2",
+		ReleaseURL: "https://github.com/burrowers/garble/releases/tag/v0.14.2",
+		Assets:     []AssetSelector{}, // Garble uses go install, no assets needed
+	},
 }
 
 // Ensure downloads and prepares all binaries defined in the manifest.
@@ -148,7 +219,10 @@ func Ensure(debug bool) error {
 	for _, binary := range embeddedCoreBinaries {
 		log.Info("Checking binary", "name", binary.Name, "version", binary.Version, "repo", binary.Repo)
 
-		installPath := Get(binary.Name)
+		installPath, err := Get(binary.Name)
+		if err != nil {
+			return fmt.Errorf("failed to get install path for %s: %w", binary.Name, err)
+		}
 		currentMeta, err := readMeta(installPath)
 		if err == nil && currentMeta.Version == binary.Version {
 			log.Info("Binary up to date", "name", binary.Name, "version", binary.Version)
@@ -164,6 +238,8 @@ func Ensure(debug bool) error {
 		// Determine the correct installer based on binary name
 		var installer Installer
 		switch binary.Name {
+		case "bento":
+			installer = &bentoInstaller{}
 		case "task":
 			installer = &taskInstaller{}
 		case "tofu":
@@ -174,6 +250,8 @@ func Ensure(debug bool) error {
 			installer = &koInstaller{}
 		case "flyctl":
 			installer = &flyctlInstaller{}
+		case "garble":
+			installer = &garbleInstaller{}
 		default:
 			return fmt.Errorf("no installer found for binary: %s", binary.Name)
 		}
@@ -193,6 +271,18 @@ func Ensure(debug bool) error {
 }
 
 // Get returns the absolute path to the requested binary for the current platform.
-func Get(name string) string {
-	return config.Get(name)
+// Returns an error if the binary name is invalid or not supported.
+func Get(name string) (string, error) {
+	if strings.TrimSpace(name) == "" {
+		return "", fmt.Errorf("%w: binary name cannot be empty", ErrInvalidInput)
+	}
+
+	// Validate that the binary is in our supported list
+	for _, binary := range embeddedCoreBinaries {
+		if binary.Name == name {
+			return config.Get(name), nil
+		}
+	}
+
+	return "", fmt.Errorf("%w: binary '%s' is not supported", ErrBinaryNotFound, name)
 }

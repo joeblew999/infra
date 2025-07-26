@@ -1,6 +1,20 @@
 # Config
 
-we do not want config files, but instead use this to formalise config here.
+Formalise config here, so we do not need config files.
+
+## Environment detection
+
+At the moment we have a IsProduction function that use the ENV.
+
+
+## Environments
+
+In Dev environment we use the local ./.dep folder. This is so that the files are all local and do not pollute your OS at all.
+
+In Prod environment, we use the standard OS folders. This is so that when users uninstall the software and then reinstall it, the data is still there, and also so we respect each OS and the place it stores things normally on disk.
+
+
+## Later things
 
 Eventually we will enable this to be optionally driven by NATS Jetstream, so that the config is in the KV store.
 

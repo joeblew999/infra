@@ -23,9 +23,35 @@ var serviceCmd = &cobra.Command{
 	},
 }
 
+// apiCheckCmd provides API compatibility checking
+var apiCheckCmd = &cobra.Command{
+	Use:   "api-check",
+	Short: "Check API compatibility between commits",
+	Long: `Check API compatibility between two Git commits using apidiff.
+This command helps ensure that public APIs remain backward compatible.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		oldCommit, _ := cmd.Flags().GetString("old")
+		newCommit, _ := cmd.Flags().GetString("new")
+		
+		if oldCommit == "" {
+			oldCommit = "HEAD~1"
+		}
+		if newCommit == "" {
+			newCommit = "HEAD"
+		}
+		
+		return runAPICompatibilityCheck(oldCommit, newCommit)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(serviceCmd)
+	rootCmd.AddCommand(apiCheckCmd)
+	
 	serviceCmd.Flags().Bool("dev-docs", false, "Enable development mode for docs (serve from disk)")
+	
+	apiCheckCmd.Flags().String("old", "HEAD~1", "Old commit to compare against")
+	apiCheckCmd.Flags().String("new", "HEAD", "New commit to compare")
 }
 
 func RunService(devDocs bool, mode string) {

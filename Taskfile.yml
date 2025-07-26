@@ -108,6 +108,24 @@ tasks:
     cmds:
       - task git:tags:delete:one TAG={{.TAG}} REMOTE={{.REMOTE}}
 
+### API COMPATIBILITY
+
+  this:api:check:
+    desc: Check API compatibility between commits (usage - task this:api:check [-- old-commit new-commit])
+    cmds:
+      - ./scripts/check-api-compatibility.sh {{.CLI_ARGS}}
+
+  this:api:docs:
+    desc: Show API documentation for specified package (usage - task this:api:docs [-- pkg/path])
+    cmds:
+      - go doc -all {{.CLI_ARGS | default "."}}
+
+  this:api:setup-hooks:
+    desc: Install git hooks for API compatibility checking
+    cmds:
+      - git config core.hooksPath .githooks
+      - echo "✅ Git hooks configured to use .githooks/"
+
 ### LOGS
 
 
