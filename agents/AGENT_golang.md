@@ -8,23 +8,25 @@ This embraces the "infrastructure as code" for infra.
 
 ## Quick Start
 
-Enable automatic API protection:
-```bash
-task this:api:setup-hooks
-```
+Everything is controlled via `go run .` - no task files needed.
 
 ## Daily Commands
 
 ```bash
 # Check for breaking changes
-task this:api:check
+go run . api-check
+
+# Run pre-commit checks (API + docs)
+go run . pre-commit
+
+# Run full CI checks
+go run . ci
 
 # View package documentation  
-task this:api:docs -- ./pkg/packagename
 go doc -all ./pkg/packagename
 
-# Test before committing
-task this:test:all
+# Development mode (when implemented)
+go run . dev
 ```
 
 ## Package Requirements
@@ -101,71 +103,48 @@ func ExistingFunc(old string, new int) string     // Breaking
 
 Reference implementation: `pkg/dep`
 
-
 ## TODO
 
-### golang development
+### Fix API Compatibility Checker
 
 Problem:
 
-We need to formalise the goalng development flow also, to enforce good code quality.
+The API compatibility checker is reporting false positive breaking changes across all packages when running:
 
-We currently have it scatttered around from the github root at :
-
-./.githooks/pre-commit
-
-./.github/workflows/api-compatibility.yml
-
-./script/check-api-compatibility.sh
-
-./pkg/cmd
-
-We want "go run ." to be the way we work always, so how do we incorporate that ? 
-
-Solution:
-
-Create a unified development CLI in main.go, using pkg/cmd
-
-```
-go run . pre-commit    # Run pre-commit checks
-go run . ci            # Run CI checks  
-go run . api-check     # API compatibility check
-go run . dev           # Development mode
-go run . help          # Show commands
-go run .               # Runs essentiually what is production
+```bash
+go run . api-check
+go run . pre-commit  
 ```
 
-Update existing files to call `go run .` commands. Move quality check logic from shell scripts into Go code.
+Current behavior: Reports breaking changes in every package (docs, pkg/log, pkg/nats, etc.) even when those packages weren't modified.
 
-./../pkg/cmd structure with CLI framework in place:
+Root cause: Bug in `runAPICompatibilityCheck()` function in `pkg/cmd/common.go` around lines 105-180.
 
-  - root.go - Root command setup
-  - cli.go - CLI utilities
-  - common.go - Shared functionality
-  - service.go - Service commands
-  - workflows.go - Workflow commands
+Likely issues:
+- Package discovery logic finding wrong directories
+- apidiff command failing silently but being treated as breaking changes
+- Git worktree setup not working correctly  
+- Error handling interpreting failed apidiff runs as API breaks
 
-  You can add your development commands (pre-commit, ci, api-check, dev) to this
-  existing CLI structure rather than starting from scratch.
+Impact:
+- Pre-commit hooks failing with false positives
+- Developers will lose trust in API checking system
+- Real breaking changes might be missed in the noise
+- CI pipeline blocked by unreliable checks
 
-Looking at the existing pkg/cmd structure and the 3 files' functionality:
+Solution needed:
+1. Debug the `runAPICompatibilityCheck()` function step by step
+2. Add proper error handling and logging to see what apidiff is actually doing
+3. Verify git worktree setup is working correctly
+4. Test package discovery logic to ensure it finds the right directories
+5. Verify apidiff is running correctly and interpreting results properly
 
-  Code Distribution:
-
-  .githooks/pre-commit logic →
-  - workflows.go - Pre-commit workflow command
-  - common.go - Git staged files detection, documentation checks
-
-  .github/workflows/api-compatibility.yml logic →
-  - workflows.go - CI workflow command
-  - service.go - API compatibility service functions
-
-  scripts/check-api-compatibility.sh logic →
-  - service.go - Core API diff functionality (git worktrees, apidiff calls)
-  - common.go - Package discovery, error handling utilities
-
-  This keeps workflow orchestration in workflows.go, reusable services in service.go,
-  and shared utilities in common.go.
+Test commands:
+```bash
+# Should work without false positives
+go run . api-check --old HEAD~1 --new HEAD
+go run . pre-commit
+```
 
 
 
