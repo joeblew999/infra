@@ -46,6 +46,7 @@ func Execute() {
 	RunCLI()
 	RunWorkflows()
 	RunConduit()
+	// RunCLI() already includes flyctl command
 	// RunService() is called directly from rootCmd.Run
 
 	if err := rootCmd.Execute(); err != nil {

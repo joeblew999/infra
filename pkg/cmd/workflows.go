@@ -54,10 +54,16 @@ var buildCmd = &cobra.Command{
 		tag, _ := cmd.Flags().GetString("tag")
 
 		// TODO: Implement build workflow
-		fmt.Printf("Building with: push=%v, platform=%s, repo=%s, tag=%s\n", 
-			push, platform, repo, tag)
+		workflow := workflows.NewBuildWorkflow(workflows.BuildOptions{
+			Push:     push,
+			Platform: platform,
+			Repo:     repo,
+			Tag:      tag,
+			DryRun:   false,
+		})
 		
-		return fmt.Errorf("build workflow not implemented yet")
+		_, err := workflow.Execute()
+		return err
 	},
 }
 

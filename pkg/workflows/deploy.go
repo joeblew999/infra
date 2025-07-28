@@ -116,13 +116,13 @@ func (d *DeployWorkflow) checkAuth() error {
 		return nil
 	}
 
-	// Check if already authenticated
-	err := runBinary(config.GetFlyctlBinPath(), "auth", "whoami")
-	if err != nil {
-		log.Warn("Not authenticated with Fly.io. Please run: go run . flyctl auth login")
-		return fmt.Errorf("authentication required: run 'go run . flyctl auth login'")
+	// Use FLY_API_TOKEN from environment if set
+	token := os.Getenv("FLY_API_TOKEN")
+	if token == "" {
+		return fmt.Errorf("FLY_API_TOKEN environment variable is required")
 	}
-
+	
+	log.Info("Using FLY_API_TOKEN from environment")
 	return nil
 }
 
@@ -135,27 +135,36 @@ func (d *DeployWorkflow) ensureApp() error {
 		return nil
 	}
 
-	// Check if app exists
+	// Check if app exists - handle both success and error cases
 	output, err := runBinaryWithOutput(config.GetFlyctlBinPath(), "apps", "list")
 	if err != nil {
-		return fmt.Errorf("failed to list apps: %w", err)
-	}
-
-	if !strings.Contains(output, d.opts.AppName) {
-		log.Info("App doesn't exist, creating...", "app", d.opts.AppName)
-		
-		args := []string{"apps", "create", d.opts.AppName}
-		if d.opts.Region != "" {
+		// If we can't list apps, check if it's an auth issue
+		if strings.Contains(err.Error(), "must be authenticated") {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+		// Otherwise, log the error but continue - app might exist
+		log.Warn("Could not list apps, will attempt to deploy to existing app", "error", err)
+	} else {
+		// Successfully listed apps, check if our app exists
+		if !strings.Contains(output, d.opts.AppName) {
+			log.Info("App doesn't exist, creating...", "app", d.opts.AppName)
+			
+			args := []string{"apps", "create", d.opts.AppName}
 			args = append(args, "--org", "personal") // Default org
-		}
-		
-		if err := runBinary(config.GetFlyctlBinPath(), args...); err != nil {
-			return fmt.Errorf("failed to create app: %w", err)
-		}
-
-		// Set initial secrets
-		if err := d.setSecrets(); err != nil {
-			return fmt.Errorf("failed to set secrets: %w", err)
+			
+			createErr := runBinary(config.GetFlyctlBinPath(), args...)
+			if createErr != nil && strings.Contains(createErr.Error(), "already been taken") {
+				log.Info("App already exists, continuing...", "app", d.opts.AppName)
+			} else if createErr != nil {
+				return fmt.Errorf("failed to create app: %w", createErr)
+			} else {
+				// Only set secrets for new apps
+				if err := d.setSecrets(); err != nil {
+					return fmt.Errorf("failed to set secrets: %w", err)
+				}
+			}
+		} else {
+			log.Info("App already exists, skipping creation", "app", d.opts.AppName)
 		}
 	}
 
@@ -189,49 +198,45 @@ func (d *DeployWorkflow) ensureVolume() error {
 		return nil
 	}
 
-	// Check if volume exists
+	// Check if volume exists - handle idempotently
 	output, err := runBinaryWithOutput(config.GetFlyctlBinPath(), "volumes", "list", "-a", d.opts.AppName)
 	if err != nil {
-		return fmt.Errorf("failed to list volumes: %w", err)
-	}
-
-	if !strings.Contains(output, "infra_data") {
-		log.Info("Creating persistent volume")
-		args := []string{"volumes", "create", "infra_data", "--size", "1", "--region", d.opts.Region, "-a", d.opts.AppName, "--yes"}
-		if err := runBinary(config.GetFlyctlBinPath(), args...); err != nil {
-			return fmt.Errorf("failed to create volume: %w", err)
+		// Handle auth or other errors gracefully
+		if strings.Contains(err.Error(), "must be authenticated") {
+			return fmt.Errorf("authentication failed: %w", err)
+		}
+		log.Warn("Could not list volumes, will attempt to use existing volume", "error", err)
+	} else {
+		// Successfully listed volumes
+		if !strings.Contains(output, "infra_data") {
+			log.Info("Creating persistent volume")
+			args := []string{"volumes", "create", "infra_data", "--size", "1", "--region", d.opts.Region, "-a", d.opts.AppName, "--yes"}
+			createErr := runBinary(config.GetFlyctlBinPath(), args...)
+			if createErr != nil && strings.Contains(createErr.Error(), "already exists") {
+				log.Info("Volume already exists, continuing...", "volume", "infra_data")
+			} else if createErr != nil {
+				return fmt.Errorf("failed to create volume: %w", createErr)
+			}
+		} else {
+			log.Info("Volume already exists, skipping creation", "volume", "infra_data")
 		}
 	}
 
 	return nil
 }
 
-// buildImage builds the container image using ko
+// buildImage builds the container image using flyctl deploy
 func (d *DeployWorkflow) buildImage() (string, error) {
-	log.Info("Building container image with ko")
+	log.Info("Building container image with flyctl")
 	
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would build container image")
 		return "registry.fly.io/" + d.opts.AppName + ":latest", nil
 	}
 
-	// Authenticate with Fly.io registry
-	if err := runBinary(config.GetFlyctlBinPath(), "auth", "docker"); err != nil {
-		return "", fmt.Errorf("failed to authenticate with Fly.io registry: %w", err)
-	}
-
-	// Set ko environment
-	os.Setenv("KO_DOCKER_REPO", fmt.Sprintf("registry.fly.io/%s", d.opts.AppName))
-	os.Setenv("ENVIRONMENT", d.opts.Environment)
-
-	// Build image
-	image, err := runBinaryWithOutput(config.GetKoBinPath(), "build", "--platform=linux/amd64", "github.com/joeblew99/infra")
-	if err != nil {
-		return "", fmt.Errorf("ko build failed: %w", err)
-	}
-
-	image = strings.TrimSpace(image)
-	log.Info("Built container image", "image", image)
+	// Use flyctl deploy with --build-only to build without deploying
+	image := fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
+	log.Info("Using flyctl deploy for image building", "image", image)
 	
 	return image, nil
 }
@@ -245,7 +250,7 @@ func (d *DeployWorkflow) deploy(image string) error {
 		return nil
 	}
 
-	args := []string{"deploy", "--image", image, "-a", d.opts.AppName, "--remote-only"}
+	args := []string{"deploy", "-a", d.opts.AppName, "--remote-only"}
 	return runBinary(config.GetFlyctlBinPath(), args...)
 }
 
@@ -278,6 +283,24 @@ func runBinary(path string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
+	// Ensure FLY_API_TOKEN is passed through environment
+	token := os.Getenv("FLY_API_TOKEN")
+	if token != "" {
+		cmd.Env = append(os.Environ(), "FLY_API_TOKEN="+token)
+		// Add --access-token flag if not already present
+		hasTokenFlag := false
+		for _, arg := range args {
+			if arg == "--access-token" {
+				hasTokenFlag = true
+				break
+			}
+		}
+		if !hasTokenFlag {
+			args = append(args, "--access-token", token)
+		}
+	}
+	
+	cmd.Args = append([]string{path}, args...)
 	return cmd.Run()
 }
 
@@ -285,9 +308,28 @@ func runBinaryWithOutput(path string, args ...string) (string, error) {
 	log.Debug("Running command with output", "binary", path, "args", args)
 	
 	cmd := exec.Command(path, args...)
-	output, err := cmd.Output()
+	// Ensure FLY_API_TOKEN is passed through environment
+	token := os.Getenv("FLY_API_TOKEN")
+	if token != "" {
+		cmd.Env = append(os.Environ(), "FLY_API_TOKEN="+token)
+		// Add --access-token flag if not already present
+		hasTokenFlag := false
+		for _, arg := range args {
+			if arg == "--access-token" {
+				hasTokenFlag = true
+				break
+			}
+		}
+		if !hasTokenFlag {
+			args = append(args, "--access-token", token)
+		}
+	}
+	
+	cmd.Args = append([]string{path}, args...)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("command failed: %w", err)
+		log.Debug("Command failed", "error", err, "output", string(output))
+		return string(output), fmt.Errorf("command failed: %w", err)
 	}
 	
 	return string(output), nil

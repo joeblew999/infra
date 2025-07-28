@@ -1,34 +1,41 @@
 # Config
 
-Formalise config here, so we do not need config files.
+Central configuration package for cross-platform paths, environment detection, and binary naming.
 
-## Environment detection
+## Usage
 
-At the moment we have a IsProduction function that use the ENV.
+```go
+import "github.com/joeblew999/infra/pkg/config"
 
+// Get binary paths
+config.Get("flyctl")          // .dep/flyctl or .dep/flyctl.exe
+config.GetFlyctlBinPath()     // .dep/flyctl
+config.GetDepPath()          // .dep
 
-## Environments
+// Environment detection
+config.IsProduction()        // true on Fly.io
+config.IsDevelopment()       // true locally
 
-In Dev environment we use the local ./.dep folder. This is so that the files are all local and do not pollute your OS at all.
+// Platform utilities  
+config.GetBinaryName("tool") // "tool.exe" on Windows
+```
 
-In Prod environment, we use the standard OS folders. This is so that when users uninstall the software and then reinstall it, the data is still there, and also so we respect each OS and the place it stores things normally on disk.
+## Environment
 
+- **Development**: Uses local `.dep`, `.bin`, `.data` folders
+- **Production**: Uses standard OS paths (Fly.io deployment)
 
-## Later things
+## Paths
 
-Eventually we will enable this to be optionally driven by NATS Jetstream, so that the config is in the KV store.
+- `.dep/` - External binaries (flyctl, ko, caddy, etc.)
+- `.bin/` - Compiled project binaries
+- `.data/` - Application data (databases, stores)
+- `docs/` - Markdown documentation
 
-this will probably we when in Production mode.
+## Future
 
-when we go down this route, we will need to use Protobufs so we support schema evolution.
+Need to use github.com/adrg/xdg, so that we store data on dekstops in the right place ? 
 
-We will also need a proper way to config the local nats leaf node and upgrade it when the NATS Cluster changes its streams configurations.
-
-We need to really get the AI to think about this fully before we make a mess.
-
----
-
-expot as JSON so we can show on CLI and in Web GUI, via Web Server.
-
+Eventually configuration will be stored in NATS JetStream KV store. This centralized `pkg/config` design enables seamless migration from local files to distributed configuration without code changes.
 
 
