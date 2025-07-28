@@ -3,6 +3,7 @@
 package conduit
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -25,6 +26,9 @@ type ConduitBinary struct {
 	Type       string            `json:"type"` // "core", "connector", "processor"
 }
 
+//go:embed config/*.json
+var embeddedConfigs embed.FS
+
 // Configuration structures for separate files
 var coreConfig = struct {
 	Conduit ConduitBinary `json:"conduit"`
@@ -37,6 +41,9 @@ var connectorsConfig = struct {
 var processorsConfig = struct {
 	Processors []ConduitBinary `json:"processors"`
 }{}
+
+// ConfigOverride allows runtime override of config directory
+var ConfigOverride string
 
 // Ensure downloads and prepares all Conduit binaries from separate configuration files
 func Ensure(debug bool) error {
@@ -111,22 +118,35 @@ func ensureBinary(binary ConduitBinary, debug bool) error {
 
 // loadCoreConfig loads the core.json configuration file
 func loadCoreConfig() error {
+	// Use ConfigOverride if provided
 	configPath := filepath.Join("pkg", "conduit", "config", "core.json")
-	
-	// Check if core config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Use default core configuration if file doesn't exist
+	if ConfigOverride != "" {
+		configPath = filepath.Join(ConfigOverride, "core.json")
+	}
+
+	// Check if external config file exists
+	if _, err := os.Stat(configPath); err == nil {
+		// Use external file if it exists
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to read core config file %s: %w", configPath, err)
+		}
+		if err := json.Unmarshal(data, &coreConfig); err != nil {
+			return fmt.Errorf("failed to parse core config file %s: %w", configPath, err)
+		}
+		return nil
+	}
+
+	// Use embedded config
+	data, err := embeddedConfigs.ReadFile("config/core.json")
+	if err != nil {
+		// Fallback to hardcoded defaults
 		coreConfig = getDefaultCoreConfig()
 		return nil
 	}
 
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to read core config file %s: %w", configPath, err)
-	}
-
 	if err := json.Unmarshal(data, &coreConfig); err != nil {
-		return fmt.Errorf("failed to parse core config file %s: %w", configPath, err)
+		return fmt.Errorf("failed to parse embedded core config: %w", err)
 	}
 
 	return nil
@@ -262,7 +282,12 @@ func installGenericBinary(binary dep.DepBinary, _ bool) error {
 	}
 
 	// Create a simple executable placeholder
-	content := fmt.Sprintf("#!/bin/bash\necho \"Placeholder for %s %s from %s\"\n", binary.Name, binary.Version, binary.Repo)
+	var content string
+	if runtime.GOOS == "windows" {
+		content = fmt.Sprintf("@echo off\necho Placeholder for %s %s from %s\n", binary.Name, binary.Version, binary.Repo)
+	} else {
+		content = fmt.Sprintf("#!/bin/bash\necho \"Placeholder for %s %s from %s\"\n", binary.Name, binary.Version, binary.Repo)
+	}
 	
 	// Write the placeholder file
 	if err := os.WriteFile(installPath, []byte(content), 0755); err != nil {

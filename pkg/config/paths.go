@@ -1,10 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 )
 
 const (
@@ -87,7 +85,7 @@ func GetDataPath() string {
 }
 
 func Get(name string) string {
-	return filepath.Join(GetDepPath(), fmt.Sprintf(BinaryDepNameFormat, name, runtime.GOOS, runtime.GOARCH))
+	return filepath.Join(GetDepPath(), GetBinaryName(name))
 }
 
 // GetTofuBinPath returns the absolute path to the tofu binary.

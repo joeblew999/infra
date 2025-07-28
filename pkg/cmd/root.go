@@ -45,6 +45,7 @@ func Execute() {
 	// Add subcommands from other files
 	RunCLI()
 	RunWorkflows()
+	RunConduit()
 	// RunService() is called directly from rootCmd.Run
 
 	if err := rootCmd.Execute(); err != nil {
