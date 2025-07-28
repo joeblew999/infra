@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestEmbeddedCoreBinaries(t *testing.T) {
+func TestEmbeddedDepBinaries(t *testing.T) {
 	expectedBinaries := []string{
 		"bento",
 		"task",
@@ -16,22 +16,22 @@ func TestEmbeddedCoreBinaries(t *testing.T) {
 		"garble",
 	}
 
-	if len(embeddedCoreBinaries) != len(expectedBinaries) {
-		t.Errorf("Expected %d binaries, got %d", len(expectedBinaries), len(embeddedCoreBinaries))
+	if len(embeddedDepBinaries) != len(expectedBinaries) {
+		t.Errorf("Expected %d binaries, got %d", len(expectedBinaries), len(embeddedDepBinaries))
 	}
 
 	binaryMap := make(map[string]bool)
-	for _, binary := range embeddedCoreBinaries {
+	for _, binary := range embeddedDepBinaries {
 		binaryMap[binary.Name] = true
 	}
 
 	for _, expected := range expectedBinaries {
 		if !binaryMap[expected] {
-			t.Errorf("Expected binary %s not found in embeddedCoreBinaries", expected)
+			t.Errorf("Expected binary %s not found in embeddedDepBinaries", expected)
 		}
 	}
 
-	for _, binary := range embeddedCoreBinaries {
+	for _, binary := range embeddedDepBinaries {
 		if binary.Name == "" {
 			t.Error("Binary name cannot be empty")
 		}
@@ -44,7 +44,8 @@ func TestEmbeddedCoreBinaries(t *testing.T) {
 		if binary.ReleaseURL == "" {
 			t.Errorf("Binary %s release URL cannot be empty", binary.Name)
 		}
-		if len(binary.Assets) == 0 {
+		// Garble uses go install, so it intentionally has no assets
+		if len(binary.Assets) == 0 && binary.Name != "garble" {
 			t.Errorf("Binary %s must have at least one asset", binary.Name)
 		}
 	}

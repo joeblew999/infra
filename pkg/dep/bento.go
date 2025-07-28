@@ -13,7 +13,7 @@ import (
 
 type bentoInstaller struct{}
 
-func (i *bentoInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *bentoInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

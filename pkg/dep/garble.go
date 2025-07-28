@@ -13,7 +13,7 @@ import (
 
 type garbleInstaller struct{}
 
-func (i *garbleInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *garbleInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Installing using go install", "binary", binary.Name, "version", binary.Version)
 
 	installPath, err := Get(binary.Name)

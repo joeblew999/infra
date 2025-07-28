@@ -13,7 +13,7 @@ import (
 
 type tofuInstaller struct{}
 
-func (i *tofuInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *tofuInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

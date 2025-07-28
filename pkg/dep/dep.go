@@ -100,8 +100,8 @@ func writeMeta(binaryPath string, meta *BinaryMeta) error {
 	return nil
 }
 
-// CoreBinary represents a core bootstrapping binary.
-type CoreBinary struct {
+// DepBinary represents a dependency binary.
+type DepBinary struct {
 	Name       string
 	Repo       string
 	Version    string
@@ -116,14 +116,14 @@ type AssetSelector struct {
 	Match string // Regular expression to match the asset filename
 }
 
-// Installer defines the interface for installing a core binary.
+// Installer defines the interface for installing a dependency binary.
 type Installer interface {
-	Install(binary CoreBinary, debug bool) error
+	Install(binary DepBinary, debug bool) error
 }
 
-// embeddedCoreBinaries will contain the manifest for core bootstrapping binaries.
+// embeddedDepBinaries will contain the manifest for dependency binaries.
 // This will be embedded at compile time.
-var embeddedCoreBinaries = []CoreBinary{
+var embeddedDepBinaries = []DepBinary{
 	{
 		Name:       "bento",
 		Repo:       "warpstreamlabs/bento",
@@ -216,7 +216,7 @@ var embeddedCoreBinaries = []CoreBinary{
 func Ensure(debug bool) error {
 	log.Info("Ensuring core binaries...")
 
-	for _, binary := range embeddedCoreBinaries {
+	for _, binary := range embeddedDepBinaries {
 		log.Info("Checking binary", "name", binary.Name, "version", binary.Version, "repo", binary.Repo)
 
 		installPath, err := Get(binary.Name)
@@ -278,7 +278,7 @@ func Get(name string) (string, error) {
 	}
 
 	// Validate that the binary is in our supported list
-	for _, binary := range embeddedCoreBinaries {
+	for _, binary := range embeddedDepBinaries {
 		if binary.Name == name {
 			return config.Get(name), nil
 		}

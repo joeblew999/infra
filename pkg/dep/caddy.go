@@ -13,7 +13,7 @@ import (
 
 type caddyInstaller struct{}
 
-func (i *caddyInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *caddyInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

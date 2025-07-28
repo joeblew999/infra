@@ -13,7 +13,7 @@ import (
 
 type flyctlInstaller struct{}
 
-func (i *flyctlInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *flyctlInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

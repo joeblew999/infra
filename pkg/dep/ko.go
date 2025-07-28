@@ -13,7 +13,7 @@ import (
 
 type koInstaller struct{}
 
-func (i *koInstaller) Install(binary CoreBinary, debug bool) error {
+func (i *koInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

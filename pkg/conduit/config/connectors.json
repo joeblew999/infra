@@ -1,0 +1,140 @@
+{
+  "connectors": [
+    {
+      "name": "conduit-connector-s3",
+      "repo": "ConduitIO/conduit-connector-s3",
+      "version": "v0.9.3",
+      "release_url": "https://github.com/ConduitIO/conduit-connector-s3/releases/tag/v0.9.3",
+      "type": "connector",
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "conduit-connector-s3_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "conduit-connector-s3_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "conduit-connector-s3_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "conduit-connector-s3_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "conduit-connector-s3_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "conduit-connector-postgres",
+      "repo": "ConduitIO/conduit-connector-postgres",
+      "version": "v0.14.0",
+      "release_url": "https://github.com/ConduitIO/conduit-connector-postgres/releases/tag/v0.14.0",
+      "type": "connector",
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "conduit-connector-postgres_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "conduit-connector-postgres_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "conduit-connector-postgres_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "conduit-connector-postgres_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "conduit-connector-postgres_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "conduit-connector-kafka",
+      "repo": "ConduitIO/conduit-connector-kafka",
+      "version": "v0.8.0",
+      "release_url": "https://github.com/ConduitIO/conduit-connector-kafka/releases/tag/v0.8.0",
+      "type": "connector",
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "conduit-connector-kafka_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "conduit-connector-kafka_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "conduit-connector-kafka_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "conduit-connector-kafka_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "conduit-connector-kafka_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "conduit-connector-file",
+      "repo": "ConduitIO/conduit-connector-file",
+      "version": "v0.7.0",
+      "release_url": "https://github.com/ConduitIO/conduit-connector-file/releases/tag/v0.7.0",
+      "type": "connector",
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "conduit-connector-file_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "conduit-connector-file_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "conduit-connector-file_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "conduit-connector-file_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "conduit-connector-file_.*_windows_amd64\\.zip$"
+        }
+      ]
+    }
+  ]
+}
