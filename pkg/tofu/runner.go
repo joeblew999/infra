@@ -60,23 +60,3 @@ func (r *Runner) RunWithOutput(args ...string) ([]byte, error) {
 
 	return output, nil
 }
-
-
-// RunTofu executes the tofu command with the given arguments
-func RunTofu(args []string) error {
-	runner := New()
-	return runner.Run(args...)
-}
-
-// RunWithOutput executes a tofu command and returns the output
-func (r *Runner) RunWithOutput(args ...string) ([]byte, error) {
-	cmd := exec.Command(r.binaryPath, args...)
-	cmd.Dir = r.workingDir
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return output, fmt.Errorf("tofu command failed: %w", err)
-	}
-
-	return output, nil
-}

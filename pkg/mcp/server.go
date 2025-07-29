@@ -2,8 +2,9 @@ package mcp
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // StartServer starts a simple HTTP server for MCP interactions.

@@ -9,7 +9,7 @@
 // The following functions and types form the stable public API:
 //   - Ensure(debug bool) error - Downloads and ensures all binaries are available
 //   - Get(name string) (string, error) - Returns the path to a binary
-//   - BinaryMeta, CoreBinary, AssetSelector structs - Data structures
+//   - BinaryMeta, DepBinary, AssetSelector structs - Data structures
 //   - ErrBinaryNotFound, ErrInvalidInput, ErrInstallationFailed - Error types
 //
 // # API Stability Contract
@@ -41,9 +41,11 @@
 package dep
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/joeblew999/infra/pkg/log"
@@ -102,18 +104,18 @@ func writeMeta(binaryPath string, meta *BinaryMeta) error {
 
 // DepBinary represents a dependency binary.
 type DepBinary struct {
-	Name       string
-	Repo       string
-	Version    string
-	ReleaseURL string // Full URL to the GitHub release page
-	Assets     []AssetSelector
+	Name       string          `json:"name"`
+	Repo       string          `json:"repo"`
+	Version    string          `json:"version"`
+	ReleaseURL string          `json:"release_url"` // Full URL to the GitHub release page
+	Assets     []AssetSelector `json:"assets"`
 }
 
 // AssetSelector defines how to select a release asset.
 type AssetSelector struct {
-	OS    string
-	Arch  string
-	Match string // Regular expression to match the asset filename
+	OS    string `json:"os"`
+	Arch  string `json:"arch"`
+	Match string `json:"match"` // Regular expression to match the asset filename
 }
 
 // Installer defines the interface for installing a dependency binary.
@@ -121,94 +123,47 @@ type Installer interface {
 	Install(binary DepBinary, debug bool) error
 }
 
-// embeddedDepBinaries will contain the manifest for dependency binaries.
-// This will be embedded at compile time.
-var embeddedDepBinaries = []DepBinary{
-	{
-		Name:       "bento",
-		Repo:       "warpstreamlabs/bento",
-		Version:    "v1.9.0",
-		ReleaseURL: "https://github.com/warpstreamlabs/bento/releases/tag/v1.9.0",
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `bento_.*_darwin_amd64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `bento_.*_darwin_arm64\.tar\.gz$`},
-			{OS: "linux", Arch: "amd64", Match: `bento_.*_linux_amd64\.tar\.gz$`},
-			{OS: "linux", Arch: "arm64", Match: `bento_.*_linux_arm64\.tar\.gz$`},
-			{OS: "windows", Arch: "amd64", Match: `bento_.*_windows_amd64\.zip$`},
-		},
-	},
-	{
-		Name:       "task",
-		Repo:       "go-task/task",
-		Version:    "v3.44.1", // Example version, update as needed
-		ReleaseURL: "https://github.com/go-task/task/releases/tag/v3.44.1",
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `task_darwin_amd64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `task_darwin_arm64\.tar\.gz$`},
-			{OS: "linux", Arch: "amd64", Match: `task_linux_amd64\.tar\.gz$`},
-			{OS: "linux", Arch: "arm64", Match: `task_linux_arm64\.tar\.gz$`},
-			{OS: "windows", Arch: "amd64", Match: `task_windows_amd64\.zip$`},
-		},
-	},
-	{
-		Name:       "tofu",
-		Repo:       "opentofu/opentofu",
-		Version:    "v1.7.2", // Example version, update as needed
-		ReleaseURL: "https://github.com/opentofu/opentofu/releases/tag/v1.7.2",
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `tofu_.*_darwin_amd64\.zip$`},
-			{OS: "darwin", Arch: "arm64", Match: `tofu_.*_darwin_arm64\.zip$`},
-			{OS: "linux", Arch: "amd64", Match: `tofu_.*_linux_amd64\.zip$`},
-			{OS: "linux", Arch: "arm64", Match: `tofu_.*_linux_arm64\.zip$`},
-			{OS: "windows", Arch: "amd64", Match: `tofu_.*_windows_amd64\.zip$`},
-		},
-	},
-	{
-		Name:       "caddy",
-		Repo:       "caddyserver/caddy",
-		Version:    "v2.10.0",                                                   // Updated version
-		ReleaseURL: "https://github.com/caddyserver/caddy/releases/tag/v2.10.0", // Updated URL
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `caddy_.*_darwin_amd64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `caddy_.*_mac_arm64\.tar\.gz$`},
-			{OS: "linux", Arch: "amd64", Match: `caddy_.*_linux_amd64\.tar\.gz$`},
-			{OS: "linux", Arch: "arm64", Match: `caddy_.*_linux_arm64\.tar\.gz$`},
-			{OS: "windows", Arch: "amd64", Match: `caddy_.*_windows_amd64\.zip$`},
-		},
-	},
-	{
-		Name:       "ko",
-		Repo:       "ko-build/ko",
-		Version:    "v0.18.0",
-		ReleaseURL: "https://github.com/ko-build/ko/releases/tag/v0.18.0",
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `ko_.*_Darwin_x86_64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `ko_.*_Darwin_arm64\.tar\.gz$`},
-			{OS: "linux", Arch: "amd64", Match: `ko_.*_Linux_x86_64\.tar\.gz$`},
-			{OS: "linux", Arch: "arm64", Match: `ko_.*_Linux_arm64\.tar\.gz$`},
-			{OS: "windows", Arch: "amd64", Match: `ko_.*_Windows_x86_64\.tar\.gz$`},
-		},
-	},
-	{
-		Name:       "flyctl",
-		Repo:       "superfly/flyctl",
-		Version:    "v0.3.159",
-		ReleaseURL: "https://github.com/superfly/flyctl/releases/tag/v0.3.159",
-		Assets: []AssetSelector{
-			{OS: "darwin", Arch: "amd64", Match: `flyctl_.*_macOS_x86_64\.tar\.gz$`},
-			{OS: "darwin", Arch: "arm64", Match: `flyctl_.*_macOS_arm64\.tar\.gz$`},
-			{OS: "linux", Arch: "amd64", Match: `flyctl_.*_Linux_x86_64\.tar\.gz$`},
-			{OS: "linux", Arch: "arm64", Match: `flyctl_.*_Linux_arm64\.tar\.gz$`},
-			{OS: "windows", Arch: "amd64", Match: `flyctl_.*_Windows_x86_64\.zip$`},
-		},
-	},
-	{
-		Name:       "garble",
-		Repo:       "burrowers/garble",
-		Version:    "v0.14.2",
-		ReleaseURL: "https://github.com/burrowers/garble/releases/tag/v0.14.2",
-		Assets:     []AssetSelector{}, // Garble uses go install, no assets needed
-	},
+//go:embed dep.json
+var embeddedConfig embed.FS
+
+// depBinaries contains the loaded dependency binaries from JSON configuration
+var depBinaries []DepBinary
+
+// loadConfig loads the dependency configuration from embedded JSON or external file
+func loadConfig() ([]DepBinary, error) {
+	// If depBinaries is already loaded, return it
+	if len(depBinaries) > 0 {
+		return depBinaries, nil
+	}
+
+	// Try to load from external config file first
+	configPath := filepath.Join("pkg", "dep", "dep.json")
+	if _, err := os.Stat(configPath); err == nil {
+		data, err := os.ReadFile(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read external config file %s: %w", configPath, err)
+		}
+		var binaries []DepBinary
+		if err := json.Unmarshal(data, &binaries); err != nil {
+			return nil, fmt.Errorf("failed to parse external config file %s: %w", configPath, err)
+		}
+		depBinaries = binaries
+		return depBinaries, nil
+	}
+
+	// Fall back to embedded configuration
+	data, err := embeddedConfig.ReadFile("dep.json")
+	if err != nil {
+		return nil, fmt.Errorf("failed to read embedded config: %w", err)
+	}
+
+	var binaries []DepBinary
+	if err := json.Unmarshal(data, &binaries); err != nil {
+		return nil, fmt.Errorf("failed to parse embedded config: %w", err)
+	}
+
+	depBinaries = binaries
+	return depBinaries, nil
 }
 
 // Ensure downloads and prepares all binaries defined in the manifest.
@@ -216,7 +171,13 @@ var embeddedDepBinaries = []DepBinary{
 func Ensure(debug bool) error {
 	log.Info("Ensuring core binaries...")
 
-	for _, binary := range embeddedDepBinaries {
+	// Load configuration from embedded JSON
+	binaries, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load dependency configuration: %w", err)
+	}
+
+	for _, binary := range binaries {
 		log.Info("Checking binary", "name", binary.Name, "version", binary.Version, "repo", binary.Repo)
 
 		installPath, err := Get(binary.Name)
@@ -277,8 +238,14 @@ func Get(name string) (string, error) {
 		return "", fmt.Errorf("%w: binary name cannot be empty", ErrInvalidInput)
 	}
 
+	// Load configuration to validate binary exists
+	binaries, err := loadConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to load dependency configuration: %w", err)
+	}
+
 	// Validate that the binary is in our supported list
-	for _, binary := range embeddedDepBinaries {
+	for _, binary := range binaries {
 		if binary.Name == name {
 			return config.Get(name), nil
 		}

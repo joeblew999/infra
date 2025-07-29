@@ -1,0 +1,233 @@
+[
+  {
+    "name": "flyctl",
+    "repo": "superfly/flyctl",
+    "version": "v0.3.162",
+    "release_url": "https://github.com/superfly/flyctl/releases",
+    "assets": [
+      {
+        "match": "flyctl_.*_macOS_arm64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "flyctl_.*_macOS_x86_64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "flyctl_.*_Linux_x86_64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "flyctl_.*_Linux_arm64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "flyctl_.*_Windows_x86_64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "ko",
+    "repo": "ko-build/ko",
+    "version": "v0.18.0",
+    "release_url": "https://github.com/ko-build/ko/releases",
+    "assets": [
+      {
+        "match": "ko_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "ko_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "ko_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "ko_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "ko_.*_windows_amd64.zip",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "caddy",
+    "repo": "caddyserver/caddy",
+    "version": "v2.10.0",
+    "release_url": "https://github.com/caddyserver/caddy/releases",
+    "assets": [
+      {
+        "match": "caddy_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "caddy_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "caddy_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "caddy_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "caddy_.*_windows_amd64.zip",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "task",
+    "repo": "go-task/task",
+    "version": "v3.44.1",
+    "release_url": "https://github.com/go-task/task/releases",
+    "assets": [
+      {
+        "match": "task_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "task_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "task_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "task_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "task_.*_windows_amd64.zip",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "tofu",
+    "repo": "opentofu/opentofu",
+    "version": "v1.7.2",
+    "release_url": "https://github.com/opentofu/opentofu/releases",
+    "assets": [
+      {
+        "match": "tofu_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "tofu_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "tofu_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "tofu_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "tofu_.*_windows_amd64.zip",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "bento",
+    "repo": "warpstreamlabs/bento",
+    "version": "v1.9.0",
+    "release_url": "https://github.com/warpstreamlabs/bento/releases",
+    "assets": [
+      {
+        "match": "bento_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "bento_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "bento_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "bento_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "bento_.*_windows_amd64.tar.gz",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "garble",
+    "repo": "burrowers/garble",
+    "version": "v0.14.2",
+    "release_url": "https://github.com/burrowers/garble/releases",
+    "assets": [
+      {
+        "match": "garble_.*_darwin_arm64.tar.gz",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "garble_.*_darwin_amd64.tar.gz",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "garble_.*_linux_amd64.tar.gz",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "garble_.*_linux_arm64.tar.gz",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "garble_.*_windows_amd64.zip",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  }
+]

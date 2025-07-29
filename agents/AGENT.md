@@ -2,13 +2,11 @@
 
 All Agent instructions live in this agents folder.
 
-Infrastructure using Taskfiles and OpenTofu for deployments, plus DataStar web interface.
-
 Use installed MCP Servers.
 
 ## Development
 
-main.go runs everything. Keep coding until `go run .` works and tests pass.
+main.go runs everything. Keep coding until `go run .` works and all test pass. 
 
 Use gofmt, goimports, go vet.
 

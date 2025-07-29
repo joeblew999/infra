@@ -16,22 +16,28 @@ func TestEmbeddedDepBinaries(t *testing.T) {
 		"garble",
 	}
 
-	if len(embeddedDepBinaries) != len(expectedBinaries) {
-		t.Errorf("Expected %d binaries, got %d", len(expectedBinaries), len(embeddedDepBinaries))
+	// Load configuration using the new loadConfig function
+	binaries, err := loadConfig()
+	if err != nil {
+		t.Fatalf("Failed to load embedded configuration: %v", err)
+	}
+
+	if len(binaries) != len(expectedBinaries) {
+		t.Errorf("Expected %d binaries, got %d", len(expectedBinaries), len(binaries))
 	}
 
 	binaryMap := make(map[string]bool)
-	for _, binary := range embeddedDepBinaries {
+	for _, binary := range binaries {
 		binaryMap[binary.Name] = true
 	}
 
 	for _, expected := range expectedBinaries {
 		if !binaryMap[expected] {
-			t.Errorf("Expected binary %s not found in embeddedDepBinaries", expected)
+			t.Errorf("Expected binary %s not found in embedded configuration", expected)
 		}
 	}
 
-	for _, binary := range embeddedDepBinaries {
+	for _, binary := range binaries {
 		if binary.Name == "" {
 			t.Error("Binary name cannot be empty")
 		}

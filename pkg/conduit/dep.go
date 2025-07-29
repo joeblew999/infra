@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
@@ -276,14 +275,11 @@ func installGenericBinary(binary dep.DepBinary, _ bool) error {
 	}
 
 	// Create a placeholder file for the binary in the .dep directory
-	installPath := filepath.Join(depPath, binary.Name)
-	if runtime.GOOS == "windows" {
-		installPath += ".exe"
-	}
+	installPath := filepath.Join(depPath, config.GetBinaryName(binary.Name))
 
 	// Create a simple executable placeholder
 	var content string
-	if runtime.GOOS == "windows" {
+	if config.IsWindows() {
 		content = fmt.Sprintf("@echo off\necho Placeholder for %s %s from %s\n", binary.Name, binary.Version, binary.Repo)
 	} else {
 		content = fmt.Sprintf("#!/bin/bash\necho \"Placeholder for %s %s from %s\"\n", binary.Name, binary.Version, binary.Repo)
