@@ -2,6 +2,12 @@
 
 Binary dependency management with design-by-contract guarantees. Downloads, caches, and manages external tools required by the system.
 
+Try it it using :
+
+```sh
+go run . dep -h
+```
+
 ## How it works
 
 - **Configuration**: `dep.json` defines supported binaries with GitHub release patterns

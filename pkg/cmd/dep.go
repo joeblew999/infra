@@ -99,6 +99,7 @@ var depListCmd = &cobra.Command{
 		fmt.Println("  garble - burrowers/garble")
 		fmt.Println("  bun - oven-sh/bun")
 		fmt.Println("  claude - anthropics/claude-code")
+		fmt.Println("  nats - nats-io/natscli")
 	},
 }
 

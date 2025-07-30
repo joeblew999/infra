@@ -1,67 +1,102 @@
-# README
+# Infrastructure Management System
 
-https://github.com/joeblew999/infra
+[![GitHub](https://img.shields.io/badge/github-joeblew999/infra-blue)](https://github.com/joeblew999/infra)
 
-DO NOT TRY THIS AT HOME !!
+A self-similar infrastructure management system that bridges development and production with identical workflows.
 
-# Endponts
+## 🚀 Quick Start
 
-http://localhost:1337/
-http://localhost:1337/docs/
+```bash
+git clone https://github.com/joeblew999/infra.git
+cd infra
+go run .
+```
 
+Access the web interface at **http://localhost:1337**
 
+## 🌐 Endpoints
 
-## Concept
+| Endpoint | Description |
+|----------|-------------|
+| **http://localhost:1337/** | Main dashboard with NATS → DataStar demo |
+| **http://localhost:1337/docs/** | Documentation |
+| **http://localhost:1337/logs** | System logs |
+| **http://localhost:1337/metrics** | Metrics |
+| **http://localhost:1337/status** | Status |
 
-Its Self Similar design. 
+## 🔧 Development
 
-At Dev time, you and the AI can easily do complex flows, because we are using binaries and their CLI to loop. We then formalsie common workflows looping through many binaries in the workflows, ensuring idempotency.    
+### Web GUI Debugging
+Use Claude Code's built-in Playwright tools:
+```
+mcp__playwright__browser_navigate → http://localhost:1337
+mcp__playwright__browser_click → click buttons
+mcp__playwright__browser_type → input text
+mcp__playwright__browser_evaluate → check DOM state
+mcp__playwright__browser_console_messages → debug errors
+```
 
-At Runtime, in Dev and Prod, we do the same thing. There is no shifting in thinking or Architetcure.
+### Architecture
+**Self-Similar Design**: The same patterns work at development time and runtime.
 
-When things run, they log, but they can log to NATS too, and so we can self reflect on it at runtime from anywhere. 
+- **Development**: Use binaries and CLI tools directly
+- **Runtime**: Use the same binaries and CLI tools, just orchestrated
+- **No mental model shift** between dev and prod
 
-We can also publish events to nats when thigns happen to help workflows works well.
+**Key Features:**
+- ✅ **NATS JetStream** for real-time messaging and logging
+- ✅ **Multi-destination logging** (stdout, files, NATS)
+- ✅ **Runtime configuration** without restart
+- ✅ **Idempotent workflows** across environments
+- ✅ **Cross-platform** (laptop, CI, CD, production)
 
+## 🔄 Workflows
 
-Also they can run on your laptop, in CI ( github actions), in CD ( tarraform via taskfile ) and also in Production.
+### Local Development
+```bash
+go run .                    # Start web interface
+go run . cli --help         # CLI commands
+go run . api-check          # Verify API compatibility
+```
 
-It helps to make things DRY. The most important thing is that the Taskfiles and golang is versioned, so if this repo changes, it will not break your repo using it. Just use git hashs or git tags as you please.
+### CI/CD
+- **GitHub Actions**: Uses same binaries via Taskfiles
+- **Terraform**: Provisions infrastructure via Taskfiles
+- **Versioned**: Use git hashes/tags for reproducible builds
 
-## AI
+### Multi-Environment
+- **Laptop**: Direct binary execution
+- **CI**: Same binaries via GitHub Actions
+- **CD**: Same binaries via Terraform
+- **Production**: Same binaries via orchestration
 
-Is setup for Claude CLI and Gemini CLI.
+## 🤖 AI Integration
 
-I find Copilot and the extensions to be really heavy and make VSCOde slow.
+**Built for Claude CLI and Gemini CLI**:
+- Lightweight CLI tools instead of heavy IDE extensions
+- Direct binary execution for AI workflows
+- MCP server support available
+- No VS Code slowdown
 
-Will might add Support for VSCODE Copilot, if requested I find it makes the IDE slow, but https://code.visualstudio.com/mcp support might be good.
+## 📦 Dependencies
 
-If you want another AI setup let me know.
+Manage via `./pkg/dep/` - see [./roadmap/dep.md](./roadmap/dep.md) for details.
 
-## Deps
+## 🌍 Deployment
 
-See ./roadmap/dep.md
+### Primary
+**Hetzner Cloud (Germany)** - European coverage
 
+### Secondary
+**OVH Cloud** - Global coverage
+- [OVH Terraform Provider](https://github.com/ovh/terraform-provider-ovh)
+- Supports: VMs, K8s, DNS, Load Balancers, Storage
 
+## 📊 Monitoring
 
-## Deployment
-
-Origin on Hetzner in Germany.
-- to Get European Coverage
-
-Secondaries on OVH in for the rest of the world.
-- https://www.ovhcloud.com/en-au/
-- https://github.com/ovh/terraform-provider-ovh
-
-Supported Resources: The provider supports a wide range of OVH services including:
-
-Public Cloud instances and infrastructure
-Dedicated servers
-Load balancers
-DNS zones and records
-vRack networking
-Kubernetes clusters
-Object storage
-Databases
+- **NATS JetStream** for event streaming
+- **Multi-destination logging** for observability
+- **Real-time web interface** for monitoring
+- **Self-reflection** via NATS event publishing
 
 
