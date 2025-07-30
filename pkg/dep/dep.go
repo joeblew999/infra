@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -213,6 +213,10 @@ func Ensure(debug bool) error {
 			installer = &flyctlInstaller{}
 		case "garble":
 			installer = &garbleInstaller{}
+		case "bun":
+			installer = &bunInstaller{}
+		case "claude":
+			installer = &claudeInstaller{}
 		default:
 			return fmt.Errorf("no installer found for binary: %s", binary.Name)
 		}
@@ -252,4 +256,60 @@ func Get(name string) (string, error) {
 	}
 
 	return "", fmt.Errorf("%w: binary '%s' is not supported", ErrBinaryNotFound, name)
+}
+
+// Remove deletes a specific binary and its metadata file from the .dep directory.
+// Useful for testing/debugging to force reinstallation of a specific binary.
+func Remove(name string) error {
+	if strings.TrimSpace(name) == "" {
+		return fmt.Errorf("%w: binary name cannot be empty", ErrInvalidInput)
+	}
+
+	// Validate that the binary is supported
+	binaries, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load dependency configuration: %w", err)
+	}
+
+	found := false
+	for _, binary := range binaries {
+		if binary.Name == name {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("%w: binary '%s' is not supported", ErrBinaryNotFound, name)
+	}
+
+	// Get the binary path
+	binaryPath := config.Get(name)
+	metaPath := getMetaPath(binaryPath)
+
+	// Remove binary if it exists
+	if _, err := os.Stat(binaryPath); err == nil {
+		if err := os.Remove(binaryPath); err != nil {
+			return fmt.Errorf("failed to remove binary: %w", err)
+		}
+	}
+
+	// Remove metadata file if it exists
+	if _, err := os.Stat(metaPath); err == nil {
+		if err := os.Remove(metaPath); err != nil {
+			return fmt.Errorf("failed to remove metadata: %w", err)
+		}
+	}
+
+	// Remove the claude-code directory for claude (npm package)
+	if name == "claude" {
+		claudeDir := filepath.Join(filepath.Dir(binaryPath), "claude-code")
+		if _, err := os.Stat(claudeDir); err == nil {
+			if err := os.RemoveAll(claudeDir); err != nil {
+				return fmt.Errorf("failed to remove claude package directory: %w", err)
+			}
+		}
+	}
+
+	log.Info("Binary removed successfully", "name", name)
+	return nil
 }

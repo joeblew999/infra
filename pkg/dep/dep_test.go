@@ -14,6 +14,8 @@ func TestEmbeddedDepBinaries(t *testing.T) {
 		"ko",
 		"flyctl",
 		"garble",
+		"bun",
+		"claude",
 	}
 
 	// Load configuration using the new loadConfig function

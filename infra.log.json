@@ -1,0 +1,21 @@
+{
+  "destinations": [
+    {
+      "type": "stdout",
+      "level": "info",
+      "format": "json"
+    },
+    {
+      "type": "file",
+      "level": "debug",
+      "format": "json",
+      "path": ""
+    },
+    {
+      "type": "nats",
+      "level": "info",
+      "format": "json",
+      "subject": "logs.app"
+    }
+  ]
+}

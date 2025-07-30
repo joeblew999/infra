@@ -27,6 +27,8 @@ const (
 
 	// Configuration file names
 	KoConfigFileName = ".ko.yaml"
+	LoggingConfigFileName = "infra.log.json"
+	ChangelogFileName = "CHANGELOG.md"
 
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
@@ -39,6 +41,13 @@ const (
 
 	// DataDir is the root directory for all application data (e.g., databases, NATS stores).
 	DataDir = ".data"
+
+	// LogsDir is the directory for application log files.
+	LogsDir = ".logs"
+
+	// NATS stream constants
+	NATSLogStreamName   = "LOGS"
+	NATSLogStreamSubject = "logs.app"
 
 	// DocsDir is the directory containing Markdown documentation files.
 	DocsDir = "docs"
@@ -82,6 +91,11 @@ func GetTaskfilesPath() string {
 // GetDataPath returns the absolute path to the .data directory.
 func GetDataPath() string {
 	return filepath.Join(".", DataDir)
+}
+
+// GetLogsPath returns the absolute path to the .logs directory.
+func GetLogsPath() string {
+	return filepath.Join(".", LogsDir)
 }
 
 func Get(name string) string {
@@ -141,6 +155,32 @@ func ShouldUseHTTPS() bool {
 // GetKoConfigPath returns the path to the ko configuration file
 func GetKoConfigPath() string {
 	return filepath.Join(".", KoConfigFileName)
+}
+
+// GetLoggingConfigFile returns the path to the logging configuration file
+func GetLoggingConfigFile() string {
+	return filepath.Join(".", LoggingConfigFileName)
+}
+
+// GetChangelogFile returns the path to the changelog file
+func GetChangelogFile() string {
+	return filepath.Join(DocsDir, ChangelogFileName)
+}
+
+// GetLoggingLevel returns the default logging level
+func GetLoggingLevel() string {
+	if IsProduction() {
+		return "warn"
+	}
+	return "info"
+}
+
+// GetLoggingFormat returns the default logging format
+func GetLoggingFormat() string {
+	if IsProduction() {
+		return "json"
+	}
+	return "json" // Always JSON for structured logs
 }
 
 // GetKoDefaultBaseImage returns the appropriate base image for the environment

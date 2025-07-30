@@ -1,41 +1,37 @@
-# Config
+# config
 
-Central configuration package for cross-platform paths, environment detection, and binary naming.
+Centralized configuration for infra. Provides strongly-typed defaults for file system paths, URLs, and environment settings.
+
+ALWAYS use const for strings, so that obfuscation works fine.
+
+## Design Intent
+
+**No config files needed** - just use the defaults. Other packages get their configuration needs from this single source of truth.
+
+## What Goes Here
+
+- **File system root paths** (`.dep`, `.data`, etc.)
+- **URLs and endpoints** 
+- **Environment-aware defaults** (dev vs prod)
+- **Future XDG/Docker paths**
+- **Volume names for host disks**
 
 ## Usage
 
 ```go
-import "github.com/joeblew999/infra/pkg/config"
-
-// Get binary paths
-config.Get("flyctl")          // .dep/flyctl or .dep/flyctl.exe
-config.GetFlyctlBinPath()     // .dep/flyctl
-config.GetDepPath()          // .dep
-
-// Environment detection
-config.IsProduction()        // true on Fly.io
-config.IsDevelopment()       // true locally
-
-// Platform utilities  
-config.GetBinaryName("tool") // "tool.exe" on Windows
+// Get any config value
+configFile := config.GetLoggingConfigFile()
+level := config.GetLoggingLevel()
+path := config.GetDepPath()
 ```
 
-## Environment
+## Environment Support
 
-- **Development**: Uses local `.dep`, `.bin`, `.data` folders
-- **Production**: Uses standard OS paths (Fly.io deployment)
+- **Development**: Local paths, debug logs
+- **Production**: Optimized paths, warn logs  
+- **Docker**: Volume paths, container defaults
+- **XDG**: User-specific paths when available
 
-## Paths
+## Structure
 
-- `.dep/` - External binaries (flyctl, ko, caddy, etc.)
-- `.bin/` - Compiled project binaries
-- `.data/` - Application data (databases, stores)
-- `docs/` - Markdown documentation
-
-## Future
-
-Need to use github.com/adrg/xdg, so that we store data on dekstops in the right place ? 
-
-Eventually configuration will be stored in NATS JetStream KV store. This centralized `pkg/config` design enables seamless migration from local files to distributed configuration without code changes.
-
-
+All configuration is accessed through strongly-typed getter functions. No JSON parsing needed by consuming packages.

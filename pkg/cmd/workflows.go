@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/joeblew999/infra/pkg/mcp"
 	"github.com/joeblew999/infra/pkg/workflows"
 	"github.com/spf13/cobra"
 )
@@ -188,6 +189,7 @@ func RunWorkflows() {
 	rootCmd.AddCommand(preCommitCmd)
 	rootCmd.AddCommand(ciCmd)
 	rootCmd.AddCommand(devCmd)
+	mcp.AddCommands(rootCmd)
 }
 
 // runPreCommitChecks implements the pre-commit workflow logic

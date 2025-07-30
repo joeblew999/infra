@@ -4,6 +4,9 @@
 # AI likes to make a binary :)
 infra
 
+# we log to the root to help with debugging
+*.log
+
 # Where Binaries live
 .bin
 
@@ -16,4 +19,9 @@ infra
 # Remote taskfiles store
 .task
 
+# our terraform files
 terraform
+
+# Our docker files
+docker
+

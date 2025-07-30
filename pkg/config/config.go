@@ -42,6 +42,7 @@ type Config struct {
 	Paths       PathsConfig       `json:"paths"`
 	Binaries    BinariesConfig    `json:"binaries"`
 	Registry    RegistryConfig    `json:"registry"`
+	Logging     LoggingConfig     `json:"logging"`
 	EnvironmentVars []string       `json:"environment_vars"`
 	EnvironmentStatus map[string]string `json:"environment_status"`
 }
@@ -80,6 +81,12 @@ type RegistryConfig struct {
 	KoPlatforms  []string `json:"ko_platforms"`
 }
 
+type LoggingConfig struct {
+	ConfigFile string `json:"config_file"`
+	Level      string `json:"level"`
+	Format     string `json:"format"`
+}
+
 // GetConfig returns the complete configuration structure
 func GetConfig() Config {
 	return Config{
@@ -111,6 +118,11 @@ func GetConfig() Config {
 			KoDockerRepo: GetKoDockerRepo(),
 			KoBaseImage:  GetKoDefaultBaseImage(),
 			KoPlatforms:  GetKoDefaultPlatforms(),
+		},
+		Logging: LoggingConfig{
+			ConfigFile: GetLoggingConfigFile(),
+			Level:      GetLoggingLevel(),
+			Format:     GetLoggingFormat(),
 		},
 		EnvironmentVars: []string{
 			EnvVarEnvironment,

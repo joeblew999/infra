@@ -75,6 +75,34 @@ func RunService(devDocs bool, mode string) {
 	}
 	defer nc.Close()
 
+	// Initialize multi-destination logging with NATS support
+	loggingConfig := log.LoadConfig()
+	if len(loggingConfig.Destinations) > 0 {
+		// Check if we have NATS destinations
+		hasNATS := false
+		for _, dest := range loggingConfig.Destinations {
+			if dest.Type == "nats" {
+				hasNATS = true
+				break
+			}
+		}
+		
+		if hasNATS {
+			// Use NATS-aware initialization
+			if err := log.InitMultiLoggerWithNATS(loggingConfig, nc); err != nil {
+				log.Warn("Failed to initialize NATS-aware multi-destination logging", "error", err)
+			}
+		} else {
+			// Use regular initialization
+			if err := log.InitMultiLogger(loggingConfig); err != nil {
+				log.Warn("Failed to initialize multi-destination logging", "error", err)
+			}
+		}
+	} else {
+		// Use basic logging if no config
+		log.Info("Using basic logging (no multi-destination config found)")
+	}
+
 	// Determine the service role based on the mode flag
 	if mode == "" {
 		mode = "service" // Default to service mode if not specified

@@ -1,67 +1,59 @@
 # dep
 
-The dep.json has the links to how the files are on github.
+Binary dependency management with design-by-contract guarantees. Downloads, caches, and manages external tools required by the system.
 
-Uses Design by Contract principles to ensure we do not break other code.
+## How it works
 
-This Downloads binaries from github and records their version for idempotency.  These binaries are used by the systems core functionality, and stored locally.
+- **Configuration**: `dep.json` defines supported binaries with GitHub release patterns
+- **Selection**: Automatic platform detection (`runtime.GOOS`, `runtime.GOARCH`) with regex matching
+- **Caching**: Versioned downloads stored locally for idempotency
+- **API**: Stable public interface (`Ensure()`, `Get()`) with guaranteed backward compatibility
 
-The system automatically selects the correct asset based on the runtime platform and matches the filename using regex patterns.
+## Supported sources
 
-Because each github repository releases their binaries in different forms, we have a golang file for each that is aware of the specifics of each.
+| Source | Binaries | Pattern |
+|--------|----------|---------|
+| GitHub releases | flyctl, ko, caddy, task, tofu, bento, garble, bun | Platform-specific asset matching |
+| npm registry | claude | Node.js CLI package |
 
-The getGitHubReleaseDebug function  calls the gh CLI tool to get GitHub release information so that a developer or AI agent can get this information. 
+## claude
 
-### bento
+**Distribution**: npm registry
 
-For workflows at runtime.
-https://github.com/warpstreamlabs/bento
-https://github.com/warpstreamlabs/bento/releases/tag/v1.9.0
+Downloads `@anthropic-ai/claude-code` npm package and creates wrapper scripts for the Node.js CLI tool. The package handles native binary downloads internally.
 
----
+**Current**: 1.0.62  
+**Registry**: `https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-{VERSION}.tgz`
 
-NOTE: For later running conduit look at https://github.com/warpstreamlabs/bento/discussions/396
+## bun
 
-- https://github.com/gregfurman/bento/tree/add/conduit/internal/impl/conduit
+**Distribution**: GitHub releases
 
----
+Downloads Bun runtime from oven-sh/bun releases for platform-specific binaries.
 
-NOTE: For later running WASM, we need a golang example for it to run.
+**Current**: bun-v1.2.19
+**Release**: `https://github.com/oven-sh/bun/releases`
 
+## Development
 
-### caddy
+### Release checking
 
-Web server with automatic HTTPS.
-https://github.com/caddyserver/caddy
-https://github.com/caddyserver/caddy/releases/tag/v2.10.0
+Check latest versions for all configured binaries:
 
-### flyctl
+```bash
+go test -run TestCheckAllReleases -v
+```
 
-Fly.io CLI tool.
-https://github.com/superfly/flyctl
-https://github.com/superfly/flyctl/releases/tag/v0.3.159
+Check specific binary:
 
-### garble
+```bash
+go test -run TestCheckGitHubRelease -v
+```
 
-https://github.com/burrowers/garble
-https://github.com/burrowers/garble/releases/tag/v0.14.2
+### Testing utilities
 
-### ko
-
-Container image builder for Go.
-https://github.com/ko-build/ko
-https://github.com/ko-build/ko/releases/tag/v0.18.0
-
-### task
-
-Task runner / build tool.
-https://github.com/go-task/task
-https://github.com/go-task/task/releases/tag/v3.44.1
-
-### tofu
-
-OpenTofu infrastructure as code.
-https://github.com/opentofu/opentofu
-https://github.com/opentofu/opentofu/releases/tag/v1.7.2
-
-
+```go
+// Remove specific binary for testing
+err := dep.Remove("bun")  // Deletes bun and metadata
+err := dep.Remove("claude")  // Also removes claude-code directory
+```

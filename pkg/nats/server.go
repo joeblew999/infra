@@ -4,6 +4,10 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"time"
+
+	gonats "github.com/nats-io/nats.go"
+	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
 	"github.com/nats-io/nats-server/v2/server"
@@ -18,6 +22,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	natsOpts := &server.Options{
 		Debug: true, // Enable debug logging
 		Trace: true, // Enable trace logging
+		JetStream: true, // Enable JetStream for logging
 	}
 
 	// Initialize embedded NATS server
@@ -53,4 +58,30 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	}()
 
 	return nc.ConnectedUrl(), nil
+}
+
+// EnsureLoggingStream creates the logging stream if it doesn't exist
+func EnsureLoggingStream(ctx context.Context, nc *gonats.Conn) error {
+	js, err := jetstream.New(nc)
+	if err != nil {
+		return fmt.Errorf("failed to create jetstream context: %w", err)
+	}
+
+	// Create logging stream if it doesn't exist
+	streamConfig := jetstream.StreamConfig{
+		Name:     config.NATSLogStreamName,
+		Subjects: []string{config.NATSLogStreamSubject},
+		Storage:  jetstream.FileStorage,
+		Retention: jetstream.LimitsPolicy,
+		MaxAge:   24 * 30 * time.Hour, // 30 days
+	}
+
+	_, err = js.CreateOrUpdateStream(ctx, streamConfig)
+	if err != nil {
+		// Log warning but don't fail - JetStream might not be enabled
+		log.Warn("Failed to create logging stream, continuing without NATS logging", "error", err)
+		return nil
+	}
+
+	return nil
 }

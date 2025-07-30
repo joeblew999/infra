@@ -1,43 +1,88 @@
-# MCP
+# MCP Package
 
-We want to use Claude code at dev time and runtime.
+This package provides tools for managing MCP (Model Context Protocol) servers for Claude Code integration.
 
-Because MCP's are built in to many languages we should use docker. We might change that later, when we can start using golang MCP Servers. 
+## Overview
 
-In the End, this will provide teams to build AI systems with their Products.
+MCP (Model Context Protocol) allows Claude to extend its capabilities by connecting to external tools and services. This package provides a Go-based manager for installing, configuring, and managing MCP servers.
 
+## Quick Start
 
+### Using the CLI
 
-CLaude make it all here : https://claude.ai/public/artifacts/63fe381a-3e8d-44c6-a5b6-0371df07f6cc
+```bash
+# List configured MCP servers
+go run ./cmd infra mcp list
 
-- use docker nats, pocketbase, datastar 
+# Install MCP servers from configuration
+go run ./cmd infra mcp install
 
-- integates with Claude Code.
+# Uninstall specific servers
+go run ./cmd infra mcp uninstall github filesystem
 
----
+# Uninstall all MCP servers
+go run ./cmd infra mcp uninstall-all
+```
 
-https://github.com/skeeeon has really good NATS and Pocketbase stuff.
+### Configuration
 
+MCP servers are configured in `pkg/mcp/mcp.json`. The configuration format is:
 
-https://github.com/skeeeon/pb-nats can mint NATS JWTS, and stroe them in PB, which is highly useful for making new users at runtime.
+```json
+{
+  "servers": [
+    {
+      "name": "github",
+      "version": "2025-01-24",
+      "repo": "modelcontextprotocol/servers",
+      "type": "stdio",
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  ]
+}
+```
 
-https://github.com/skeeeon/pb-cli to interact with PB. zero deps.
-- Has a context system, just like NATS, but not using it. 
-- So designed for multi project use.
-- NOT tagged yet.
+## API Usage
 
----
+```go
+package main
 
-https://github.com/benallfree/pocketpages provides a JS based way to use Pocketbase. And has Datastar integrated. 
+import (
+    "fmt"
+    "github.com/joeblew999/infra/pkg/mcp"
+)
 
-- docs: https://pocketpages.dev/docs
+func main() {
+    // Create manager
+    manager, err := mcp.NewManager()
+    if err != nil {
+        panic(err)
+    }
+    
+    // List configured servers
+    servers := manager.List()
+    for _, server := range servers {
+        fmt.Printf("Server: %s (%s)\n", server.Name, server.Version)
+    }
+    
+    // Install servers from config
+    err = manager.LoadConfigFromFile("mcp.json")
+    if err != nil {
+        panic(err)
+    }
+}
+```
 
-WE DEF need to try this with bun, as its way easier than npm.
+## Available MCP Servers
 
-This will be highly useful for Devs and Users to extend the system at dev and runtime.
+See [MCP-LIST.md](./MCP-LIST.md) for a list of available MCP servers and their purposes.
 
-https://github.com/benallfree/pocketpages/tree/main/packages/plugins/datastar
+## Resources
 
-
-
-
+- [Claude Code Documentation](https://docs.anthropic.com/en/docs/claude-code/overview)
+- [MCP Documentation](https://docs.anthropic.com/en/docs/claude-code/mcp)
+- [Official MCP Servers](https://github.com/modelcontextprotocol/servers)

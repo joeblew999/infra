@@ -1,0 +1,34 @@
+{
+  "servers": [
+    {
+      "name": "github",
+      "version": "2025-01-24",
+      "repo": "modelcontextprotocol/servers",
+      "type": "stdio",
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    {
+      "name": "filesystem",
+      "version": "2025-01-24",
+      "repo": "modelcontextprotocol/servers",
+      "type": "stdio",
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "ALLOWED_PATHS": "${HOME}"
+      }
+    },
+    {
+      "name": "fetch",
+      "version": "2025-01-24",
+      "repo": "modelcontextprotocol/servers",
+      "type": "stdio",
+      "command": "node",
+      "args": ["build/index.js"]
+    }
+  ]
+}
