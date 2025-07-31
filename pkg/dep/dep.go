@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -219,6 +219,8 @@ func Ensure(debug bool) error {
 			installer = &claudeInstaller{}
 		case "nats":
 			installer = &natsInstaller{}
+		case "litestream":
+			installer = &litestreamInstaller{}
 		default:
 			return fmt.Errorf("no installer found for binary: %s", binary.Name)
 		}

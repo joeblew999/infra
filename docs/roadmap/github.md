@@ -1,5 +1,7 @@
 # github
 
+
+
 Then i really need you to tell me how you can use the Claude MCP server for github.
 
 Cause i want you to be able to interact with this proejects github, so you can see everything like Issues, respond to Issues. Later also to do a PR into Github, and then close an Issues related to it after you have validated that it works.

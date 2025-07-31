@@ -3,6 +3,8 @@ package dep
 import (
 	"errors"
 	"testing"
+
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 func TestEmbeddedDepBinaries(t *testing.T) {
@@ -16,6 +18,7 @@ func TestEmbeddedDepBinaries(t *testing.T) {
 		"garble",
 		"bun",
 		"claude",
+		"nats",
 	}
 
 	// Load configuration using the new loadConfig function
@@ -135,5 +138,230 @@ func TestBinaryMetaStruct(t *testing.T) {
 	}
 	if meta.Version != "v1.0.0" {
 		t.Errorf("Expected version 'v1.0.0', got %s", meta.Version)
+	}
+}
+
+// TestGetBinaryName tests the platform-specific binary naming from platform.go
+func TestGetBinaryName(t *testing.T) {
+	tests := []struct {
+		name     string
+		baseName string
+		osName   string
+		expected string
+	}{
+		{
+			name:     "Linux binary",
+			baseName: "claude",
+			osName:   "linux",
+			expected: "claude",
+		},
+		{
+			name:     "macOS binary",
+			baseName: "task",
+			osName:   "darwin",
+			expected: "task",
+		},
+		{
+			name:     "Windows binary",
+			baseName: "claude",
+			osName:   "windows",
+			expected: "claude.exe",
+		},
+		{
+			name:     "Windows task binary",
+			baseName: "task",
+			osName:   "windows",
+			expected: "task.exe",
+		},
+		{
+			name:     "Empty base name",
+			baseName: "",
+			osName:   "linux",
+			expected: "",
+		},
+		{
+			name:     "Windows with dots in name",
+			baseName: "my.tool",
+			osName:   "windows",
+			expected: "my.tool.exe",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetBinaryNameFor(tt.baseName, tt.osName, "amd64")
+			if result != tt.expected {
+				t.Errorf("GetBinaryNameFor(%q, %q, \"amd64\") = %q, want %q", 
+					tt.baseName, tt.osName, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestGetBinaryNames tests batch binary naming
+func TestGetBinaryNames(t *testing.T) {
+	baseNames := []string{"claude", "task", "tofu", "caddy"}
+	
+	tests := []struct {
+		name     string
+		osName   string
+		expected []string
+	}{
+		{
+			name:     "Linux batch",
+			osName:   "linux",
+			expected: []string{"claude", "task", "tofu", "caddy"},
+		},
+		{
+			name:     "Windows batch",
+			osName:   "windows",
+			expected: []string{"claude.exe", "task.exe", "tofu.exe", "caddy.exe"},
+		},
+		{
+			name:     "macOS batch",
+			osName:   "darwin",
+			expected: []string{"claude", "task", "tofu", "caddy"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := GetBinaryNamesFor(baseNames, tt.osName, "amd64")
+			if len(result) != len(tt.expected) {
+				t.Errorf("GetBinaryNamesFor() returned %d names, want %d", len(result), len(tt.expected))
+				return
+			}
+			for i := range result {
+				if result[i] != tt.expected[i] {
+					t.Errorf("GetBinaryNamesFor()[%d] = %q, want %q", i, result[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}
+
+// TestStripExeSuffix tests the exe suffix removal functionality
+func TestStripExeSuffix(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Windows binary",
+			input:    "claude.exe",
+			expected: "claude",
+		},
+		{
+			name:     "Linux binary",
+			input:    "claude",
+			expected: "claude",
+		},
+		{
+			name:     "Multiple extensions",
+			input:    "tool.v1.exe",
+			expected: "tool.v1",
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := StripExeSuffix(tt.input)
+			if result != tt.expected {
+				t.Errorf("StripExeSuffix(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+// TestPlatformFunctions tests platform detection utilities
+func TestPlatformFunctions(t *testing.T) {
+	// Test that platform functions return reasonable values
+	platform := GetPlatform()
+	if platform == "" {
+		t.Error("GetPlatform() should not return empty string")
+	}
+
+	osName, arch := GetPlatformParts()
+	if osName == "" {
+		t.Error("GetPlatformParts() osName should not be empty")
+	}
+	if arch == "" {
+		t.Error("GetPlatformParts() arch should not be empty")
+	}
+
+	// Test IsWindows with override
+	originalGOOS := config.PlatformOverride.GOOS
+	defer func() { config.PlatformOverride.GOOS = originalGOOS }()
+
+	config.PlatformOverride.GOOS = "windows"
+	if !IsWindows() {
+		t.Error("IsWindows() should return true when GOOS=windows")
+	}
+
+	config.PlatformOverride.GOOS = "linux"
+	if IsWindows() {
+		t.Error("IsWindows() should return false when GOOS=linux")
+	}
+
+	config.PlatformOverride.GOOS = "darwin"
+	if IsWindows() {
+		t.Error("IsWindows() should return false when GOOS=darwin")
+	}
+}
+
+// TestBinaryPathConstruction tests the full binary path construction using platform naming
+func TestBinaryPathConstruction(t *testing.T) {
+	// This tests the integration between dep package and platform naming
+	// We'll use platform overrides to test different scenarios
+	
+	originalGOOS := config.PlatformOverride.GOOS
+	defer func() { config.PlatformOverride.GOOS = originalGOOS }()
+
+	tests := []struct {
+		name     string
+		binary   string
+		osName   string
+		expected string
+	}{
+		{
+			name:     "claude on Linux",
+			binary:   "claude",
+			osName:   "linux",
+			expected: ".dep/claude",
+		},
+		{
+			name:     "claude on Windows",
+			binary:   "claude",
+			osName:   "windows",
+			expected: ".dep/claude.exe",
+		},
+		{
+			name:     "task on macOS",
+			binary:   "task",
+			osName:   "darwin",
+			expected: ".dep/task",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config.PlatformOverride.GOOS = tt.osName
+			
+			// Test that GetBinaryName produces correct name
+			binaryName := GetBinaryName(tt.binary)
+			
+			// Test the full path construction (relative to current dir)
+			fullPath := ".dep/" + binaryName
+			
+			if fullPath != tt.expected {
+				t.Errorf("Expected path %q, got %q", tt.expected, fullPath)
+			}
+		})
 	}
 }

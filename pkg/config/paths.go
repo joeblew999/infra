@@ -29,6 +29,7 @@ const (
 	KoConfigFileName = ".ko.yaml"
 	LoggingConfigFileName = "infra.log.json"
 	ChangelogFileName = "CHANGELOG.md"
+	ClaudeConfigFileName = "claude.json"
 
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
@@ -98,6 +99,7 @@ func GetLogsPath() string {
 	return filepath.Join(".", LogsDir)
 }
 
+// Get returns the absolute path to a binary dependency.
 func Get(name string) string {
 	return filepath.Join(GetDepPath(), GetBinaryName(name))
 }
@@ -125,6 +127,11 @@ func GetKoBinPath() string {
 // GetFlyctlBinPath returns the absolute path to the flyctl binary.
 func GetFlyctlBinPath() string {
 	return Get("flyctl")
+}
+
+// GetClaudeBinPath returns the absolute path to the claude binary.
+func GetClaudeBinPath() string {
+	return Get("claude")
 }
 
 // GetTerraformPath returns the absolute path to the terraform directory.
@@ -175,6 +182,11 @@ func GetLoggingLevel() string {
 	return "info"
 }
 
+// GetClaudeConfigPath returns the absolute path to the Claude configuration file
+func GetClaudeConfigPath() string {
+	return filepath.Join(".", ClaudeConfigFileName)
+}
+
 // GetLoggingFormat returns the default logging format
 func GetLoggingFormat() string {
 	if IsProduction() {
@@ -218,4 +230,14 @@ func GetKoDefaultPlatforms() []string {
 	}
 	// Single platform for development (faster builds)
 	return []string{PlatformLinuxAmd64}
+}
+
+// GetPocketBaseDataPath returns the absolute path to the PocketBase data directory.
+func GetPocketBaseDataPath() string {
+	return filepath.Join(GetDataPath(), "pocketbase")
+}
+
+// GetPocketBasePort returns the default port for PocketBase server.
+func GetPocketBasePort() string {
+	return "8090"
 }

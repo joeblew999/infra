@@ -1,15 +1,14 @@
-package cmd
+package conduit
 
 import (
 	"fmt"
 	"log"
 
-	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/spf13/cobra"
 )
 
-// conduitCmd represents the conduit command
-var conduitCmd = &cobra.Command{
+// Cmd represents the conduit command
+var Cmd = &cobra.Command{
 	Use:   "conduit",
 	Short: "Manage Conduit and its connectors",
 	Long: `Manage Conduit (https://github.com/ConduitIO/conduit) and its connectors.
@@ -24,7 +23,7 @@ var conduitStartCmd = &cobra.Command{
 	Short: "Start Conduit and connectors",
 	Long:  `Start Conduit and all configured connectors as managed processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		fmt.Println("Starting Conduit service...")
 		if err := service.EnsureAndStart(false); err != nil {
@@ -44,7 +43,7 @@ var conduitStopCmd = &cobra.Command{
 	Short: "Stop Conduit and connectors",
 	Long:  `Stop all running Conduit processes gracefully.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		fmt.Println("Stopping Conduit service...")
 		if err := service.Initialize(); err != nil {
@@ -65,7 +64,7 @@ var conduitStatusCmd = &cobra.Command{
 	Short: "Show Conduit process status",
 	Long:  `Display the current status of all Conduit processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
@@ -91,7 +90,7 @@ var conduitRestartCmd = &cobra.Command{
 	Short: "Restart Conduit and connectors",
 	Long:  `Restart all Conduit processes gracefully.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		fmt.Println("Restarting Conduit service...")
 		if err := service.Initialize(); err != nil {
@@ -119,7 +118,7 @@ var conduitCoreStartCmd = &cobra.Command{
 	Short: "Start only the core conduit process",
 	Long:  `Start only the core conduit process, without connectors.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
@@ -140,7 +139,7 @@ var conduitCoreStopCmd = &cobra.Command{
 	Short: "Stop only the core conduit process",
 	Long:  `Stop only the core conduit process, leaving connectors running.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
@@ -168,7 +167,7 @@ var conduitConnectorsStartCmd = &cobra.Command{
 	Short: "Start all connector processes",
 	Long:  `Start all configured connector processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
@@ -189,7 +188,7 @@ var conduitConnectorsStopCmd = &cobra.Command{
 	Short: "Stop all connector processes",
 	Long:  `Stop all running connector processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := conduit.NewService()
+		service := NewService()
 		
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
@@ -210,23 +209,20 @@ func init() {
 	conduitRestartCmd.Flags().Bool("debug", false, "Enable debug logging")
 	
 	// Add subcommands to root
-	conduitCmd.AddCommand(conduitStartCmd)
-	conduitCmd.AddCommand(conduitStopCmd)
-	conduitCmd.AddCommand(conduitStatusCmd)
-	conduitCmd.AddCommand(conduitRestartCmd)
+	Cmd.AddCommand(conduitStartCmd)
+	Cmd.AddCommand(conduitStopCmd)
+	Cmd.AddCommand(conduitStatusCmd)
+	Cmd.AddCommand(conduitRestartCmd)
 	
 	// Add core subcommands
 	conduitCoreCmd.AddCommand(conduitCoreStartCmd)
 	conduitCoreCmd.AddCommand(conduitCoreStopCmd)
-	conduitCmd.AddCommand(conduitCoreCmd)
+	Cmd.AddCommand(conduitCoreCmd)
 	
 	// Add connectors subcommands
 	conduitConnectorsCmd.AddCommand(conduitConnectorsStartCmd)
 	conduitConnectorsCmd.AddCommand(conduitConnectorsStopCmd)
-	conduitCmd.AddCommand(conduitConnectorsCmd)
-	
-	// Add conduit to root command
-	rootCmd.AddCommand(conduitCmd)
+	Cmd.AddCommand(conduitConnectorsCmd)
 }
 
 // RunConduit adds conduit commands to the CLI

@@ -1,0 +1,81 @@
+# https://taskfile.dev
+
+version: '3'
+
+vars:
+  CONFIG: "litestream.yml"
+
+tasks:
+  default:
+    cmds:
+      - task --list-all
+      - touch {{.CONFIG}}
+      - echo "CONFIG      {{.CONFIG}}"
+    silent: true
+
+  dep:
+    cmds:
+      - go install github.com/benbjohnson/litestream/cmd/litestream@latest
+    silent: false
+
+  help:
+    deps:
+      - dep
+    cmds:
+      - litestream --help
+      - litestream version
+    silent: false
+
+  start:
+    deps:
+      - dep
+    cmds:
+      # http://localhost:9090/metrics
+      #- litestream replicate --help
+      - litestream replicate -config {{.CONFIG}}
+    silent: false
+
+  databases:
+    deps:
+      - dep
+    cmds:
+      #- litestream databases --help
+      - litestream databases --config {{.CONFIG}}
+    silent: false
+
+  generations:
+    deps:
+      - dep
+    cmds:
+      #- litestream generations --help
+      - litestream generations --config {{.CONFIG}}
+    silent: false
+
+  restore:
+    deps:
+      - dep
+    cmds:
+      - litestream restore --config {{.CONFIG}}
+    silent: false
+
+  snapshots:
+    deps:
+      - dep
+    cmds:
+      - litestream snapshots --config {{.CONFIG}}
+    silent: false
+
+  version:
+    deps:
+      - dep
+    cmds:
+      - litestream version
+    silent: false
+
+  wal:
+    deps:
+      - dep
+    cmds:
+      #- litestream wal --help
+      - litestream wal --config {{.CONFIG}}
+    silent: false

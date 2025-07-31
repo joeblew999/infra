@@ -9,10 +9,16 @@ A self-similar infrastructure management system that bridges development and pro
 ```bash
 git clone https://github.com/joeblew999/infra.git
 cd infra
-go run .
+go run .                    # Start all services
 ```
 
 Access the web interface at **http://localhost:1337**
+
+### Environment Modes
+```bash
+go run . --env dev          # Development mode
+go run . --env production   # Production mode (default)
+```
 
 ## 🌐 Endpoints
 
@@ -25,6 +31,15 @@ Access the web interface at **http://localhost:1337**
 | **http://localhost:1337/status** | Status |
 
 ## 🔧 Development
+
+### CLI Tools (Always Available)
+All debugging and provisioning tools are always available:
+```bash
+go run . --help               # Show all commands
+go run . dep list             # Manage dependencies
+go run . task                # Run Taskfiles
+go run . build               # Build application
+```
 
 ### Web GUI Debugging
 Use Claude Code's built-in Playwright tools:
@@ -39,8 +54,8 @@ mcp__playwright__browser_console_messages → debug errors
 ### Architecture
 **Self-Similar Design**: The same patterns work at development time and runtime.
 
-- **Development**: Use binaries and CLI tools directly
-- **Runtime**: Use the same binaries and CLI tools, just orchestrated
+- **Unified Interface**: `go run .` - starts all services automatically
+- **Always Available**: All CLI tools accessible without mode switching
 - **No mental model shift** between dev and prod
 
 **Key Features:**
@@ -53,10 +68,11 @@ mcp__playwright__browser_console_messages → debug errors
 ## 🔄 Workflows
 
 ### Local Development
+
 ```bash
-go run .                    # Start web interface
-go run . cli --help         # CLI commands
-go run . api-check          # Verify API compatibility
+go run .                    # Always starts all services
+go run . --env dev          # Development mode with migration tools
+go run . --env production   # Production mode (optimized)
 ```
 
 ### CI/CD

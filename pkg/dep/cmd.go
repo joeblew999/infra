@@ -1,14 +1,13 @@
-package cmd
+package dep
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/spf13/cobra"
 )
 
-var depCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "dep",
 	Short: "Manage binary dependencies",
 	Long:  `Manage binary dependencies including installation, updates, and removal.`,
@@ -25,7 +24,7 @@ var depInstallCmd = &cobra.Command{
 		if len(args) == 0 {
 			// Install all binaries
 			fmt.Println("Installing all configured binaries...")
-			if err := dep.Ensure(debug); err != nil {
+			if err := Ensure(debug); err != nil {
 				fmt.Fprintf(os.Stderr, "Error installing binaries: %v\n", err)
 				os.Exit(1)
 			}
@@ -37,7 +36,7 @@ var depInstallCmd = &cobra.Command{
 			
 			// For individual installation, we'll use Ensure (which installs all)
 			// In future, we could enhance this to install just one
-			if err := dep.Ensure(debug); err != nil {
+			if err := Ensure(debug); err != nil {
 				fmt.Fprintf(os.Stderr, "Error installing %s: %v\n", binaryName, err)
 				os.Exit(1)
 			}
@@ -55,7 +54,7 @@ var depRemoveCmd = &cobra.Command{
 		binaryName := args[0]
 		fmt.Printf("Removing %s...\n", binaryName)
 		
-		if err := dep.Remove(binaryName); err != nil {
+		if err := Remove(binaryName); err != nil {
 			fmt.Fprintf(os.Stderr, "Error removing %s: %v\n", binaryName, err)
 			os.Exit(1)
 		}
@@ -72,7 +71,7 @@ var depCheckCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) == 0 {
 			// Check all binaries
-			if err := dep.CheckAllReleases(); err != nil {
+			if err := CheckAllReleases(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error checking releases: %v\n", err)
 				os.Exit(1)
 			}
@@ -100,18 +99,16 @@ var depListCmd = &cobra.Command{
 		fmt.Println("  bun - oven-sh/bun")
 		fmt.Println("  claude - anthropics/claude-code")
 		fmt.Println("  nats - nats-io/natscli")
+		fmt.Println("  litestream - benbjohnson/litestream")
 	},
 }
 
 func init() {
-	// Add dep command to root
-	rootCmd.AddCommand(depCmd)
-	
 	// Add subcommands to dep
-	depCmd.AddCommand(depInstallCmd)
-	depCmd.AddCommand(depRemoveCmd)
-	depCmd.AddCommand(depListCmd)
-	depCmd.AddCommand(depCheckCmd)
+	Cmd.AddCommand(depInstallCmd)
+	Cmd.AddCommand(depRemoveCmd)
+	Cmd.AddCommand(depListCmd)
+	Cmd.AddCommand(depCheckCmd)
 	
 	// Add debug flag to install command
 	depInstallCmd.Flags().Bool("debug", false, "Enable debug output")

@@ -17,12 +17,12 @@ import (
 // ConduitBinary represents a Conduit binary or connector
 // This follows the same pattern as DepBinary in pkg/dep
 type ConduitBinary struct {
-	Name       string            `json:"name"`
-	Repo       string            `json:"repo"`
-	Version    string            `json:"version"`
-	ReleaseURL string            `json:"release_url"`
+	Name       string              `json:"name"`
+	Repo       string              `json:"repo"`
+	Version    string              `json:"version"`
+	ReleaseURL string              `json:"release_url"`
 	Assets     []dep.AssetSelector `json:"assets"`
-	Type       string            `json:"type"` // "core", "connector", "processor"
+	Type       string              `json:"type"` // "core", "connector", "processor"
 }
 
 //go:embed config/*.json
@@ -154,7 +154,7 @@ func loadCoreConfig() error {
 // loadConnectorsConfig loads the connectors.json configuration file
 func loadConnectorsConfig() error {
 	configPath := filepath.Join("pkg", "conduit", "config", "connectors.json")
-	
+
 	// Check if connectors config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// Use default connectors configuration if file doesn't exist
@@ -177,7 +177,7 @@ func loadConnectorsConfig() error {
 // loadProcessorsConfig loads the processors.json configuration file
 func loadProcessorsConfig() error {
 	configPath := filepath.Join("pkg", "conduit", "config", "processors.json")
-	
+
 	// Check if processors config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		// Use default processors configuration if file doesn't exist
@@ -284,7 +284,7 @@ func installGenericBinary(binary dep.DepBinary, _ bool) error {
 	} else {
 		content = fmt.Sprintf("#!/bin/bash\necho \"Placeholder for %s %s from %s\"\n", binary.Name, binary.Version, binary.Repo)
 	}
-	
+
 	// Write the placeholder file
 	if err := os.WriteFile(installPath, []byte(content), 0755); err != nil {
 		return fmt.Errorf("failed to create binary file: %w", err)
@@ -364,10 +364,10 @@ func getDefaultConnectorsConfig() struct {
 				},
 			},
 			{
-				Name:       "conduit-connector-kafka",
-				Repo:       "ConduitIO/conduit-connector-kafka",
-				Version:    "v0.8.0",
-				Type:       "connector",
+				Name:    "conduit-connector-kafka",
+				Repo:    "ConduitIO/conduit-connector-kafka",
+				Version: "v0.8.0",
+				Type:    "connector",
 				Assets: []dep.AssetSelector{
 					{OS: "darwin", Arch: "amd64", Match: `conduit-connector-kafka_.*_darwin_amd64\.tar\.gz$`},
 					{OS: "darwin", Arch: "arm64", Match: `conduit-connector-kafka_.*_darwin_arm64\.tar\.gz$`},
@@ -377,10 +377,10 @@ func getDefaultConnectorsConfig() struct {
 				},
 			},
 			{
-				Name:       "conduit-connector-file",
-				Repo:       "ConduitIO/conduit-connector-file",
-				Version:    "v0.7.0",
-				Type:       "connector",
+				Name:    "conduit-connector-file",
+				Repo:    "ConduitIO/conduit-connector-file",
+				Version: "v0.7.0",
+				Type:    "connector",
 				Assets: []dep.AssetSelector{
 					{OS: "darwin", Arch: "amd64", Match: `conduit-connector-file_.*_darwin_amd64\.tar\.gz$`},
 					{OS: "darwin", Arch: "arm64", Match: `conduit-connector-file_.*_darwin_arm64\.tar\.gz$`},

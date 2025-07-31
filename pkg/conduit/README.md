@@ -2,6 +2,14 @@
 
 Binary management for [Conduit](https://github.com/ConduitIO/conduit) and its connectors.
 
+We run the conduit binaries. We definitly do not want them as part of infra, because the go modules woudl be too large. 
+
+## TODO
+
+It has SQLITE db for all storage. SO we can easily use Litestream with it, so we are HA and can even be Serverless, because Litestream can restore off S3. 
+
+
+
 ## Quick Start
 
 ```bash

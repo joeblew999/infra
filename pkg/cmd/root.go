@@ -15,16 +15,8 @@ var rootCmd = &cobra.Command{
 	Long:    `A comprehensive tool for managing infrastructure, including dependencies, services, and more.`,
 	Version: "0.0.1",
 	Run: func(cmd *cobra.Command, args []string) {
-		mode, _ := cmd.Flags().GetString("mode")
-		switch mode {
-		case "cli":
-			// Cobra will handle the subcommands
-		case "service":
-			RunService(false, mode) // Pass mode to RunService
-		default:
-			// Default to service mode if no mode or invalid mode is specified
-			RunService(false, "service") // Default to "service" mode
-		}
+		env, _ := cmd.Flags().GetString("env")
+		RunService(false, false, false, env) // Always start all services
 	},
 }
 
@@ -42,12 +34,10 @@ func Execute() {
 		os.Exit(1)
 	}
 
-	// Add subcommands from other files
+	// Always add CLI commands
 	RunCLI()
 	RunWorkflows()
-	RunConduit()
-	// RunCLI() already includes flyctl command
-	// RunService() is called directly from rootCmd.Run
+	RunAI()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -55,6 +45,8 @@ func Execute() {
 	}
 }
 
+
 func init() {
-	rootCmd.PersistentFlags().String("mode", "", "Set the operating mode (e.g., cli, service)")
+	rootCmd.PersistentFlags().String("env", "production", "Environment: production or development")
+	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug mode")
 }

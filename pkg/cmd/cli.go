@@ -5,7 +5,10 @@ import (
 	"strconv"
 
 	"github.com/joeblew999/infra/pkg/caddy"
+	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/spf13/cobra"
 )
 
@@ -143,4 +146,8 @@ func RunCLI() {
 	rootCmd.AddCommand(caddyCmd)
 	rootCmd.AddCommand(koCmd)
 	rootCmd.AddCommand(flyctlCmd)
+	rootCmd.AddCommand(pocketbase.Cmd)
+	rootCmd.AddCommand(config.Cmd)
+	rootCmd.AddCommand(conduit.Cmd)
+	rootCmd.AddCommand(dep.Cmd)
 }

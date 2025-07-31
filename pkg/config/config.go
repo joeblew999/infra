@@ -40,6 +40,7 @@ type Config struct {
 	Environment EnvironmentConfig `json:"environment"`
 	Platform    PlatformConfig    `json:"platform"`
 	Paths       PathsConfig       `json:"paths"`
+	Ports       PortsConfig       `json:"ports"`
 	Binaries    BinariesConfig    `json:"binaries"`
 	Registry    RegistryConfig    `json:"registry"`
 	Logging     LoggingConfig     `json:"logging"`
@@ -60,11 +61,21 @@ type PlatformConfig struct {
 }
 
 type PathsConfig struct {
-	Dep       string `json:"dep"`
-	Bin       string `json:"bin"`
-	Data      string `json:"data"`
-	Docs      string `json:"docs"`
-	Taskfiles string `json:"taskfiles"`
+	Dep         string `json:"dep"`
+	Bin         string `json:"bin"`
+	Data        string `json:"data"`
+	Docs        string `json:"docs"`
+	Taskfiles   string `json:"taskfiles"`
+	PocketBase  string `json:"pocketbase"`
+	NATS        string `json:"nats"`
+}
+
+// PortsConfig contains port configuration for services
+type PortsConfig struct {
+	WebServer  string `json:"web_server"`
+	PocketBase string `json:"pocketbase"`
+	NATS       string `json:"nats"`
+	MCP        string `json:"mcp"`
 }
 
 type BinariesConfig struct {
@@ -101,11 +112,19 @@ func GetConfig() Config {
 			Platform: GetPlatform(),
 		},
 		Paths: PathsConfig{
-			Dep:       GetDepPath(),
-			Bin:       GetBinPath(),
-			Data:      GetDataPath(),
-			Docs:      DocsDir,
-			Taskfiles: GetTaskfilesPath(),
+			Dep:         GetDepPath(),
+			Bin:         GetBinPath(),
+			Data:        GetDataPath(),
+			Docs:        DocsDir,
+			Taskfiles:   GetTaskfilesPath(),
+			PocketBase:  GetPocketBaseDataPath(),
+			NATS:        filepath.Join(GetDataPath(), "nats"),
+		},
+		Ports: PortsConfig{
+			WebServer:  "1337",
+			PocketBase: "8090",
+			NATS:       "4222",
+			MCP:        "8080",
 		},
 		Binaries: BinariesConfig{
 			Flyctl: GetFlyctlBinPath(),

@@ -328,5 +328,38 @@
         "arch": "amd64"
       }
     ]
+  },
+  {
+    "name": "litestream",
+    "repo": "benbjohnson/litestream",
+    "version": "v0.5.0-beta1",
+    "release_url": "https://github.com/benbjohnson/litestream/releases",
+    "assets": [
+      {
+        "match": "litestream-.*-darwin-arm64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "litestream-.*-darwin-amd64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "litestream-.*-linux-amd64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "litestream-.*-linux-arm64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "litestream-.*-windows-amd64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
   }
 ]

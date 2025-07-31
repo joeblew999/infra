@@ -1,5 +1,7 @@
 # MCP Package
 
+I THINK THIS PKG is ALL WRONG. Need to think more about best way to control the AI, etc -
+
 This package provides tools for managing MCP (Model Context Protocol) servers for Claude Code integration.
 
 ## Overview

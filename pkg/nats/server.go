@@ -23,6 +23,8 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 		Debug: true, // Enable debug logging
 		Trace: true, // Enable trace logging
 		JetStream: true, // Enable JetStream for logging
+		Port: 4222, // Explicitly set NATS port
+		Host: "127.0.0.1", // Bind to localhost only
 	}
 
 	// Initialize embedded NATS server
@@ -41,8 +43,12 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	}
 
 	// Wait for the server to be ready
+	log.Info("Waiting for NATS server to be ready...")
 	natsServer.WaitForServer()
-	log.Info("Embedded NATS server started")
+	log.Info("Embedded NATS server started and ready")
+	
+	// Get server info for debugging
+	log.Info("NATS server started successfully")
 
 	// Get client connection from the embedded server
 	nc, err := natsServer.Client()

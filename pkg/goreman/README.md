@@ -2,6 +2,11 @@
 
 A lightweight process manager inspired by [goreman](https://github.com/mattn/goreman) but implemented as a reusable Go package.
 
+## TODO
+
+Explore later, the idea of generating Proc files, for Core and Secondary thngs thart we run.
+
+
 
 
 ## Features
