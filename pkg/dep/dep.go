@@ -178,64 +178,94 @@ func Ensure(debug bool) error {
 	}
 
 	for _, binary := range binaries {
-		log.Info("Checking binary", "name", binary.Name, "version", binary.Version, "repo", binary.Repo)
-
-		installPath, err := Get(binary.Name)
-		if err != nil {
-			return fmt.Errorf("failed to get install path for %s: %w", binary.Name, err)
-		}
-		currentMeta, err := readMeta(installPath)
-		if err == nil && currentMeta.Version == binary.Version {
-			log.Info("Binary up to date", "name", binary.Name, "version", binary.Version)
-			continue // Skip installation
-		} else if err != nil && !os.IsNotExist(err) {
-			log.Warn("Error reading metadata", "name", binary.Name, "error", err, "action", "attempting re-download")
-		} else if currentMeta != nil && currentMeta.Version != binary.Version {
-			log.Warn("Version mismatch", "name", binary.Name, "expected", binary.Version, "got", currentMeta.Version, "action", "attempting re-download")
-		} else {
-			log.Info("Binary not found or metadata missing", "name", binary.Name, "action", "attempting download and installation")
-		}
-
-		// Determine the correct installer based on binary name
-		var installer Installer
-		switch binary.Name {
-		case "bento":
-			installer = &bentoInstaller{}
-		case "task":
-			installer = &taskInstaller{}
-		case "tofu":
-			installer = &tofuInstaller{}
-		case "caddy":
-			installer = &caddyInstaller{}
-		case "ko":
-			installer = &koInstaller{}
-		case "flyctl":
-			installer = &flyctlInstaller{}
-		case "garble":
-			installer = &garbleInstaller{}
-		case "bun":
-			installer = &bunInstaller{}
-		case "claude":
-			installer = &claudeInstaller{}
-		case "nats":
-			installer = &natsInstaller{}
-		case "litestream":
-			installer = &litestreamInstaller{}
-		default:
-			return fmt.Errorf("no installer found for binary: %s", binary.Name)
-		}
-
-		if err := installer.Install(binary, debug); err != nil {
+		if err := InstallBinary(binary.Name, debug); err != nil {
 			return fmt.Errorf("failed to install %s: %w", binary.Name, err)
-		}
-
-		// Write metadata after successful installation
-		if err := writeMeta(installPath, &BinaryMeta{Name: binary.Name, Version: binary.Version}); err != nil {
-			return fmt.Errorf("failed to write metadata for %s: %w", binary.Name, err)
 		}
 	}
 
 	log.Info("Core binaries ensured.")
+	return nil
+}
+
+// InstallBinary installs a single binary by name.
+// This allows selective installation of individual binaries without affecting others.
+func InstallBinary(name string, debug bool) error {
+	log.Info("Checking binary", "name", name)
+
+	// Load configuration to find the specific binary
+	binaries, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load dependency configuration: %w", err)
+	}
+
+	// Find the specific binary
+	var targetBinary *DepBinary
+	for _, binary := range binaries {
+		if binary.Name == name {
+			targetBinary = &binary
+			break
+		}
+	}
+	
+	if targetBinary == nil {
+		return fmt.Errorf("%w: binary '%s' is not supported", ErrBinaryNotFound, name)
+	}
+
+	installPath, err := Get(name)
+	if err != nil {
+		return fmt.Errorf("failed to get install path for %s: %w", name, err)
+	}
+	currentMeta, err := readMeta(installPath)
+	if err == nil && currentMeta.Version == targetBinary.Version {
+		log.Info("Binary up to date", "name", name, "version", targetBinary.Version)
+		return nil // Skip installation
+	} else if err != nil && !os.IsNotExist(err) {
+		log.Warn("Error reading metadata", "name", name, "error", err, "action", "attempting re-download")
+	} else if currentMeta != nil && currentMeta.Version != targetBinary.Version {
+		log.Warn("Version mismatch", "name", name, "expected", targetBinary.Version, "got", currentMeta.Version, "action", "attempting re-download")
+	} else {
+		log.Info("Binary not found or metadata missing", "name", name, "action", "attempting download and installation")
+	}
+
+	// Determine the correct installer based on binary name
+	var installer Installer
+	switch name {
+	case "bento":
+		installer = &bentoInstaller{}
+	case "task":
+		installer = &taskInstaller{}
+	case "tofu":
+		installer = &tofuInstaller{}
+	case "caddy":
+		installer = &caddyInstaller{}
+	case "ko":
+		installer = &koInstaller{}
+	case "flyctl":
+		installer = &flyctlInstaller{}
+	case "garble":
+		installer = &garbleInstaller{}
+	case "bun":
+		installer = &bunInstaller{}
+	case "claude":
+		installer = &claudeInstaller{}
+	case "nats":
+		installer = &natsInstaller{}
+	case "litestream":
+		installer = &litestreamInstaller{}
+	default:
+		return fmt.Errorf("no installer found for binary: %s", name)
+	}
+
+	if err := installer.Install(*targetBinary, debug); err != nil {
+		return fmt.Errorf("failed to install %s: %w", name, err)
+	}
+
+	// Write metadata after successful installation
+	if err := writeMeta(installPath, &BinaryMeta{Name: name, Version: targetBinary.Version}); err != nil {
+		return fmt.Errorf("failed to write metadata for %s: %w", name, err)
+	}
+
+	log.Info("Binary installed successfully", "name", name, "version", targetBinary.Version)
 	return nil
 }
 

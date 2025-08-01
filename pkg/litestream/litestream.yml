@@ -1,0 +1,33 @@
+# Litestream Configuration Templates
+# Copy and customize based on your environment
+
+# Production Template (S3)
+# dbs:
+#   - path: /app/pb_data/data.db
+#     replicas:
+#       - type: s3
+#         bucket: ${FLY_APP_NAME}-backups
+#         path: litestream/pb_data.db
+#         region: ${AWS_REGION:-us-east-1}
+#         access-key-id: ${AWS_ACCESS_KEY_ID}
+#         secret-access-key: ${AWS_SECRET_ACCESS_KEY}
+#         retention: 30d
+#         retention-check-interval: 1h
+
+# Development Template (Local Filesystem)
+dbs:
+  - path: ./pb_data/data.db
+    replicas:
+      - type: file
+        path: ./backups/pb_data.db
+        retention: 7d
+        retention-check-interval: 24h
+
+# Testing Template (Fast Sync)
+# dbs:
+#   - path: ./test_data/data.db
+#     replicas:
+#       - type: file
+#         path: /tmp/test_backup.db
+#         sync-interval: 100ms
+#         retention: 1h

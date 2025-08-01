@@ -30,13 +30,12 @@ var depInstallCmd = &cobra.Command{
 			}
 			fmt.Println("✓ All binaries installed successfully")
 		} else {
-			// Install specific binary - use Ensure for now
+			// Install specific binary
 			binaryName := args[0]
 			fmt.Printf("Installing %s...\n", binaryName)
 			
-			// For individual installation, we'll use Ensure (which installs all)
-			// In future, we could enhance this to install just one
-			if err := Ensure(debug); err != nil {
+			// Use the new single binary installation
+			if err := InstallBinary(binaryName, debug); err != nil {
 				fmt.Fprintf(os.Stderr, "Error installing %s: %v\n", binaryName, err)
 				os.Exit(1)
 			}

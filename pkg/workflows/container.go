@@ -8,8 +8,8 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// BuildOptions configures build behavior
-type BuildOptions struct {
+// ContainerBuildOptions configures container build behavior
+type ContainerBuildOptions struct {
 	Push     bool
 	Platform string
 	Repo     string
@@ -17,13 +17,13 @@ type BuildOptions struct {
 	DryRun   bool
 }
 
-// BuildWorkflow handles standardized container image builds
-type BuildWorkflow struct {
-	opts BuildOptions
+// ContainerBuildWorkflow handles standardized container image builds
+type ContainerBuildWorkflow struct {
+	opts ContainerBuildOptions
 }
 
-// NewBuildWorkflow creates a new build workflow
-func NewBuildWorkflow(opts BuildOptions) *BuildWorkflow {
+// NewContainerBuildWorkflow creates a new container build workflow
+func NewContainerBuildWorkflow(opts ContainerBuildOptions) *ContainerBuildWorkflow {
 	// Set defaults
 	if opts.Platform == "" {
 		opts.Platform = config.PlatformLinuxAmd64
@@ -35,12 +35,12 @@ func NewBuildWorkflow(opts BuildOptions) *BuildWorkflow {
 		opts.Tag = "latest"
 	}
 
-	return &BuildWorkflow{opts: opts}
+	return &ContainerBuildWorkflow{opts: opts}
 }
 
-// Execute runs the build workflow
-func (b *BuildWorkflow) Execute() (string, error) {
-	log.Info("Starting build workflow", 
+// Execute runs the container build workflow
+func (b *ContainerBuildWorkflow) Execute() (string, error) {
+	log.Info("Starting container build workflow", 
 		"push", b.opts.Push,
 		"platform", b.opts.Platform,
 		"repo", b.opts.Repo,
@@ -89,7 +89,7 @@ func (b *BuildWorkflow) Execute() (string, error) {
 }
 
 // pushImage pushes the built image to registry
-func (b *BuildWorkflow) pushImage(image string) (string, error) {
+func (b *ContainerBuildWorkflow) pushImage(image string) (string, error) {
 	log.Info("Pushing image to registry", "image", image)
 
 	// Tag and push using ko

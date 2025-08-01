@@ -1,5 +1,10 @@
 # dep
 
+TODO:
+
+https://github.com/burrowers/garble
+https://github.com/goretk/redress 
+
 Binary dependency management with design-by-contract guarantees. Downloads, caches, and manages external tools required by the system.
 
 Try it it using :
