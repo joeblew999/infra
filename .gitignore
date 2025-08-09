@@ -17,6 +17,9 @@ infra*
 # Whenre binary dependencies live.
 .dep
 
+# Where ko builds OCI images
+.oci
+
 # Remote taskfiles store
 .task
 

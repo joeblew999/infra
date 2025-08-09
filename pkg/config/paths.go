@@ -56,6 +56,9 @@ const (
 	// DocsHTTPPath is the HTTP path prefix for serving documentation.
 	DocsHTTPPath = "/docs/"
 
+	// BuildDir is the directory for storing built container images and artifacts.
+	BuildDir = ".oci"
+
 	// TerraformDir is the directory containing Terraform/OpenTofu configuration files.
 	TerraformDir = "terraform"
 
@@ -137,6 +140,11 @@ func GetClaudeBinPath() string {
 // GetTerraformPath returns the absolute path to the terraform directory.
 func GetTerraformPath() string {
 	return filepath.Join(".", TerraformDir)
+}
+
+// GetBuildPath returns the absolute path to the build directory.
+func GetBuildPath() string {
+	return filepath.Join(".", BuildDir)
 }
 
 // IsProduction returns true if running in production environment

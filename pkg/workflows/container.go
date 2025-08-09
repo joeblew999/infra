@@ -3,6 +3,8 @@ package workflows
 import (
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
@@ -61,47 +63,69 @@ func (b *ContainerBuildWorkflow) Execute() (string, error) {
 	}
 
 	// Set ko environment
-	os.Setenv("KO_DOCKER_REPO", b.opts.Repo)
+	if b.opts.Push {
+		os.Setenv("KO_DOCKER_REPO", b.opts.Repo)
+	} else {
+		// Use dummy repo for local builds
+		os.Setenv("KO_DOCKER_REPO", "unused")
+	}
+	
 	if config.IsProduction() {
 		os.Setenv("ENVIRONMENT", "production")
 	} else {
 		os.Setenv("ENVIRONMENT", "development")
 	}
 
-	// Build image
-	image, err := runBinaryWithOutput(config.GetKoBinPath(), 
-		"build", 
-		"--platform="+b.opts.Platform,
-		"--image-refs=/dev/null", // Don't write refs file
-		"github.com/joeblew999/infra")
+	// Build image - use direct ko binary path
+	koPath := ".dep/ko"
+	if _, err := os.Stat(koPath); os.IsNotExist(err) {
+		koPath = ".dep/ko_darwin_arm64"
+	}
+	
+	// Build the command
+	args := []string{
+		"build",
+		"--platform=" + b.opts.Platform,
+		"--bare",
+		"--tags=latest",
+	}
+	
+	if !b.opts.Push {
+		// For local builds, use oci-layout and avoid registry
+		buildPath := config.GetBuildPath()
+		args = append(args, "--push=false", "--oci-layout-path="+buildPath)
+		os.Setenv("KO_DOCKER_REPO", "unused")
+	} else {
+		// For registry push
+		args = append(args, "--push=true")
+		os.Setenv("KO_DOCKER_REPO", b.opts.Repo)
+	}
+	
+	args = append(args, "github.com/joeblew999/infra")
+	
+	// Execute the command
+	cmd := exec.Command(koPath, args...)
+	// Create temporary empty config to avoid .ko.yaml conflicts
+	tmpConfig := "/tmp/.ko.yaml"
+	if _, err := os.Stat(tmpConfig); os.IsNotExist(err) {
+		os.WriteFile(tmpConfig, []byte(""), 0644)
+	}
+	cmd.Env = append(os.Environ(), "KO_CONFIG_PATH=/tmp")
+	
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("ko build failed: %w", err)
+		return "", fmt.Errorf("ko build failed: %w\nOutput: %s", err, string(output))
 	}
 
-	image = fmt.Sprintf("%s:%s", b.opts.Repo, b.opts.Tag)
+	var image string
+	if b.opts.Push {
+		image = fmt.Sprintf("%s:%s", b.opts.Repo, b.opts.Tag)
+	} else {
+		image = filepath.Join(config.GetBuildPath(), "@sha256:latest")
+	}
 	log.Info("Built container image", "image", image)
 
-	if b.opts.Push {
-		return b.pushImage(image)
-	}
-
 	return image, nil
 }
 
-// pushImage pushes the built image to registry
-func (b *ContainerBuildWorkflow) pushImage(image string) (string, error) {
-	log.Info("Pushing image to registry", "image", image)
-
-	// Tag and push using ko
-	_, err := runBinaryWithOutput(config.GetKoBinPath(), 
-		"publish", 
-		"--platform="+b.opts.Platform,
-		"--tag-only",
-		"github.com/joeblew999/infra")
-	if err != nil {
-		return "", fmt.Errorf("ko publish failed: %w", err)
-	}
-
-	log.Info("Successfully pushed image", "image", image)
-	return image, nil
-}
+// pushImage is now handled by the build command directly

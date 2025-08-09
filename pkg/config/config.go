@@ -68,6 +68,7 @@ type PathsConfig struct {
 	Taskfiles   string `json:"taskfiles"`
 	PocketBase  string `json:"pocketbase"`
 	NATS        string `json:"nats"`
+	Build       string `json:"build"`
 }
 
 // PortsConfig contains port configuration for services
@@ -119,6 +120,7 @@ func GetConfig() Config {
 			Taskfiles:   GetTaskfilesPath(),
 			PocketBase:  GetPocketBaseDataPath(),
 			NATS:        filepath.Join(GetDataPath(), "nats"),
+			Build:       GetBuildPath(),
 		},
 		Ports: PortsConfig{
 			WebServer:  "1337",

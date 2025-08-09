@@ -257,10 +257,10 @@ func init() {
 	deployCmd.Flags().Bool("force", false, "Force deployment even if no changes detected")
 
 	// Build command flags
-	buildCmd.Flags().Bool("push", true, "Push image to registry")
+	buildCmd.Flags().Bool("push", false, "Push image to registry")
 	buildCmd.Flags().String("platform", "linux/amd64", "Target platform")
-	buildCmd.Flags().String("repo", "", "Container repository (default: auto-detected)")
-	buildCmd.Flags().StringP("tag", "t", "", "Image tag (default: auto-generated)")
+	buildCmd.Flags().String("repo", "ko.local", "Container repository (ko.local for local)")
+	buildCmd.Flags().StringP("tag", "t", "latest", "Image tag")
 
 	// Status command flags
 	statusCmd.Flags().StringP("app", "a", "", "Fly.io app name")
