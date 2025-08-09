@@ -21,7 +21,7 @@ var serviceCmd = &cobra.Command{
 	Short: "Run in service mode",
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
-		RunService(false, false, false, env) // Always start all services
+		RunService(true, false, false, env) // Use embedded docs in production
 	},
 }
 
@@ -166,9 +166,9 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 			os.Exit(1)
 		}
 
-		log.Info("🌐 Starting web server", "address", "http://localhost:1337", "dev_docs", !noDevDocs)
+		log.Info("🌐 Starting web server", "address", "http://localhost:1337", "dev_docs", noDevDocs)
 		// Start the web server (blocking)
-		if err := web.StartServer(natsAddr, !noDevDocs); err != nil {
+		if err := web.StartServer(natsAddr, noDevDocs); err != nil {
 			log.Error("❌ Failed to start web server", "error", err)
 			os.Exit(1)
 		}
