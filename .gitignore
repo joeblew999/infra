@@ -2,7 +2,8 @@
 # This file is used to ignore files and directories in a Git repository.
 
 # AI likes to make a binary :)
-infra
+infra*
+
 
 # we log to the root to help with debugging
 *.log
