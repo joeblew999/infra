@@ -2,27 +2,26 @@ package pocketbase
 
 import (
 	"context"
-	"github.com/joeblew999/infra/pkg/log"
 	"os"
 
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/pocketbase/pocketbase"
-	"github.com/pocketbase/pocketbase/plugins/migratecmd"
 )
 
 // Server represents a PocketBase server instance
 type Server struct {
-	app *pocketbase.PocketBase
-	port string
-	env  string
+	app     *pocketbase.PocketBase
+	port    string
+	env     string
 	dataDir string
 }
 
 // NewServer creates a new PocketBase server instance
 func NewServer(env string) *Server {
 	return &Server{
-		port: config.GetPocketBasePort(),
-		env:  env,
+		port:    config.GetPocketBasePort(),
+		env:     env,
 		dataDir: config.GetPocketBaseDataPath(),
 	}
 }
@@ -35,49 +34,35 @@ func (s *Server) SetDataDir(dataDir string) {
 // Start starts the PocketBase server
 func (s *Server) Start(ctx context.Context) error {
 	log.Info("Starting PocketBase server", "port", s.port, "env", s.env, "data_dir", s.dataDir)
-	
-	// Ensure data directory exists
+
+	// Ensure data directory exists with proper permissions
 	if err := os.MkdirAll(s.dataDir, 0755); err != nil {
+		log.Error("Failed to create data directory", "error", err)
 		return err
 	}
-	
-	// Create new PocketBase app
-	app := pocketbase.New()
-	
-	
-	// Configure the app
-	// Add custom routes here if needed
-	// app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
-	// 	e.Router.GET("/api/health", func(c echo.Context) error {
-	// 		return c.JSON(200, map[string]string{"status": "ok"})
-	// 	})
-	// 	return nil
-	// })
+
+	// Create new PocketBase app with custom data directory
+	app := pocketbase.NewWithConfig(pocketbase.Config{
+		DefaultDataDir: s.dataDir,
+	})
 
 	s.app = app
+
+	// Start the PocketBase server
+	log.Info("Starting PocketBase server...", "port", s.port, "data_dir", s.dataDir)
 	
-	// Set environment variables for PocketBase
-	os.Setenv("PB_ENV", s.env)
-	os.Setenv("PORT", s.port)
-	os.Setenv("PB_DATA_DIR", s.dataDir)
+	// Configure the server to use our settings
+	app.RootCmd.SetArgs([]string{
+		"serve",
+		"--dir", s.dataDir,
+		"--http", ":" + s.port,
+	})
 	
-	// Configure development mode
-	if s.env == "development" {
-		// Enable automigration in development
-		migratecmd.MustRegister(app, app.RootCmd, migratecmd.Config{
-			Automigrate: true,
-		})
+	// Execute the serve command directly
+	if err := app.Start(); err != nil {
+		log.Error("PocketBase server error", "error", err)
+		return err
 	}
-	
-	// Force server mode with correct port format
-	app.RootCmd.SetArgs([]string{"serve", "--http", ":" + s.port})
-	
-	// Start the server in a goroutine
-	go func() {
-		if err := app.Start(); err != nil {
-			log.Error("PocketBase server error", "error", err)
-		}
-	}()
 	
 	return nil
 }
