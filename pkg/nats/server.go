@@ -32,9 +32,9 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 
-	// Wait for the server to be ready
+	// Wait for the server to be ready with longer timeout
 	log.Info("Waiting for NATS server to be ready...")
-	maxWait := 3 * time.Second
+	maxWait := 15 * time.Second
 	done := make(chan struct{})
 	go func() {
 		natsServer.WaitForServer()
@@ -45,7 +45,9 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	case <-done:
 		log.Info("Embedded NATS server started and ready")
 	case <-time.After(maxWait):
-		return "", fmt.Errorf("timeout waiting for NATS server")
+		// Log more detailed error
+		log.Error("NATS server timeout", "data_path", natsDataPath)
+		return "", fmt.Errorf("timeout waiting for NATS server after %v", maxWait)
 	}
 	
 	// Get server info for debugging

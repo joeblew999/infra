@@ -51,15 +51,16 @@ func (s *Server) Start(ctx context.Context) error {
 	// Start the PocketBase server
 	log.Info("Starting PocketBase server...", "port", s.port, "data_dir", s.dataDir)
 	
-	// Configure the server to use our settings
+	// Use the app's built-in serve functionality with proper context handling
 	app.RootCmd.SetArgs([]string{
 		"serve",
 		"--dir", s.dataDir,
 		"--http", ":" + s.port,
 	})
 	
-	// Execute the serve command directly
-	if err := app.Start(); err != nil {
+	// Execute synchronously - this will block, which is expected for a server
+	// This should work for the embedded version
+	if err := app.Execute(); err != nil {
 		log.Error("PocketBase server error", "error", err)
 		return err
 	}
@@ -72,6 +73,7 @@ func (s *Server) Stop() error {
 	// PocketBase stops via context cancellation, no explicit Stop method needed
 	return nil
 }
+
 
 // GetDataDir returns the PocketBase data directory
 func GetDataDir() string {

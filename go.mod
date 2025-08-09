@@ -6,9 +6,8 @@ require (
 	github.com/delaneyj/toolbelt v0.5.0
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/joho/godotenv v1.5.1
-	github.com/nats-io/nats-server/v2 v2.11.6
 	github.com/nats-io/nats.go v1.43.0
-	github.com/pocketbase/pocketbase v0.29.2
+	github.com/pocketbase/pocketbase v0.29.1
 	github.com/samber/slog-multi v1.4.1
 	github.com/samber/slog-nats v0.4.3
 	github.com/shirou/gopsutil/v3 v3.24.5
@@ -42,6 +41,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/highwayhash v1.0.3 // indirect
 	github.com/nats-io/jwt/v2 v2.7.4 // indirect
+	github.com/nats-io/nats-server/v2 v2.11.6 // indirect
 	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect

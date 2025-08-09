@@ -62,25 +62,29 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Always start NATS server
+	// Start NATS server (but don't fail if it doesn't work)
 	log.Info("🚀 Step 1: Starting embedded NATS server...")
-	var err error
 	natsAddr, err := nats.StartEmbeddedNATS(ctx)
 	if err != nil {
-		log.Error("❌ Failed to start embedded NATS server", "error", err)
-		os.Exit(1)
+		log.Warn("⚠️  Failed to start embedded NATS server, continuing without NATS", "error", err)
+		natsAddr = "" // Mark as disabled
+	} else {
+		log.Info("✅ NATS server started", "address", natsAddr)
 	}
-	log.Info("✅ NATS server started", "address", natsAddr)
 
-	// Connect to NATS for client operations
-	log.Info("🔗 Connecting to NATS client...")
-	nc, err := gonats.Connect(natsAddr)
-	if err != nil {
-		log.Error("❌ Failed to connect to NATS client", "error", err)
-		os.Exit(1)
+	// Connect to NATS for client operations (only if NATS started)
+	var nc *gonats.Conn
+	if natsAddr != "" {
+		log.Info("🔗 Connecting to NATS client...")
+		nc, err = gonats.Connect(natsAddr)
+		if err != nil {
+			log.Warn("⚠️  Failed to connect to NATS client, continuing without NATS", "error", err)
+			natsAddr = "" // Mark as disabled
+		} else {
+			log.Info("✅ NATS client connected")
+			defer nc.Close()
+		}
 	}
-	defer nc.Close()
-	log.Info("✅ NATS client connected")
 
 	// Start PocketBase server (optional for now)
 	pbEnv := "production"
@@ -111,12 +115,16 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		}()
 	}
 
-	// Initialize multi-destination logging with NATS support
+	// Initialize multi-destination logging with NATS support (only if NATS started)
 	loggingConfig := log.LoadConfig()
 	if len(loggingConfig.Destinations) > 0 {
-		// Use NATS-aware initialization since we always start NATS
-		if err := log.InitMultiLoggerWithNATS(loggingConfig, nc); err != nil {
-			log.Warn("Failed to initialize NATS-aware multi-destination logging", "error", err)
+		if natsAddr != "" {
+			// Use NATS-aware initialization since NATS is available
+			if err := log.InitMultiLoggerWithNATS(loggingConfig, nc); err != nil {
+				log.Warn("Failed to initialize NATS-aware multi-destination logging", "error", err)
+			}
+		} else {
+			log.Info("Using basic logging (NATS unavailable)")
 		}
 	} else {
 		// Use basic logging if no config
@@ -131,11 +139,19 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	switch mode {
 	case "metric-agent":
 		log.Info("Starting as Metric Agent")
-		// Start metric collection in a goroutine
-		go gops.StartMetricCollection(ctx, nc, 5*time.Second) // Collect every 5 seconds
+		if natsAddr != "" {
+			// Start metric collection in a goroutine
+			go gops.StartMetricCollection(ctx, nc, 5*time.Second) // Collect every 5 seconds
+		} else {
+			log.Warn("⚠️  Metric Agent requires NATS, but NATS is unavailable")
+		}
 	case "autoscaling-orchestrator":
 		log.Info("Starting as Autoscaling Orchestrator")
-		// TODO: Implement autoscaling orchestration logic here
+		if natsAddr != "" {
+			// TODO: Implement autoscaling orchestration logic here
+		} else {
+			log.Warn("⚠️  Autoscaling Orchestrator requires NATS, but NATS is unavailable")
+		}
 	default:
 		log.Info("🚀 Step 3: Starting web server...")
 		// Check web server port availability
