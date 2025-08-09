@@ -10,7 +10,6 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 
 	"github.com/delaneyj/toolbelt/embeddednats"
-	"github.com/nats-io/nats-server/v2/server"
 
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
@@ -18,24 +17,15 @@ import (
 
 // StartEmbeddedNATS starts an embedded NATS server and returns its client URL.
 func StartEmbeddedNATS(ctx context.Context) (string, error) {
-	// Configure NATS server options for logging
-	natsOpts := &server.Options{
-		Debug: true, // Enable debug logging
-		Trace: true, // Enable trace logging
-		JetStream: true, // Enable JetStream for logging
-		Port: 4222, // Explicitly set NATS port
-		Host: "127.0.0.1", // Bind to localhost only
-	}
-
 	// Initialize embedded NATS server
 	log.Info("Starting embedded NATS server...")
 
-	// Use pkg/store for the data path
+	// Use .data folder for NATS data
 	natsDataPath := filepath.Join(config.GetDataPath(), "nats")
 
 	natsServer, err := embeddednats.New(ctx,
 		embeddednats.WithDirectory(natsDataPath),
-		embeddednats.WithNATSServerOptions(natsOpts),
+		embeddednats.WithShouldClearData(false), // Don't clear data
 	)
 	if err != nil {
 		log.Error("Failed to create embedded NATS server", "error", err)
@@ -44,8 +34,19 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 
 	// Wait for the server to be ready
 	log.Info("Waiting for NATS server to be ready...")
-	natsServer.WaitForServer()
-	log.Info("Embedded NATS server started and ready")
+	maxWait := 3 * time.Second
+	done := make(chan struct{})
+	go func() {
+		natsServer.WaitForServer()
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		log.Info("Embedded NATS server started and ready")
+	case <-time.After(maxWait):
+		return "", fmt.Errorf("timeout waiting for NATS server")
+	}
 	
 	// Get server info for debugging
 	log.Info("NATS server started successfully")

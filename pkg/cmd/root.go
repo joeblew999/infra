@@ -29,9 +29,14 @@ func Execute() {
 	}
 
 	debug, _ := rootCmd.Flags().GetBool("debug")
-	if err := dep.Ensure(debug); err != nil {
-		log.Error("Failed to ensure core dependencies", "error", err)
-		os.Exit(1)
+	// Skip dependency installation in production Fly.io environment
+	if os.Getenv("FLY_APP_NAME") == "" {
+		if err := dep.Ensure(debug); err != nil {
+			log.Error("Failed to ensure core dependencies", "error", err)
+			os.Exit(1)
+		}
+	} else {
+		log.Info("Running in Fly.io production environment - skipping dependency installation")
 	}
 
 	// Always add CLI commands

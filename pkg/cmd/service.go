@@ -82,7 +82,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	defer nc.Close()
 	log.Info("✅ NATS client connected")
 
-	// Always start PocketBase server
+	// Start PocketBase server (optional for now)
 	pbEnv := "production"
 	if mode == "development" {
 		pbEnv = "development"
@@ -90,19 +90,26 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	
 	log.Info("🚀 Step 2: Starting PocketBase server...")
 	pbPort := config.GetPocketBasePort()
-	log.Info("📱 PocketBase configuration", "port", pbPort, "env", pbEnv, "data_dir", config.GetPocketBaseDataPath())
+	dataDir := config.GetPocketBaseDataPath()
+	log.Info("📱 PocketBase configuration", "port", pbPort, "env", pbEnv, "data_dir", dataDir)
+	
+	// Ensure data directory exists
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Error("Failed to create PocketBase data directory", "error", err)
+	} else {
+		log.Info("✅ PocketBase data directory ready", "path", dataDir)
+	}
 	
 	pbServer := pocketbase.NewServer(pbEnv)
 	if err := pbServer.Start(ctx); err != nil {
-		log.Error("❌ Failed to start PocketBase server", "error", err)
-		os.Exit(1)
+		log.Error("❌ PocketBase server failed to start", "error", err)
+	} else {
+		log.Info("✅ PocketBase server started", "url", pocketbase.GetAppURL(pbPort))
+		defer func() {
+			log.Info("⏹️  Stopping PocketBase server...")
+			pbServer.Stop()
+		}()
 	}
-	defer func() {
-		log.Info("⏹️  Stopping PocketBase server...")
-		pbServer.Stop()
-	}()
-	
-	log.Info("✅ PocketBase server started", "url", pocketbase.GetAppURL(pbPort))
 
 	// Initialize multi-destination logging with NATS support
 	loggingConfig := log.LoadConfig()

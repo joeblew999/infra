@@ -2,7 +2,7 @@
 # This uses a multi-stage build for optimal image size
 
 # Build stage
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Install git for version info
 RUN apk add --no-cache git
@@ -25,14 +25,17 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
     -trimpath \
     -o infra .
 
-# Production stage - using minimal base image
-FROM cgr.dev/chainguard/static:latest
+# Production stage - using alpine for shell compatibility
+FROM alpine:latest
 
-# Add ca-certificates for HTTPS requests
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Install ca-certificates and wget for health checks
+RUN apk add --no-cache ca-certificates wget
+
+# Create directories and user
+RUN addgroup -g 1000 app && adduser -D -s /bin/sh -u 1000 -G app app
 
 # Create necessary directories
-RUN mkdir -p /app/.data /app/.dep /app/.bin
+RUN mkdir -p /app/.data /app/.dep /app/.bin && chown -R app:app /app
 
 # Copy binary from builder stage
 COPY --from=builder /app/infra /app/infra
@@ -44,8 +47,11 @@ COPY --from=builder /app/.ko.yaml /app/.ko.yaml
 # Set working directory
 WORKDIR /app
 
-# Create non-root user for security
-USER 1000:1000
+# Set ownership
+RUN chown -R app:app /app
+
+# Switch to non-root user
+USER app:app
 
 # Expose port
 EXPOSE 1337
@@ -55,4 +61,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:1337/status || exit 1
 
 # Run the binary
-CMD ["./infra", "--mode=service"]
+CMD ["./infra", "service"]

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/joeblew999/infra/pkg/fly"
 	"github.com/joeblew999/infra/pkg/mcp"
 	"github.com/joeblew999/infra/pkg/workflows"
 	"github.com/spf13/cobra"
@@ -314,6 +315,9 @@ func RunWorkflows() {
 	rootCmd.AddCommand(devCmd)
 	rootCmd.AddCommand(litestreamCmd)
 	mcp.AddCommands(rootCmd)
+	
+	// Add Fly.io commands
+	fly.AddCommands(rootCmd)
 }
 
 // runPreCommitChecks implements the pre-commit workflow logic
