@@ -5,4 +5,5 @@ import (
 )
 
 //go:embed *
+//go:embed roadmap/*
 var EmbeddedFS embed.FS
