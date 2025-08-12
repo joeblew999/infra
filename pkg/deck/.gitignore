@@ -1,0 +1,14 @@
+# Build artifacts
+build
+source
+
+# Release artifacts
+release/
+deck-tools-*.tar.gz
+
+# Build artifacts
+*.log
+
+# Temporary files
+*.tmp
+*.bak

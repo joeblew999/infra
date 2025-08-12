@@ -1,63 +1,95 @@
-# deck
+# Deck Visualization System
 
-Deck is a system that can output to SVG and so stream into DataStar
+A complete pipeline for transforming declarative `.dsh` markup into SVG graphics.
 
-Users can edit the XML document, and its system will produce an SVG.
-
-The SVG will be later used with DataStar, so we can easily stream the output to a Browser. 
-
-
-## Decksh
-
-https://github.com/ajstarks/decksh/tree/master/cmd has 3 command to help with the decksh system 
-
-Takes a Decksh and coverts it to DeckXml-
+These are built and deplyoed in github actions called deck-releases.yml, so that the pkg/dep can then pull them down like other deps.
+- The github worklfow just calls the golang, so things are DRY !
 
 
-https://github.com/ajstarks/decksh/blob/master/test.dsh is an example Decksh file.
- 
-https://github.com/ajstarks/decksh/blob/master/test.xml is the output as DeckXml file.
+## Quick Start
 
+```bash
+# Install all deck tools
+./infra deck install
 
-## Deck Exports
+# Watch .dsh files for changes
+./infra deck watch ./slides/
 
-https://github.com/ajstarks/deck
+# List available tools
+./infra deck list
 
-Takes a DeckXml and concert it to various oututs.
+# Clean build artifacts
+./infra deck clean
+```
 
-PDF: https://github.com/ajstarks/deck/tree/master/cmd/pdfdeck
-PNG: https://github.com/ajstarks/deck/tree/master/cmd/pngdeck
-SVG: https://github.com/ajstarks/deck/tree/master/cmd/svgdeck
+## Core Pipeline
 
+```
+.dsh file → decksh → XML → svgdeck → SVG
+```
 
-## Web
+## Available Tools
 
-Very basic controllers..
+| Tool | Purpose | Usage |
+|------|---------|--------|
+| `decksh` | Compile .dsh to XML | `decksh input.dsh > output.xml` |
+| `svgdeck` | Convert XML to SVG | `svgdeck input.xml` |
+| `pngdeck` | Convert XML to PNG | `pngdeck input.xml` |
+| `pdfdeck` | Convert XML to PDF | `pdfdeck input.xml` |
+| `dshfmt` | Format .dsh files | `dshfmt input.dsh` |
+| `dshlint` | Validate .dsh syntax | `dshlint input.dsh` |
 
-https://github.com/ajstarks/deck/tree/master/cmd/deckd
+## File Formats
 
-https://github.com/ajstarks/deck/tree/master/cmd/deckweb
+### .dsh File Structure
+```
+deck 10 5
+  text "Hello World" 5 2.5 2
+  circle 5 2.5 1 "red" 0.5
+  rect 1 1 9 4 "blue" 0.3
+edeck
+```
 
+### File Locations
+- **Binaries**: `.data/deck/bin/`
+- **WASM**: `.data/deck/wasm/`
+- **Output**: `.data/deck/cache/`
 
-## GEO
+## Usage Examples
 
-https://github.com/ajstarks/kml/blob/master/cmd/geodeck/main.go is for making 2d maps by Convert KML files to deck markup.
+### Create and Process Files
+```bash
+# Format a .dsh file
+./.data/deck/bin/dshfmt slides/example.dsh
 
-## Image Conversions
+# Validate syntax
+./.data/deck/bin/dshlint slides/example.dsh
 
-https://github.com/ajstarks/giftsh
+# Manual pipeline
+./.data/deck/bin/decksh slides/example.dsh > slides/example.xml
+./.data/deck/bin/svgdeck slides/example.xml
+```
 
-Takes a giftsh, and does transformations on images.
+### Auto-Watch Mode
+```bash
+# Watch directory for changes
+./infra deck watch ./slides/
 
-Can be used alognj with the other things above or after.
+# Watch multiple directories
+./infra deck watch ./slides/ ./templates/
+```
+
+### Build System Commands
+```bash
+./infra deck install    # Build all tools
+./infra deck status     # Show build status
+./infra deck clean      # Clean artifacts
+./infra deck list       # List available tools
+```
+
+## Environment
+- **DECKFONTS**: Font directory path
+- **DECK_CACHE**: SVG cache directory
 
 ## Examples
-
-https://github.com/ajstarks/dubois-data-portraits
-
-https://github.com/ajstarks/deckviz
-
-NOT that it seems to use DECKFONTS as an env or flag to help it location the fonts that are needed. This is a repo of them here at https://github.com/ajstarks/deckfonts, but i think we will need a better way of getting Fonts off Google fonts ? 
-
-
-
+Check `.data/deck/source/decksh/doc/code/` for working examples.

@@ -1,0 +1,112 @@
+name: Deck Release
+
+on:
+  push:
+    tags:
+      - 'deck-v*'
+
+env:
+  GO_VERSION: '1.23'
+
+jobs:
+  build:
+    name: Build Deck Tools
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        include:
+          - os: darwin
+            arch: amd64
+          - os: darwin
+            arch: arm64
+          - os: linux
+            arch: amd64
+          - os: linux
+            arch: arm64
+          - os: windows
+            arch: amd64
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        
+    - name: Build and Package Deck Tools
+      run: |
+        # Build all tools from source
+        go run . deck install
+        
+        # Create release packages using golang release system
+        go run . deck release --os ${{ matrix.os }} --arch ${{ matrix.arch }} --version ${{ github.ref_name }}
+        
+    - name: Upload Release Asset
+      uses: actions/upload-artifact@v4
+      with:
+        name: deck-tools-${{ matrix.os }}-${{ matrix.arch }}
+        path: pkg/deck/release/deck-tools-${{ github.ref_name }}-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+        
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: Deck Tools ${{ github.ref_name }}
+        body: |
+          ## Deck Visualization Tools
+          
+          Pre-built binaries and WASM modules for deck visualization system.
+          
+          ### Tools Included
+          - **decksh**: .dsh to XML compiler
+          - **dshfmt**: .dsh file formatter  
+          - **dshlint**: .dsh syntax validator
+          - **svgdeck**: XML to SVG converter
+          - **pngdeck**: XML to PNG converter
+          - **pdfdeck**: XML to PDF converter
+          
+          ### Installation
+          ```bash
+          # After downloading and extracting:
+          export PATH="$PWD/bin:$PATH"
+          ./bin/decksh --version
+          ```
+          
+          ### Usage
+          ```bash
+          # Format .dsh file
+          ./bin/dshfmt example.dsh
+          
+          # Compile .dsh to XML
+          ./bin/decksh example.dsh > example.xml
+          
+          # Convert to SVG
+          ./bin/svgdeck example.xml
+          ```
+          
+          ### WASM Usage
+          WASM modules are available in the `wasm/` directory for runtime loading.
+        files: |
+          deck-tools-darwin-amd64.tar.gz
+          deck-tools-darwin-arm64.tar.gz
+          deck-tools-linux-amd64.tar.gz
+          deck-tools-linux-arm64.tar.gz
+          deck-tools-windows-amd64.tar.gz
+        draft: false
+        prerelease: false

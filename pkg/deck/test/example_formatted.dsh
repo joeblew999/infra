@@ -1,0 +1,6 @@
+deck 10 5
+
+	text   "Hello Deck World!" 5 2.5 2
+	circle 5 2.5 1 "red" 0.5
+	rect   2 1 8 4 "gray" 0.3
+	text   "My First Deck"     5 4.5 1.5

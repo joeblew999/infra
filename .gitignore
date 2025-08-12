@@ -23,6 +23,10 @@ infra*
 # Remote taskfiles store
 .task
 
+# Deck release artifacts
+pkg/deck/release/
+deck-tools-*.tar.gz
+
 # our terraform files
 terraform
 
