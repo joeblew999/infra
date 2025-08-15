@@ -19,9 +19,20 @@ func NewGooseRunner() *GooseRunner {
 	// Get the goose binary path from dep system
 	binaryPath, err := dep.Get("goose")
 	if err != nil {
-		log.Warn("Could not get goose binary path", "error", err)
-		// Fallback to system goose if available
-		binaryPath = "goose"
+		log.Info("Goose binary not found, attempting to install", "error", err)
+		// Try to install goose automatically for idempotent behavior
+		if installErr := dep.InstallBinary("goose", false); installErr != nil {
+			log.Warn("Could not auto-install goose", "install_error", installErr)
+			// Fallback to system goose if available
+			binaryPath = "goose"
+		} else {
+			// Try to get the path again after installation
+			binaryPath, err = dep.Get("goose")
+			if err != nil {
+				log.Warn("Could not get goose path after installation", "error", err)
+				binaryPath = "goose"
+			}
+		}
 	}
 	
 	return &GooseRunner{

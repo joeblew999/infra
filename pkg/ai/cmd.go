@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/spf13/cobra"
 )
 
@@ -253,15 +254,32 @@ Generate optimized configurations where applicable.`, component)
 func configureAITools() error {
 	fmt.Println("🔧 Configuring AI tools...")
 	
-	// Check current configuration
+	// Ensure Goose is installed (idempotent)
+	fmt.Println("\n🦆 Ensuring Goose is available...")
 	runner := NewGooseRunner()
+	
+	// Ensure Claude is available (idempotent)  
+	fmt.Println("\n🤖 Ensuring Claude is available...")
+	claudePath, err := dep.Get("claude")
+	if err != nil {
+		fmt.Println("   Claude not found, attempting installation...")
+		if installErr := dep.InstallBinary("claude", false); installErr != nil {
+			fmt.Printf("   ⚠️  Could not auto-install Claude: %v\n", installErr)
+			fmt.Println("   You may need to install Claude manually or ensure it's in PATH")
+		} else {
+			fmt.Println("   ✅ Claude installed successfully")
+		}
+	} else {
+		fmt.Printf("   ✅ Claude available at: %s\n", claudePath)
+	}
+	
+	// Check current configuration
 	fmt.Println("\n📋 Current Goose configuration:")
 	if err := runner.Info(); err != nil {
 		fmt.Printf("⚠️  Could not get Goose info: %v\n", err)
+		fmt.Println("\n🚀 Run this to configure Goose:")
+		fmt.Println("  go run . ai goose configure")
 	}
-	
-	fmt.Println("\n🚀 To configure Goose, run:")
-	fmt.Println("  go run . ai goose configure")
 	
 	fmt.Println("\n📄 Configuration files:")
 	fmt.Println("  Goose config: ~/.config/goose/config.yaml")
@@ -282,6 +300,15 @@ func configureAITools() error {
 			}
 		}
 	}
+	
+	// Install MCP servers if config exists
+	fmt.Println("\n🔌 Setting up MCP servers...")
+	if err := runMCPInstall([]string{}); err != nil {
+		fmt.Printf("⚠️  MCP setup encountered issues: %v\n", err)
+	}
+	
+	fmt.Println("\n✅ AI tools configuration complete!")
+	fmt.Println("   Run 'go run . ai goose session' to start an interactive session")
 	
 	return nil
 }
