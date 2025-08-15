@@ -63,7 +63,15 @@ jobs:
         FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         FLY_APP_NAME: ${{ env.FLY_APP_NAME }}
         ENVIRONMENT: production
-      run: go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
+      run: |
+        if [ -z "$FLY_API_TOKEN" ]; then
+          echo "❌ FLY_API_TOKEN is not set as a repository secret"
+          echo "💡 Please set FLY_API_TOKEN in GitHub repository secrets"
+          echo "   Go to: Settings → Secrets and variables → Actions → New repository secret"
+          exit 1
+        fi
+        echo "✅ FLY_API_TOKEN is configured"
+        go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
 
     - name: Check deployment status (DRY - uses pkg/workflows)
       run: go run . status --app ${{ env.FLY_APP_NAME }} --verbose
