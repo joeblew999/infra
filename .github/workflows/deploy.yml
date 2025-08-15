@@ -29,16 +29,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Run tests
-      run: go test -v ./...
+    - name: Run CI workflow (DRY - uses pkg/workflows)
+      run: go run . ci
 
-    - name: Build binary
-      run: go build -v .
-
-    - name: Test ko build (without push)
+    - name: Test container build (DRY - uses pkg/workflows)
       run: |
         export KO_DOCKER_REPO=ko.local
-        go run . ko build --push=false --oci-layout-path=./build .
+        go run . build --push=false
 
   deploy:
     needs: test
@@ -61,15 +58,12 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Deploy with idempotent workflow
-      run: |
-        export FLY_APP_NAME=${{ env.FLY_APP_NAME }}
-        export ENVIRONMENT=production
-        
-        # Use built-in idempotent deployment workflow
-        go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
+    - name: Deploy with idempotent workflow (DRY - uses pkg/workflows)
+      env:
+        FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        FLY_APP_NAME: ${{ env.FLY_APP_NAME }}
+        ENVIRONMENT: production
+      run: go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
 
-    - name: Verify deployment
-      run: |
-        go run . flyctl status --app ${{ env.FLY_APP_NAME }}
-        echo "Deployment complete! App available at: https://${{ env.FLY_APP_NAME }}.fly.dev"
+    - name: Check deployment status (DRY - uses pkg/workflows)
+      run: go run . status --app ${{ env.FLY_APP_NAME }} --verbose

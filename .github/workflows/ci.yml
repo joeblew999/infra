@@ -29,11 +29,8 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
 
-    - name: Run tests
-      run: go test -v ./...
-
-    - name: Run CI checks  
+    - name: Run CI workflow (DRY - uses pkg/workflows)
       run: go run . ci
 
-    - name: Build binary
-      run: go build -v .
+    - name: Build binary (DRY - uses pkg/workflows) 
+      run: go run . binary --local
