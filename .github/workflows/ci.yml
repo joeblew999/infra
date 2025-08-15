@@ -21,16 +21,19 @@ jobs:
       with:
         go-version: 'stable'
     
-    - name: Install Task
-      uses: arduino/setup-task@v2
+    - name: Cache Go modules
+      uses: actions/cache@v4
       with:
-        version: 3.x
-        repo-token: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Run vars tasks
-      run: task task:vars
-      working-directory: ./test
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
 
-    - name: Run ci tasks
-      run: task this:ci:run
-      working-directory: ./test
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Run CI checks  
+      run: go run . ci
+
+    - name: Build binary
+      run: go build -v .

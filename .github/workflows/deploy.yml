@@ -19,7 +19,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: 'stable'
 
     - name: Cache Go modules
       uses: actions/cache@v4
@@ -37,8 +37,8 @@ jobs:
 
     - name: Test ko build (without push)
       run: |
-        export KO_DOCKER_REPO=test
-        go run . ko build --push=false --oci-layout-path=./build github.com/joeblew999/infra
+        export KO_DOCKER_REPO=ko.local
+        go run . ko build --push=false --oci-layout-path=./build .
 
   deploy:
     needs: test
@@ -51,7 +51,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: 'stable'
 
     - name: Cache Go modules
       uses: actions/cache@v4
