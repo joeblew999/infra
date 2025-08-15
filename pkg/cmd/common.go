@@ -12,13 +12,25 @@ import (
 )
 
 func EnsureInfraDirectories() error {
-	// Create .dep directory
+	// Skip non-essential directories in production (Fly.io) environment
+	// In production, we only need .data which is already mounted as a volume
+	if config.IsProduction() {
+		// Only ensure .data directory exists in production
+		dataPath := config.GetDataPath()
+		if err := os.MkdirAll(dataPath, 0755); err != nil {
+			return fmt.Errorf("failed to create data directory: %w", err)
+		}
+		log.Info("Ensured data directory exists", "path", dataPath)
+		return nil
+	}
+
+	// Create .dep directory (development only)
 	if err := os.MkdirAll(config.GetDepPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .dep directory: %w", err)
 	}
 	log.Info("Ensured directory exists", "path", config.GetDepPath())
 
-	// Create .bin directory
+	// Create .bin directory (development only)
 	if err := os.MkdirAll(config.GetBinPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create .bin directory: %w", err)
 	}
@@ -30,7 +42,7 @@ func EnsureInfraDirectories() error {
 	}
 	log.Info("Ensured directory exists", "path", config.GetDataPath())
 
-	// Create taskfiles directory
+	// Create taskfiles directory (development only)
 	if err := os.MkdirAll(config.GetTaskfilesPath(), 0755); err != nil {
 		return fmt.Errorf("failed to create taskfiles directory: %w", err)
 	}

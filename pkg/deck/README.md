@@ -2,9 +2,9 @@
 
 A complete pipeline for transforming declarative `.dsh` markup into SVG graphics.
 
-These are built and deplyoed in github actions called deck-releases.yml, so that the pkg/dep can then pull them down like other deps.
-- The github worklfow just calls the golang, so things are DRY !
+Deck Org does not make binary or wasm releaes, so we do it oursouce in cmd/build
 
+pkg/dep then downloads them off our github releases.
 
 ## Quick Start
 
@@ -92,4 +92,6 @@ edeck
 - **DECK_CACHE**: SVG cache directory
 
 ## Examples
-Check `.data/deck/source/decksh/doc/code/` for working examples.
+SEE tests in pkg/deck
+
+We need to finish grabbign the other 2 examples repos also.

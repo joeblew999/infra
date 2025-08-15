@@ -24,12 +24,12 @@ var listCmd = &cobra.Command{
 		
 		fmt.Println("")
 		fmt.Println("Tools:")
-		fmt.Println("  decksh  - dsh to XML compiler")
-		fmt.Println("  dshfmt  - dsh code formatter") 
-		fmt.Println("  dshlint - dsh syntax validator")
-		fmt.Println("  svgdeck - XML to SVG converter")
-		fmt.Println("  pngdeck - XML to PNG converter")
-		fmt.Println("  pdfdeck - XML to PDF converter")
+		fmt.Println("  decksh     - dsh to XML compiler")
+		fmt.Println("  deckshfmt  - dsh code formatter") 
+		fmt.Println("  deckshlint - dsh syntax validator")
+		fmt.Println("  decksvg    - XML to SVG converter")
+		fmt.Println("  deckpng    - XML to PNG converter")
+		fmt.Println("  deckpdf    - XML to PDF converter")
 	},
 }
 
@@ -40,12 +40,12 @@ func init() {
 // GetToolDescription returns description for a specific tool
 func GetToolDescription(name string) string {
 	descriptions := map[string]string{
-		"decksh":  "Compiler that transforms .dsh files into XML",
-		"dshfmt":  "Code formatter for .dsh files",
-		"dshlint": "Syntax validator for .dsh files",
-		"svgdeck": "Converts XML deck markup to SVG graphics",
-		"pngdeck": "Converts XML deck markup to PNG images",
-		"pdfdeck": "Converts XML deck markup to PDF documents",
+		"decksh":     "Compiler that transforms .dsh files into XML",
+		"deckshfmt":  "Code formatter for .dsh files",
+		"deckshlint": "Syntax validator for .dsh files",
+		"decksvg":    "Converts XML deck markup to SVG graphics",
+		"deckpng":    "Converts XML deck markup to PNG images",
+		"deckpdf":    "Converts XML deck markup to PDF documents",
 	}
 	
 	if desc, ok := descriptions[name]; ok {

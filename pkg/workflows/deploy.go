@@ -116,13 +116,34 @@ func (d *DeployWorkflow) checkAuth() error {
 		return nil
 	}
 
-	// Use FLY_API_TOKEN from environment if set
+	// Use FLY_API_TOKEN or FLY_ACCESS_TOKEN from environment
 	token := os.Getenv("FLY_API_TOKEN")
 	if token == "" {
-		return fmt.Errorf("FLY_API_TOKEN environment variable is required")
+		token = os.Getenv("FLY_ACCESS_TOKEN")
 	}
 	
-	log.Info("Using FLY_API_TOKEN from environment")
+	if token == "" {
+		log.Info("No Fly.io token found, attempting to use flyctl authentication...")
+		
+		// Check if flyctl is already authenticated
+		_, err := runBinaryWithOutput(config.GetFlyctlBinPath(), "auth", "whoami")
+		if err == nil {
+			log.Info("Using existing flyctl authentication")
+			return nil
+		}
+		
+		// Try to authenticate with flyctl
+		log.Info("Starting flyctl authentication (this will open a browser)...")
+		authErr := runBinary(config.GetFlyctlBinPath(), "auth", "login")
+		if authErr != nil {
+			return fmt.Errorf("authentication failed: %w. Please set FLY_API_TOKEN or FLY_ACCESS_TOKEN environment variable", authErr)
+		}
+		
+		log.Info("Successfully authenticated with flyctl")
+		return nil
+	}
+	
+	log.Info("Using Fly.io token from environment")
 	return nil
 }
 
@@ -283,10 +304,13 @@ func runBinary(path string, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
-	// Ensure FLY_API_TOKEN is passed through environment
+	// Ensure FLY_API_TOKEN or FLY_ACCESS_TOKEN is passed through environment
 	token := os.Getenv("FLY_API_TOKEN")
+	if token == "" {
+		token = os.Getenv("FLY_ACCESS_TOKEN")
+	}
 	if token != "" {
-		cmd.Env = append(os.Environ(), "FLY_API_TOKEN="+token)
+		cmd.Env = append(os.Environ(), "FLY_ACCESS_TOKEN="+token)
 		// Add --access-token flag if not already present
 		hasTokenFlag := false
 		for _, arg := range args {
@@ -308,10 +332,13 @@ func runBinaryWithOutput(path string, args ...string) (string, error) {
 	log.Debug("Running command with output", "binary", path, "args", args)
 	
 	cmd := exec.Command(path, args...)
-	// Ensure FLY_API_TOKEN is passed through environment
+	// Ensure FLY_API_TOKEN or FLY_ACCESS_TOKEN is passed through environment
 	token := os.Getenv("FLY_API_TOKEN")
+	if token == "" {
+		token = os.Getenv("FLY_ACCESS_TOKEN")
+	}
 	if token != "" {
-		cmd.Env = append(os.Environ(), "FLY_API_TOKEN="+token)
+		cmd.Env = append(os.Environ(), "FLY_ACCESS_TOKEN="+token)
 		// Add --access-token flag if not already present
 		hasTokenFlag := false
 		for _, arg := range args {

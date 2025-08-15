@@ -23,14 +23,14 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	if err := EnsureInfraDirectories(); err != nil {
-		log.Error("Failed to ensure infra directories", "error", err)
-		os.Exit(1)
-	}
-
-	debug, _ := rootCmd.Flags().GetBool("debug")
-	// Skip dependency installation in production Fly.io environment
+	// Skip directory creation and dependency installation in production Fly.io environment
 	if os.Getenv("FLY_APP_NAME") == "" {
+		if err := EnsureInfraDirectories(); err != nil {
+			log.Error("Failed to ensure infra directories", "error", err)
+			os.Exit(1)
+		}
+
+		debug, _ := rootCmd.Flags().GetBool("debug")
 		if err := dep.Ensure(debug); err != nil {
 			log.Error("Failed to ensure core dependencies", "error", err)
 			os.Exit(1)
@@ -43,6 +43,7 @@ func Execute() {
 	RunCLI()
 	RunWorkflows()
 	RunAI()
+	RunDeck()
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

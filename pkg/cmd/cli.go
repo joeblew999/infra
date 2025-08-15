@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/joeblew999/infra/pkg/bento"
 	"github.com/joeblew999/infra/pkg/caddy"
 	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/joeblew999/infra/pkg/config"
@@ -150,4 +151,5 @@ func RunCLI() {
 	rootCmd.AddCommand(config.Cmd)
 	rootCmd.AddCommand(conduit.Cmd)
 	rootCmd.AddCommand(dep.Cmd)
+	rootCmd.AddCommand(bento.NewBentoCmd())
 }

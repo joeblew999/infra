@@ -81,12 +81,18 @@ func GenerateCaddyfile(port int, targetPort int) string {
 	if config.ShouldUseHTTPS() {
 		// Development: HTTPS with automatic certificates
 		return fmt.Sprintf(`localhost:%d {
+	handle /bento-playground/* {
+		reverse_proxy localhost:4195
+	}
 	reverse_proxy localhost:%d
 	tls internal
 }`, port, targetPort)
 	} else {
 		// Production: HTTP only
 		return fmt.Sprintf(`:%d {
+	handle /bento-playground/* {
+		reverse_proxy localhost:4195
+	}
 	reverse_proxy localhost:%d
 }`, port, targetPort)
 	}

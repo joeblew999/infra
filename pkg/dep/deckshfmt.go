@@ -11,9 +11,9 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 )
 
-type svgdeckInstaller struct{}
+type deckshfmtInstaller struct{}
 
-func (i *svgdeckInstaller) Install(binary DepBinary, debug bool) error {
+func (i *deckshfmtInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)
@@ -24,7 +24,7 @@ func (i *svgdeckInstaller) Install(binary DepBinary, debug bool) error {
 	var release *gitHubRelease
 
 	if debug {
-		log.Info("Using gh cli for svgdeck release info (debug mode).")
+		log.Info("Using gh cli for dshfmt release info (debug mode).")
 		release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
 	} else {
 		release, err = getGitHubRelease(binary.Repo, binary.Version)
@@ -64,7 +64,7 @@ func (i *svgdeckInstaller) Install(binary DepBinary, debug bool) error {
 	}
 
 	// Find the binary within the extracted files
-	binaryName := "svgdeck"
+	binaryName := "dshfmt"
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
 	}

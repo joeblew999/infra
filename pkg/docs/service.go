@@ -48,7 +48,7 @@ func (s *Service) ReadFile(filePath string) ([]byte, error) {
 	// Read directly from embedded filesystem
 	content, err := fs.ReadFile(docs.EmbeddedFS, filePath)
 	if err != nil {
-		return nil, fmt.Errorf("embedded file not found: %s", filePath)
+		return nil, fmt.Errorf("document not found: %s (check /docs/ for available documents)", filePath)
 	}
 	return content, nil
 }

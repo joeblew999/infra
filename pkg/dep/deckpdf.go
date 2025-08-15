@@ -11,9 +11,9 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 )
 
-type dshfmtInstaller struct{}
+type deckpdfInstaller struct{}
 
-func (i *dshfmtInstaller) Install(binary DepBinary, debug bool) error {
+func (i *deckpdfInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)
@@ -24,7 +24,7 @@ func (i *dshfmtInstaller) Install(binary DepBinary, debug bool) error {
 	var release *gitHubRelease
 
 	if debug {
-		log.Info("Using gh cli for dshfmt release info (debug mode).")
+		log.Info("Using gh cli for deckpdf release info (debug mode).")
 		release, err = getGitHubReleaseDebug(binary.Repo, binary.Version)
 	} else {
 		release, err = getGitHubRelease(binary.Repo, binary.Version)
@@ -64,7 +64,7 @@ func (i *dshfmtInstaller) Install(binary DepBinary, debug bool) error {
 	}
 
 	// Find the binary within the extracted files
-	binaryName := "dshfmt"
+	binaryName := "deckpdf"
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
 	}

@@ -1,5 +1,9 @@
 # dep
 
+the .dep folder is loaded up usng the .envrc, one level above this repo.
+
+so you can call a binary inside .dep, by just the name is needed, for basic assertiosn etc .
+
 TODO:
 
 https://github.com/burrowers/garble

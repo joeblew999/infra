@@ -294,3 +294,33 @@ func (r *Release) copyFile(src, dst string) error {
 func GetPackageName(version, os, arch string) string {
 	return fmt.Sprintf("deck-tools-%s-%s-%s.tar.gz", version, os, arch)
 }
+
+// Packager handles release packaging
+type Packager struct {
+	release *Release
+}
+
+// NewPackager creates a new packager
+func NewPackager() *Packager {
+	return &Packager{
+		release: NewRelease(""),
+	}
+}
+
+// CreateReleasePackage creates a release package
+func (p *Packager) CreateReleasePackage(version string) (string, error) {
+	if version == "" {
+		version = GetGitVersion()
+	}
+	
+	p.release.Version = version
+	
+	// Build for all targets
+	if err := p.release.BuildAllTargets(); err != nil {
+		return "", fmt.Errorf("failed to build all targets: %w", err)
+	}
+	
+	// Return the package path for the current platform
+	packageName := GetPackageName(version, runtime.GOOS, runtime.GOARCH)
+	return filepath.Join(p.release.OutputDir, packageName), nil
+}

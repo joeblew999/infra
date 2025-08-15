@@ -5,7 +5,7 @@ import "path/filepath"
 // MCP package constants
 const (
 	// DefaultConfigFile is the default MCP configuration file name
-	DefaultConfigFile = "mcp.json"
+	DefaultConfigFile = "claude-mcp-default.json"
 
 	// DefaultConfigDir is the default directory for MCP configurations
 	DefaultConfigDir = "pkg/ai"
@@ -14,7 +14,7 @@ const (
 	ClaudeConfigDir = ".config/claude"
 
 	// ClaudeConfigFile is the Claude MCP configuration file name
-	ClaudeConfigFile = "mcp.json"
+	ClaudeConfigFile = "claude-mcp-default.json"
 
 	// StatusRunning indicates a server is running
 	StatusRunning = "running"

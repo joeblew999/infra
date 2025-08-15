@@ -1,10 +1,7 @@
-# Build artifacts
-build
-source
-
-# Release artifacts
-release/
-deck-tools-*.tar.gz
+# Source, Build Release artifacts
+.build/
+.release/
+.source/
 
 # Build artifacts
 *.log

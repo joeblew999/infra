@@ -34,6 +34,9 @@ const (
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
 
+	// DepMCPDir is the designated location for all downloaded and managed MCP server binaries.
+	DepMCPDir = ".dep-mcp"
+
 	// BinDir is the location for the project's own compiled binaries.
 	BinDir = ".bin"
 
@@ -59,6 +62,9 @@ const (
 	// BuildDir is the directory for storing built container images and artifacts.
 	BuildDir = ".oci"
 
+	// FontDir is the directory for cached fonts
+	FontDir = "font"
+
 	// TerraformDir is the directory containing Terraform/OpenTofu configuration files.
 	TerraformDir = "terraform"
 
@@ -82,6 +88,11 @@ func GetDepPath() string {
 	return filepath.Join(".", DepDir)
 }
 
+// GetMCPPath returns the absolute path to the .dep-mcp directory.
+func GetMCPPath() string {
+	return filepath.Join(".", DepMCPDir)
+}
+
 // GetBinPath returns the absolute path to the .bin directory.
 func GetBinPath() string {
 	return filepath.Join(".", BinDir)
@@ -93,12 +104,22 @@ func GetTaskfilesPath() string {
 }
 
 // GetDataPath returns the absolute path to the .data directory.
+// In Fly.io production, this points to the mounted volume at /app/.data
 func GetDataPath() string {
+	if IsProduction() {
+		// In Fly.io production, use the mounted volume at /app/.data
+		return "/app/.data"
+	}
 	return filepath.Join(".", DataDir)
 }
 
 // GetLogsPath returns the absolute path to the .logs directory.
+// In Fly.io production, this uses the data directory for logs
 func GetLogsPath() string {
+	if IsProduction() {
+		// In Fly.io production, use the data directory for logs
+		return filepath.Join(GetDataPath(), "logs")
+	}
 	return filepath.Join(".", LogsDir)
 }
 
@@ -150,10 +171,12 @@ func GetBuildPath() string {
 // IsProduction returns true if running in production environment
 func IsProduction() bool {
 	env := os.Getenv(EnvVarEnvironment)
-	if env == "" {
-		env = os.Getenv(EnvVarFlyAppName) // Fly.io sets this
+	if env != "" {
+		return env == EnvProduction
 	}
-	return env == EnvProduction || os.Getenv(EnvVarFlyAppName) != ""
+	// Don't consider Fly.io unless ENVIRONMENT is explicitly set to production
+	// This prevents false positives when FLY_APP_NAME is set for other reasons
+	return false
 }
 
 // IsDevelopment returns true if running in development environment
@@ -248,4 +271,39 @@ func GetPocketBaseDataPath() string {
 // GetPocketBasePort returns the default port for PocketBase server.
 func GetPocketBasePort() string {
 	return "8090"
+}
+
+// GetBentoPath returns the absolute path to the bento configuration directory.
+func GetBentoPath() string {
+	return filepath.Join(GetDataPath(), "bento")
+}
+
+// GetBentoPort returns the default port for bento service.
+func GetBentoPort() string {
+	return "4195"
+}
+
+// GetFontPath returns the absolute path to the font cache directory.
+func GetFontPath() string {
+	return filepath.Join(GetDataPath(), FontDir)
+}
+
+// GetFontPathForFamily returns the absolute path for a specific font family.
+func GetFontPathForFamily(family string) string {
+	return filepath.Join(GetFontPath(), family)
+}
+
+// GetCaddyPath returns the absolute path to the caddy configuration directory.
+func GetCaddyPath() string {
+	return filepath.Join(GetDataPath(), "caddy")
+}
+
+// GetCaddyPort returns the default port for caddy reverse proxy.
+func GetCaddyPort() string {
+	return "80"
+}
+
+// GetTransPath returns the absolute path to the translation cache directory.
+func GetTransPath() string {
+	return filepath.Join(GetDataPath(), "trans")
 }

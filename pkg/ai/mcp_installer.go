@@ -218,15 +218,15 @@ func NewMCPServerManager() *MCPServerManager {
 
 // loadConfig loads MCP server configuration from mcp-servers.json
 func (m *MCPServerManager) loadConfig() error {
-	configPath := filepath.Join("pkg", "mcp", "mcp-servers.json")
+	configPath := filepath.Join("pkg", "ai", "goose-mcp-registry.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read mcp-servers.json: %w", err)
+		return fmt.Errorf("failed to read goose-mcp-registry.json: %w", err)
 	}
 
 	var servers []MCPServer
 	if err := json.Unmarshal(data, &servers); err != nil {
-		return fmt.Errorf("failed to parse mcp-servers.json: %w", err)
+		return fmt.Errorf("failed to parse goose-mcp-registry.json: %w", err)
 	}
 
 	for _, server := range servers {

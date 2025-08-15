@@ -11,9 +11,9 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 )
 
-type dshlintInstaller struct{}
+type deckshlintInstaller struct{}
 
-func (i *dshlintInstaller) Install(binary DepBinary, debug bool) error {
+func (i *deckshlintInstaller) Install(binary DepBinary, debug bool) error {
 	log.Info("Attempting download and installation", "binary", binary.Name)
 
 	installPath, err := Get(binary.Name)

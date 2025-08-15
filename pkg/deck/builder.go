@@ -22,39 +22,39 @@ type Tool struct {
 var Tools = []Tool{
 	{
 		Name:    "decksh",
-		Repo:    "https://github.com/ajstarks/decksh",
+		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/decksh",
-		Binary:  "decksh",
+		Binary:  DeckshBinary,
 	},
 	{
-		Name:    "dshfmt",
-		Repo:    "https://github.com/ajstarks/decksh",
+		Name:    "deckfmt",
+		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/dshfmt",
-		Binary:  "dshfmt",
+		Binary:  DeckfmtBinary,
 	},
 	{
-		Name:    "dshlint",
-		Repo:    "https://github.com/ajstarks/decksh",
+		Name:    "decklint",
+		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/dshlint",
-		Binary:  "dshlint",
+		Binary:  DecklintBinary,
 	},
 	{
-		Name:    "svgdeck",
-		Repo:    "https://github.com/ajstarks/deck",
+		Name:    "decksvg",
+		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/svgdeck",
-		Binary:  "svgdeck",
+		Binary:  DecksvgBinary,
 	},
 	{
-		Name:    "pngdeck",
-		Repo:    "https://github.com/ajstarks/deck",
+		Name:    "deckpng",
+		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/pngdeck",
-		Binary:  "pngdeck",
+		Binary:  DeckpngBinary,
 	},
 	{
-		Name:    "pdfdeck",
-		Repo:    "https://github.com/ajstarks/deck",
+		Name:    "deckpdf",
+		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/pdfdeck",
-		Binary:  "pdfdeck",
+		Binary:  DeckpdfBinary,
 	},
 }
 
@@ -68,9 +68,9 @@ type Builder struct {
 // NewBuilder creates a new deck builder
 func NewBuilder() *Builder {
 	return &Builder{
-		SourceDir: filepath.Join("pkg", "deck", "source"),
-		BuildDir:  filepath.Join("pkg", "deck", "build", "bin"),
-		WASMDir:   filepath.Join("pkg", "deck", "build", "wasm"),
+		SourceDir: SourceDir,
+		BuildDir:  filepath.Join(BuildRoot, "bin"),
+		WASMDir:   filepath.Join(BuildRoot, "wasm"),
 	}
 }
 

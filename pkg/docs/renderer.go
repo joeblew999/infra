@@ -53,6 +53,8 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 		.nav li { margin: 5px 0; }
 		.nav a { color: #007acc; text-decoration: none; }
 		.nav a:hover { text-decoration: underline; }
+		.nav .bento-link { color: #dc2626; font-weight: bold; }
+		.nav .bento-link:hover { color: #b91c1c; }
 		.content { flex: 1; }
 		pre, code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
 		pre { padding: 10px; overflow-x: auto; }
@@ -72,11 +74,21 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 
 // renderNavigation renders the navigation menu HTML
 func (r *Renderer) renderNavigation(nav []NavItem) string {
+	var sb strings.Builder
+	
+	// Add bento playground link at the top
+	sb.WriteString("<h3>Main Navigation</h3>")
+	sb.WriteString("<ul>")
+	sb.WriteString("<li><a href=\"/\">🏠 Home</a></li>")
+	sb.WriteString("<li><a href=\"/bento-playground\" class=\"bento-link\">🎮 Bento Playground</a></li>")
+	sb.WriteString("</ul>")
+	
+	// Add documentation navigation
 	if len(nav) == 0 {
-		return "<h3>Documentation</h3><p>No documents found.</p>"
+		sb.WriteString("<h3>Documentation</h3><p>No documents found.</p>")
+		return sb.String()
 	}
 
-	var sb strings.Builder
 	sb.WriteString("<h3>Documentation</h3><ul>")
 
 	for _, item := range nav {

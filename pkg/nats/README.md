@@ -16,6 +16,9 @@ https://github.com/skeeeon/pb-cli to interact with PB. zero deps.
 - So designed for multi project use.
 - NOT tagged yet.
 
+https://github.com/skeeeon/onvif-nats-gateway for security cameras
+
+
 ## AUth and Authz
 
 NATS Auth callout pattern
