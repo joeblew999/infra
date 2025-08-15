@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"compress/bzip2"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
@@ -175,6 +176,52 @@ func untarGz(src, dest string) error {
 	defer gr.Close()
 
 	tr := tar.NewReader(gr)
+
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break // End of archive
+		}
+		if err != nil {
+			return fmt.Errorf("failed to read tar header: %w", err)
+		}
+
+		fpath := filepath.Join(dest, header.Name)
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(fpath, os.FileMode(header.Mode)); err != nil {
+				return fmt.Errorf("failed to create directory %s: %w", fpath, err)
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(fpath), os.FileMode(0755)); err != nil {
+				return fmt.Errorf("failed to create directory for file %s: %w", fpath, err)
+			}
+			out, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
+			if err != nil {
+				return fmt.Errorf("failed to open output file %s: %w", fpath, err)
+			}
+			defer out.Close()
+			if _, err := io.Copy(out, tr); err != nil {
+				return fmt.Errorf("failed to copy content from tar to file: %w", err)
+			}
+		default:
+			log.Warn("Skipping unsupported tar entry type", "type", header.Typeflag, "name", header.Name)
+		}
+	}
+	return nil
+}
+
+// untarBz2 extracts a .tar.bz2 archive to a destination directory.
+func untarBz2(src, dest string) error {
+	file, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("failed to open tar.bz2 file: %w", err)
+	}
+	defer file.Close()
+
+	br := bzip2.NewReader(file)
+	tr := tar.NewReader(br)
 
 	for {
 		header, err := tr.Next()

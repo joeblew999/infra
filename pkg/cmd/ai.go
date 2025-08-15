@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/joeblew999/infra/pkg/ai"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -62,7 +63,12 @@ func listAIMCP() {
 
 // RunAI adds all AI-related commands to the root command
 func RunAI() {
-	rootCmd.AddCommand(aiCmd)
-	aiCmd.AddCommand(aiConfigCmd)
-	aiCmd.AddCommand(aiMCPCmd)
+	// Get the comprehensive AI command from pkg/ai
+	aiFullCmd := ai.NewAICmd()
+	
+	// Add the existing Claude-specific commands to it
+	aiFullCmd.AddCommand(aiConfigCmd)
+	aiFullCmd.AddCommand(aiMCPCmd)
+	
+	rootCmd.AddCommand(aiFullCmd)
 }

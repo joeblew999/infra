@@ -369,27 +369,126 @@
     "release_url": "https://github.com/joeblew999/infra/releases",
     "assets": [
       {
-        "match": "deck-tools-deck-v1\.0\.0-darwin-arm64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1\\.0\\.0-darwin-arm64\\.tar\\.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "deck-tools-deck-v1\.0\.0-darwin-amd64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1\\.0\\.0-darwin-amd64\\.tar\\.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "deck-tools-deck-v1\.0\.0-linux-amd64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1\\.0\\.0-linux-amd64\\.tar\\.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "deck-tools-deck-v1\.0\.0-linux-arm64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1\\.0\\.0-linux-arm64\\.tar\\.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "deck-tools-deck-v1\.0\.0-windows-amd64\\.zip$",
+        "match": "deck-tools-deck-v1\\.0\\.0-windows-amd64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "zig",
+    "repo": "ziglang/zig",
+    "version": "0.14.1",
+    "release_url": "https://ziglang.org/download/",
+    "assets": [
+      {
+        "match": "zig-aarch64-macos-0\\.14\\.1\\.tar\\.xz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "zig-x86_64-macos-0\\.14\\.1\\.tar\\.xz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "zig-x86_64-linux-0\\.14\\.1\\.tar\\.xz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "zig-aarch64-linux-0\\.14\\.1\\.tar\\.xz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "zig-x86_64-windows-0\\.14\\.1\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "toki",
+    "repo": "joeblew999/toki",
+    "version": "v1.0.0",
+    "release_url": "https://github.com/joeblew999/toki/releases",
+    "assets": [
+      {
+        "match": "toki_.*_darwin_arm64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "toki_.*_darwin_amd64\\.tar\\.gz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "toki_.*_linux_amd64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "toki_.*_linux_arm64\\.tar\\.gz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "toki_.*_windows_amd64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
+    "name": "goose",
+    "repo": "block/goose",
+    "version": "v1.3.1",
+    "release_url": "https://github.com/block/goose/releases",
+    "assets": [
+      {
+        "match": "goose-aarch64-apple-darwin\\.tar\\.bz2$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "goose-x86_64-apple-darwin\\.tar\\.bz2$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "goose-x86_64-unknown-linux-gnu\\.tar\\.bz2$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "goose-aarch64-unknown-linux-gnu\\.tar\\.bz2$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "goose-x86_64-pc-windows-gnu\\.zip$",
         "os": "windows",
         "arch": "amd64"
       }

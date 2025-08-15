@@ -1,0 +1,154 @@
+{
+  "servers": [
+    {
+      "name": "go-debug",
+      "repo": "go-delve/mcp-dap-server",
+      "version": "v0.1.0",
+      "release_url": "https://github.com/go-delve/mcp-dap-server/releases",
+      "type": "go",
+      "command": "mcp-dap-server",
+      "args": [],
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "mcp-dap-server_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "mcp-dap-server_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "mcp-dap-server_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "mcp-dap-server_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "mcp-dap-server_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "github",
+      "repo": "modelcontextprotocol/servers",
+      "version": "2025-01-24",
+      "release_url": "https://github.com/modelcontextprotocol/servers/releases",
+      "type": "node",
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      },
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "github_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "github_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "github_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "github_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "github_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "filesystem",
+      "repo": "modelcontextprotocol/servers",
+      "version": "2025-01-24",
+      "release_url": "https://github.com/modelcontextprotocol/servers/releases",
+      "type": "node",
+      "command": "node",
+      "args": ["build/index.js"],
+      "env": {
+        "ALLOWED_PATHS": "${HOME}"
+      },
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "filesystem_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "filesystem_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "filesystem_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "filesystem_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "filesystem_.*_windows_amd64\\.zip$"
+        }
+      ]
+    },
+    {
+      "name": "fetch",
+      "repo": "modelcontextprotocol/servers",
+      "version": "2025-01-24",
+      "release_url": "https://github.com/modelcontextprotocol/servers/releases",
+      "type": "node",
+      "command": "node",
+      "args": ["build/index.js"],
+      "assets": [
+        {
+          "os": "darwin",
+          "arch": "arm64",
+          "match": "fetch_.*_darwin_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "darwin",
+          "arch": "amd64",
+          "match": "fetch_.*_darwin_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "amd64",
+          "match": "fetch_.*_linux_amd64\\.tar\\.gz$"
+        },
+        {
+          "os": "linux",
+          "arch": "arm64",
+          "match": "fetch_.*_linux_arm64\\.tar\\.gz$"
+        },
+        {
+          "os": "windows",
+          "arch": "amd64",
+          "match": "fetch_.*_windows_amd64\\.zip$"
+        }
+      ]
+    }
+  ]
+}

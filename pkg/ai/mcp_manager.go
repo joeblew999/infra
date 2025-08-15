@@ -1,4 +1,4 @@
-package mcp
+package ai
 
 import (
 	"encoding/json"
@@ -48,8 +48,8 @@ type Manager struct {
 
 // NewManager creates a new MCP manager
 func NewManager() (*Manager, error) {
-	configDir := filepath.Join(os.Getenv("HOME"), ".config", "claude")
-	configPath := filepath.Join(configDir, "mcp.json")
+	configDir := filepath.Join(os.Getenv("HOME"), ClaudeConfigDir)
+	configPath := filepath.Join(configDir, ClaudeConfigFile)
 
 	// Ensure config directory exists
 	if err := os.MkdirAll(configDir, 0755); err != nil {
@@ -140,18 +140,13 @@ func (m *Manager) List() []Server {
 
 // GetClaudeStatus queries Claude for actual MCP server status
 func (m *Manager) GetClaudeStatus() ([]ClaudeServerStatus, error) {
-	cmd := exec.Command("claude", "mcp", "list", "--print", "json")
+	cmd := exec.Command("claude", "mcp", "list")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to query Claude MCP status: %w", err)
 	}
 
-	var status ClaudeStatus
-	if err := json.Unmarshal(output, &status); err != nil {
-		return nil, fmt.Errorf("failed to parse Claude MCP status: %w", err)
-	}
-
-	return status.Servers, nil
+	return parseClaudeStatus(string(output)), nil
 }
 
 // GetClaudeConfigLocations returns Claude's MCP configuration file locations
@@ -173,6 +168,16 @@ func (m *Manager) GetClaudeConfigLocations() ([]string, error) {
 				if strings.HasSuffix(location, ".json") {
 					locations = append(locations, location)
 				}
+			}
+		}
+	}
+
+	// Fallback to common locations if no locations found
+	if len(locations) == 0 {
+		commonLocations := CommonClaudeConfigLocations()
+		for _, loc := range commonLocations {
+			if _, err := os.Stat(loc); err == nil {
+				locations = append(locations, loc)
 			}
 		}
 	}
@@ -218,11 +223,11 @@ func parseClaudeStatus(output string) []ClaudeServerStatus {
 				name := strings.TrimSpace(serverParts[0])
 				command := strings.TrimSpace(serverParts[1])
 
-				status := "unknown"
+				status := StatusUnknown
 				if strings.Contains(statusPart, "✓") || strings.Contains(statusPart, "Connected") {
-					status = "running"
+					status = StatusRunning
 				} else if strings.Contains(statusPart, "✗") || strings.Contains(statusPart, "Error") {
-					status = "error"
+					status = StatusError
 				}
 
 				servers = append(servers, ClaudeServerStatus{

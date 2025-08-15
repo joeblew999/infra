@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, decksh, svgdeck, dshfmt, dshlint
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -252,14 +252,22 @@ func InstallBinary(name string, debug bool) error {
 		installer = &natsInstaller{}
 	case "litestream":
 		installer = &litestreamInstaller{}
+	case "deck-tools":
+		installer = &deckToolsInstaller{}
 	case "decksh":
 		installer = &deckshInstaller{}
-	case "svgdeck":
-		installer = &svgdeckInstaller{}
-	case "dshfmt":
-		installer = &dshfmtInstaller{}
-	case "dshlint":
-		installer = &dshlintInstaller{}
+	case "decksvg":
+		installer = &decksvgInstaller{}
+	case "deckshfmt":
+		installer = &deckshfmtInstaller{}
+	case "deckshlint":
+		installer = &deckshlintInstaller{}
+	case "zig":
+		installer = &zigInstaller{}
+	case "toki":
+		installer = &tokiInstaller{}
+	case "goose":
+		installer = &gooseInstaller{}
 	default:
 		return fmt.Errorf("no installer found for binary: %s", name)
 	}
