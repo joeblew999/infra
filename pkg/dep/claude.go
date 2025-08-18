@@ -3,69 +3,163 @@ package dep
 import (
 	"fmt"
 	"io"
-	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// claudeInstaller handles installation of Claude Code CLI from Anthropic's npm package
-// This downloads the npm package and creates a wrapper script to execute the Node.js CLI
+// claudeInstaller handles installation of Claude Code CLI using the native install script
+// This uses Anthropic's official installation method from claude.ai/install.sh
 type claudeInstaller struct{}
 
-// Install downloads and installs the Claude Code binary
+// Install downloads and installs Claude Code using the native installation script
 func (i *claudeInstaller) Install(binary DepBinary, debug bool) error {
-	// Use "latest" version or specific version from binary.Version
-	version := binary.Version
-	if version == "" || version == "latest" {
-		version = "latest"
-	}
+	log.Info("Installing Claude Code using native installer", "platform", runtime.GOOS)
 
-	// Determine platform and architecture
-	platform := runtime.GOOS
-	arch := runtime.GOARCH
-
-	// Map Go platform/arch to Claude's naming convention
-	claudePlatform, claudeArch, ext := i.getClaudePlatformInfo(platform, arch)
-	if claudePlatform == "" || claudeArch == "" {
-		return fmt.Errorf("unsupported platform/architecture: %s/%s", platform, arch)
-	}
-
-	// Use specific version instead of "latest"
-	actualVersion := "1.0.62" // Latest version from npm
-	if version != "latest" {
-		actualVersion = version
-	}
-	
-	// Construct download URL using npm registry for Claude Code package
-	downloadURL := fmt.Sprintf("https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-%s.tgz", 
-		actualVersion)
-
-	log.Info("Downloading Claude Code", "url", downloadURL, "platform", platform, "arch", arch)
-
-	// Get install path
+	// Get install path - Claude installs to a standard location but we'll symlink to our .dep directory
 	installPath, err := Get(binary.Name)
 	if err != nil {
 		return fmt.Errorf("failed to get install path for %s: %w", binary.Name, err)
 	}
 
-	// Ensure directory exists
+	// Ensure .dep directory exists
 	installDir := filepath.Dir(installPath)
 	if err := os.MkdirAll(installDir, 0755); err != nil {
 		return fmt.Errorf("failed to create install directory: %w", err)
 	}
 
-	// Download and extract the binary
-	if err := i.downloadAndExtract(downloadURL, installPath, ext, debug); err != nil {
-		return fmt.Errorf("failed to download and install Claude: %w", err)
+	// Use platform-specific installation method
+	switch runtime.GOOS {
+	case "windows":
+		return i.installWindows(installPath, debug)
+	case "darwin", "linux":
+		return i.installUnix(installPath, debug)
+	default:
+		return fmt.Errorf("unsupported platform: %s", runtime.GOOS)
+	}
+}
+
+// installUnix installs Claude Code on Unix-like systems (macOS, Linux, WSL)
+func (i *claudeInstaller) installUnix(installPath string, debug bool) error {
+	// Create a temporary directory for installation
+	tempDir, err := os.MkdirTemp("", "claude-install")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a custom installation script that installs to our temp directory
+	tempScript := filepath.Join(tempDir, "claude_install.sh")
+	script := fmt.Sprintf(`#!/bin/bash
+set -e
+export CLAUDE_INSTALL_DIR="%s"
+curl -fsSL https://claude.ai/install.sh | bash
+`, tempDir)
+
+	if err := os.WriteFile(tempScript, []byte(script), 0755); err != nil {
+		return fmt.Errorf("failed to create install script: %w", err)
 	}
 
-	// Make binary executable on Unix systems
-	if platform != "windows" {
+	// Run the installation script
+	cmd := exec.Command("bash", tempScript)
+	if debug {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
+	log.Info("Running Claude Code native installer...")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("native installation failed: %w", err)
+	}
+
+	// Find the claude binary in the temp directory and move it to our .dep directory
+	return i.moveBinaryToDepDir(tempDir, installPath)
+}
+
+// installWindows installs Claude Code on Windows using PowerShell
+func (i *claudeInstaller) installWindows(installPath string, debug bool) error {
+	// Create a temporary directory for installation
+	tempDir, err := os.MkdirTemp("", "claude-install")
+	if err != nil {
+		return fmt.Errorf("failed to create temp directory: %w", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create PowerShell command with custom install directory
+	psScript := fmt.Sprintf(`$env:CLAUDE_INSTALL_DIR="%s"; irm https://claude.ai/install.ps1 | iex`, tempDir)
+
+	cmd := exec.Command("powershell", "-Command", psScript)
+	if debug {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
+	log.Info("Running Claude Code native installer on Windows...")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("native installation failed: %w", err)
+	}
+
+	// Find the claude binary in the temp directory and move it to our .dep directory
+	return i.moveBinaryToDepDir(tempDir, installPath)
+}
+
+// moveBinaryToDepDir finds the claude binary in the installation directory and moves it to our .dep folder
+func (i *claudeInstaller) moveBinaryToDepDir(searchDir, installPath string) error {
+	// Look for the claude binary in common locations within the search directory
+	possiblePaths := []string{
+		filepath.Join(searchDir, "claude"),
+		filepath.Join(searchDir, "bin", "claude"),
+		filepath.Join(searchDir, ".local", "bin", "claude"),
+		filepath.Join(searchDir, "claude.exe"), // Windows
+		filepath.Join(searchDir, "bin", "claude.exe"), // Windows
+	}
+
+	var foundPath string
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			foundPath = path
+			break
+		}
+	}
+
+	// If not found in expected locations, search recursively
+	if foundPath == "" {
+		var err error
+		foundPath, err = i.findClaudeBinary(searchDir)
+		if err != nil {
+			return fmt.Errorf("failed to find claude binary in installation directory: %w", err)
+		}
+	}
+
+	if foundPath == "" {
+		return fmt.Errorf("claude binary not found after installation")
+	}
+
+	// Copy the binary to our install path
+	sourceFile, err := os.Open(foundPath)
+	if err != nil {
+		return fmt.Errorf("failed to open source binary: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destFile, err := os.Create(installPath)
+	if err != nil {
+		return fmt.Errorf("failed to create destination binary: %w", err)
+	}
+	defer destFile.Close()
+
+	// Copy the file
+	if _, err := io.Copy(destFile, sourceFile); err != nil {
+		return fmt.Errorf("failed to copy binary: %w", err)
+	}
+
+	// Make it executable
+	if runtime.GOOS != "windows" {
 		if err := os.Chmod(installPath, 0755); err != nil {
-			return fmt.Errorf("failed to make Claude executable: %w", err)
+			return fmt.Errorf("failed to make binary executable: %w", err)
 		}
 	}
 
@@ -73,141 +167,30 @@ func (i *claudeInstaller) Install(binary DepBinary, debug bool) error {
 	return nil
 }
 
-// getClaudePlatformInfo maps Go platform/architecture to Claude's naming convention
-func (i *claudeInstaller) getClaudePlatformInfo(goOS, goArch string) (platform, arch, ext string) {
-	// Map Go OS to Claude platform names
-	platformMap := map[string]string{
-		"darwin":  "darwin",
-		"linux":   "linux", 
-		"windows": "windows",
-	}
-
-	// Map Go arch to Claude arch names
-	archMap := map[string]string{
-		"amd64": "amd64",
-		"arm64": "arm64",
-		"386":   "386",
-	}
-
-	platform, ok1 := platformMap[goOS]
-	arch, ok2 := archMap[goArch]
-	ext = "tar.gz"
+// findClaudeBinary recursively searches for the claude binary
+func (i *claudeInstaller) findClaudeBinary(searchDir string) (string, error) {
+	var foundPath string
 	
-	if goOS == "windows" {
-		ext = "zip"
-	}
-
-	if !ok1 || !ok2 {
-		return "", "", ""
-	}
-
-	return platform, arch, ext
-}
-
-// downloadAndExtract handles the actual download and extraction of the binary
-func (i *claudeInstaller) downloadAndExtract(url, installPath, ext string, debug bool) error {
-	// Create a temporary directory for extraction
-	tempDir, err := os.MkdirTemp("", "claude-download")
-	if err != nil {
-		return fmt.Errorf("failed to create temp directory: %w", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Download to temp directory
-	archivePath := filepath.Join(tempDir, "claude-archive")
-	if err := downloadFileDirect(url, archivePath); err != nil {
-		return fmt.Errorf("failed to download: %w", err)
-	}
-
-	// Extract the npm package (tgz format)
-	if err := untarGz(archivePath, tempDir); err != nil {
-		return fmt.Errorf("failed to extract tgz: %w", err)
-	}
-
-	// The npm package contains a Node.js CLI tool, not a native binary
-	// We'll install the entire package and create a wrapper script
-	packageDir := filepath.Join(tempDir, "package")
-	cliPath := filepath.Join(packageDir, "cli.js")
+	err := filepath.Walk(searchDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Continue searching even if we hit an error
+		}
+		
+		if info.IsDir() {
+			return nil
+		}
+		
+		filename := info.Name()
+		if filename == "claude" || filename == "claude.exe" {
+			// Verify it's executable
+			if info.Mode().Perm()&0111 != 0 || runtime.GOOS == "windows" {
+				foundPath = path
+				return filepath.SkipDir // Found it, stop searching
+			}
+		}
+		
+		return nil
+	})
 	
-	if _, err := os.Stat(cliPath); os.IsNotExist(err) {
-		return fmt.Errorf("could not find cli.js in npm package")
-	}
-
-	// Create install directory
-	installDir := filepath.Dir(installPath)
-	if err := os.MkdirAll(installDir, 0755); err != nil {
-		return fmt.Errorf("failed to create install directory: %w", err)
-	}
-
-	// Create a dedicated directory for the Claude package
-	claudeDir := filepath.Join(installDir, "claude-code")
-	if err := os.RemoveAll(claudeDir); err != nil {
-		return fmt.Errorf("failed to remove existing claude directory: %w", err)
-	}
-	
-	// Move the entire package to the install location
-	if err := os.Rename(packageDir, claudeDir); err != nil {
-		return fmt.Errorf("failed to move package to install location: %w", err)
-	}
-
-	// Create a wrapper script to execute the CLI with Bun (fallback to Node.js)
-	wrapperScript := `#!/bin/bash
-if command -v bun >/dev/null 2>&1; then
-    exec bun "$(dirname "$0")/claude-code/cli.js" "$@"
-else
-    exec node "$(dirname "$0")/claude-code/cli.js" "$@"
-fi
-`
-
-	wrapperPath := installPath
-	if runtime.GOOS == "windows" {
-		wrapperScript = `@echo off
-where bun >nul 2>nul
-if %errorlevel% == 0 (
-    bun "%~dp0claude-code\cli.js" %*
-) else (
-    node "%~dp0claude-code\cli.js" %*
-)
-`
-		wrapperPath = installPath + ".bat"
-	}
-
-	if err := os.WriteFile(wrapperPath, []byte(wrapperScript), 0755); err != nil {
-		return fmt.Errorf("failed to create wrapper script: %w", err)
-	}
-
-	return nil
-}
-
-// Helper functions for downloading and extracting using existing dep infrastructure
-func downloadFileDirect(url, destPath string) error {
-	// Create directory if it doesn't exist
-	dir := filepath.Dir(destPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("failed to create directory: %w", err)
-	}
-
-	// Download file
-	out, err := os.Create(destPath)
-	if err != nil {
-		return fmt.Errorf("failed to create file %s: %w", destPath, err)
-	}
-	defer out.Close()
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to download from %s: %w", url, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download failed with status %d for %s", resp.StatusCode, url)
-	}
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		return fmt.Errorf("failed to copy downloaded content to file: %w", err)
-	}
-
-	return nil
+	return foundPath, err
 }

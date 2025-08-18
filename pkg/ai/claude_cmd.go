@@ -1,8 +1,6 @@
 package ai
 
-import (
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
 // NewClaudeCmd creates the Claude AI command with all subcommands
 func NewClaudeCmd() *cobra.Command {
@@ -87,6 +85,9 @@ func newClaudeMCPCmd() *cobra.Command {
 
 	mcpCmd.AddCommand(
 		newClaudeMCPListCmd(),
+		newClaudeMCPAddCmd(),
+		newClaudeMCPRemoveCmd(),
+		newClaudeMCPInstallDefaultCmd(),
 	)
 
 	return mcpCmd
@@ -101,4 +102,55 @@ func newClaudeMCPListCmd() *cobra.Command {
 			return runMCPListClaude()
 		},
 	}
+}
+
+func newClaudeMCPAddCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "add [name] [command]",
+		Short: "Add MCP server to Claude",
+		Long:  "Add a new MCP server to Claude's configuration",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMCPAddClaude(args[0], args[1])
+		},
+	}
+}
+
+func newClaudeMCPRemoveCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "remove [name]",
+		Short: "Remove MCP server from Claude",
+		Long:  "Remove an MCP server from Claude's configuration",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runMCPRemoveClaude(args[0])
+		},
+	}
+}
+
+func newClaudeMCPInstallDefaultCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "install-default",
+		Short: "Install default MCP servers from config",
+		Long:  "Install the default MCP servers defined in claude-mcp-default.json",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			runner := NewClaudeRunner()
+			return runner.InstallDefaultMCP()
+		},
+	}
+}
+
+func runMCPListClaude() error {
+	runner := NewClaudeRunner()
+	return runner.MCPList()
+}
+
+func runMCPAddClaude(name, command string) error {
+	runner := NewClaudeRunner()
+	return runner.MCPAdd(name, command)
+}
+
+func runMCPRemoveClaude(name string) error {
+	runner := NewClaudeRunner()
+	return runner.MCPRemove(name)
 }

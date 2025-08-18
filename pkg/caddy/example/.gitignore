@@ -1,0 +1,5 @@
+# deps like caddy binary
+.dep
+
+# binary of example.
+example

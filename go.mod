@@ -5,6 +5,7 @@ go 1.24.5
 require (
 	github.com/delaneyj/toolbelt v0.5.0
 	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-webauthn/webauthn v0.13.4
 	github.com/joho/godotenv v1.5.1
 	github.com/nats-io/nats.go v1.43.0
 	github.com/pocketbase/pocketbase v0.29.1
@@ -19,6 +20,10 @@ require (
 
 require (
 	github.com/CAFxX/httpcompression v0.0.9 // indirect
+	github.com/ajstarks/dchart v0.0.0-20250117160033-aefd5aa7ce3e // indirect
+	github.com/ajstarks/deck v0.0.0-20250603153621-d300efa64c01 // indirect
+	github.com/ajstarks/deck/generate v0.0.0-20230623153652-ebe7b794a4b1 // indirect
+	github.com/ajstarks/decksh v0.0.0-20250816213930-ef76d2da9cd5 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect

@@ -1,0 +1,12 @@
+<div id="logged-in-header" style="padding: 1rem; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; margin-bottom: 1rem;">
+  <h3>✅ Already Logged In</h3>
+  <p>Welcome back, <strong>{{.UserID}}</strong>!</p>
+  <button onclick="window.location.href='/dashboard'" 
+          style="background: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">
+    Go to Dashboard
+  </button>
+  <button onclick="logout()" 
+          style="background: #dc3545; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+    Logout
+  </button>
+</div>

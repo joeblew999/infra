@@ -1,0 +1,5 @@
+.dep/
+.dep_all_platforms/
+coverage.out
+coverage-full.out
+coverage.html

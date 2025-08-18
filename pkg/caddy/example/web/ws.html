@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Service - Caddy Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        .connection-status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .messages {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 15px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px 10px;
+            border-radius: 3px;
+        }
+        .sent { background: #e3f2fd; text-align: right; }
+        .received { background: #f3e5f5; }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 WebSocket Service</h1>
+        <p><strong>Port:</strong> 7000 | <strong>Route:</strong> /ws/*</p>
+        
+        <a href="/" style="color: #007bff; text-decoration: none;">← Back to Main</a>
+        
+        <div id="connection-status" class="connection-status disconnected">
+            Disconnected
+        </div>
+        
+        <button id="connect-btn" onclick="connect()">Connect</button>
+        <button id="disconnect-btn" onclick="disconnect()" disabled>Disconnect</button>
+        
+        <div class="messages" id="messages">
+            <div class="message">Welcome to WebSocket demo! Click connect to start.</div>
+        </div>
+        
+        <div>
+            <input type="text" id="message-input" placeholder="Type a message..." disabled>
+            <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+        
+        <h2>WebSocket Features</h2>
+        <ul>
+            <li>Real-time Bidirectional Communication</li>
+            <li>Auto-reconnection Logic</li>
+            <li>Message Queuing</li>
+            <li>Connection Health Monitoring</li>
+            <li>Binary & Text Message Support</li>
+        </ul>
+        
+        <h2>Service Status</h2>
+        <div id="status">Checking...</div>
+        
+        <script>
+            let ws = null;
+            
+            function connect() {
+                // In a real app, this would connect to ws://localhost:8080/ws/
+                // For demo purposes, we'll simulate it
+                addMessage('Connecting to WebSocket...', 'received');
+                
+                setTimeout(() => {
+                    document.getElementById('connection-status').textContent = 'Connected';
+                    document.getElementById('connection-status').className = 'connection-status connected';
+                    document.getElementById('connect-btn').disabled = true;
+                    document.getElementById('disconnect-btn').disabled = false;
+                    document.getElementById('message-input').disabled = false;
+                    document.getElementById('send-btn').disabled = false;
+                    
+                    addMessage('Connected to WebSocket server!', 'received');
+                    addMessage('Server: Welcome! You can now send messages.', 'received');
+                }, 1000);
+            }
+            
+            function disconnect() {
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').className = 'connection-status disconnected';
+                document.getElementById('connect-btn').disabled = false;
+                document.getElementById('disconnect-btn').disabled = true;
+                document.getElementById('message-input').disabled = true;
+                document.getElementById('send-btn').disabled = true;
+                
+                addMessage('Disconnected from server', 'received');
+            }
+            
+            function sendMessage() {
+                const input = document.getElementById('message-input');
+                const message = input.value.trim();
+                
+                if (message) {
+                    addMessage(`You: ${message}`, 'sent');
+                    input.value = '';
+                    
+                    // Simulate server response
+                    setTimeout(() => {
+                        addMessage(`Server: Echo - ${message}`, 'received');
+                    }, 500);
+                }
+            }
+            
+            function addMessage(text, type) {
+                const messagesDiv = document.getElementById('messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${type}`;
+                messageDiv.textContent = text;
+                messagesDiv.appendChild(messageDiv);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+            
+            // Allow Enter key to send messages
+            document.getElementById('message-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            fetch('/ws/health')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('status').innerHTML = 
+                        `✅ WebSocket service running on port ${data.port}`;
+                })
+                .catch(error => {
+                    document.getElementById('status').innerHTML = 
+                        '❌ WebSocket service unavailable';
+                });
+        </script>
+    </div>
+</body>
+</html>

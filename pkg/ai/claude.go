@@ -383,6 +383,47 @@ func (r *ClaudeRunner) Info() error {
 	return r.RunInteractive("--version")
 }
 
+// MCPList lists MCP servers for Claude
+func (r *ClaudeRunner) MCPList() error {
+	return r.RunInteractive("mcp", "list")
+}
+
+// MCPAdd adds an MCP server to Claude
+func (r *ClaudeRunner) MCPAdd(name, command string) error {
+	return r.RunInteractive("mcp", "add", name, command)
+}
+
+// MCPRemove removes an MCP server from Claude
+func (r *ClaudeRunner) MCPRemove(name string) error {
+	return r.RunInteractive("mcp", "remove", name)
+}
+
+// InstallDefaultMCP installs the default MCP servers from config
+func (r *ClaudeRunner) InstallDefaultMCP() error {
+	configFile := "claude-mcp-default.json"
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read default config: %w", err)
+	}
+
+	var config ClaudeMCPConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	for _, server := range config.Servers {
+		fullCommand := server.Command + " " + strings.Join(server.Args, " ")
+		
+		if err := r.MCPAdd(server.Name, fullCommand); err != nil {
+			return fmt.Errorf("failed to install %s: %w", server.Name, err)
+		}
+		fmt.Printf("✅ Installed %s: %s\n", server.Name, fullCommand)
+	}
+
+	fmt.Println("🎉 Default MCP servers installed successfully!")
+	return nil
+}
+
 // DisplayClaudeInfo displays Claude configuration and system information
 func DisplayClaudeInfo() error {
 	fmt.Println("🤖 Claude AI Configuration")

@@ -81,7 +81,7 @@ func startCaddy() error {
 
 	// Generate Caddyfile
 	caddyfilePath := filepath.Join(caddyDir, "Caddyfile")
-	caddyfile := GenerateCaddyfile(80, 1337)
+	caddyfile := GenerateCaddyfile(DefaultConfig())
 	if err := os.WriteFile(caddyfilePath, []byte(caddyfile), 0644); err != nil {
 		return fmt.Errorf("failed to write Caddyfile: %w", err)
 	}
@@ -118,7 +118,7 @@ func generateCaddyfile() error {
 	}
 
 	caddyfilePath := filepath.Join(caddyDir, "Caddyfile")
-	caddyfile := GenerateCaddyfile(80, 1337)
+	caddyfile := GenerateCaddyfile(DefaultConfig())
 	
 	if err := os.WriteFile(caddyfilePath, []byte(caddyfile), 0644); err != nil {
 		return fmt.Errorf("failed to write Caddyfile: %w", err)

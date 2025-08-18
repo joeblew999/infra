@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, kosho, gh
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -48,8 +48,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep/builders"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // Package errors for better error handling and API stability
@@ -104,11 +105,14 @@ func writeMeta(binaryPath string, meta *BinaryMeta) error {
 
 // DepBinary represents a dependency binary.
 type DepBinary struct {
-	Name       string          `json:"name"`
-	Repo       string          `json:"repo"`
-	Version    string          `json:"version"`
-	ReleaseURL string          `json:"release_url"` // Full URL to the GitHub release page
-	Assets     []AssetSelector `json:"assets"`
+	Name        string          `json:"name"`
+	Description string          `json:"description"`
+	Source      string          `json:"source"` // "go-build" | "github-release" | "npm-package"
+	Repo        string          `json:"repo"`
+	Package     string          `json:"package"` // Go package path for go-build
+	Version     string          `json:"version"`
+	ReleaseURL  string          `json:"release_url"` // Full URL to the GitHub release page
+	Assets      []AssetSelector `json:"assets"`
 }
 
 // AssetSelector defines how to select a release asset.
@@ -128,6 +132,11 @@ var embeddedConfig embed.FS
 
 // depBinaries contains the loaded dependency binaries from JSON configuration
 var depBinaries []DepBinary
+
+// LoadConfigForTest exposes loadConfig for testing purposes
+func LoadConfigForTest() ([]DepBinary, error) {
+	return loadConfig()
+}
 
 // loadConfig loads the dependency configuration from embedded JSON or external file
 func loadConfig() ([]DepBinary, error) {
@@ -206,15 +215,25 @@ func InstallBinary(name string, debug bool) error {
 			break
 		}
 	}
-	
+
 	if targetBinary == nil {
 		return fmt.Errorf("%w: binary '%s' is not supported", ErrBinaryNotFound, name)
 	}
 
-	installPath, err := Get(name)
-	if err != nil {
-		return fmt.Errorf("failed to get install path for %s: %w", name, err)
+	// Get the expected install path based on source type
+	var installPath string
+	if targetBinary.Source == "npm-package" {
+		// NPM packages install to node_modules/.bin/
+		installPath = filepath.Join(config.GetDepPath(), "node_modules", ".bin", name)
+	} else {
+		// Regular binaries install to .dep/binary_name
+		path, err := Get(name)
+		if err != nil {
+			return fmt.Errorf("failed to get install path for %s: %w", name, err)
+		}
+		installPath = path
 	}
+	
 	currentMeta, err := readMeta(installPath)
 	if err == nil && currentMeta.Version == targetBinary.Version {
 		log.Info("Binary up to date", "name", name, "version", targetBinary.Version)
@@ -227,53 +246,44 @@ func InstallBinary(name string, debug bool) error {
 		log.Info("Binary not found or metadata missing", "name", name, "action", "attempting download and installation")
 	}
 
-	// Determine the correct installer based on binary name
-	var installer Installer
-	switch name {
-	case "bento":
-		installer = &bentoInstaller{}
-	case "task":
-		installer = &taskInstaller{}
-	case "tofu":
-		installer = &tofuInstaller{}
-	case "caddy":
-		installer = &caddyInstaller{}
-	case "ko":
-		installer = &koInstaller{}
-	case "flyctl":
-		installer = &flyctlInstaller{}
-	case "garble":
-		installer = &garbleInstaller{}
-	case "bun":
-		installer = &bunInstaller{}
-	case "claude":
-		installer = &claudeInstaller{}
-	case "nats":
-		installer = &natsInstaller{}
-	case "litestream":
-		installer = &litestreamInstaller{}
-	case "deck-tools":
-		installer = &deckToolsInstaller{}
-	case "decksh":
-		installer = &deckshInstaller{}
-	case "decksvg":
-		installer = &decksvgInstaller{}
-	case "deckshfmt":
-		installer = &deckshfmtInstaller{}
-	case "deckshlint":
-		installer = &deckshlintInstaller{}
-	case "zig":
-		installer = &zigInstaller{}
-	case "toki":
-		installer = &tokiInstaller{}
-	case "goose":
-		installer = &gooseInstaller{}
+	// Handle different source types
+	switch targetBinary.Source {
+	case "go-build":
+		// Use new builders package for go-build
+		builder := builders.GoBuildInstaller{}
+		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+			return err
+		}
+	case "npm-package":
+		// Use new builders package for npm-package
+		builder := builders.NPMInstaller{}
+		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+			return err
+		}
+	case "github-release":
+		// Use new builders package for github-release
+		builder := builders.GitHubReleaseInstaller{}
+		// Convert AssetSelector types
+		var assets []builders.AssetSelector
+		for _, asset := range targetBinary.Assets {
+			assets = append(assets, builders.AssetSelector{
+				OS:    asset.OS,
+				Arch:  asset.Arch,
+				Match: asset.Match,
+			})
+		}
+		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
+			return err
+		}
+	case "claude-release":
+		// Use new builders package for claude-release
+		builder := builders.ClaudeReleaseInstaller{}
+		if err := builder.Install(targetBinary.Name, targetBinary.Version, debug); err != nil {
+			return err
+		}
 	default:
+		// Legacy fallback for tools without source field
 		return fmt.Errorf("no installer found for binary: %s", name)
-	}
-
-	if err := installer.Install(*targetBinary, debug); err != nil {
-		return fmt.Errorf("failed to install %s: %w", name, err)
 	}
 
 	// Write metadata after successful installation

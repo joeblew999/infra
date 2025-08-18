@@ -1,0 +1,8 @@
+deck
+slide "lightblue" "darkblue"
+text "Test Deck" 50 30 4 "sans" "white"
+circle 30 60 10 "yellow"
+rect 70 60 15 10 "red" 0.8
+text "Generated via cmd" 50 80 2 "sans" "lightgray"
+eslide
+edeck

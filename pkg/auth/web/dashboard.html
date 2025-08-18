@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body { font-family: system-ui; max-width: 600px; margin: 2rem auto; padding: 1rem; }
+        .success { background: #d4edda; padding: 1rem; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="success">
+        <h2>Dashboard</h2>
+        <p>Logged in as: {{.UserID}}</p>
+        <p>Session ID: {{.SessionID}}</p>
+        <button onclick="logout()">Logout</button>
+        <button onclick="window.location.href='/'" style="margin-left: 1rem;">Back to Home</button>
+    </div>
+    <script>
+        function logout() {
+            fetch('/logout', {method: 'POST'})
+                .then(() => window.location.href = '/');
+        }
+    </script>
+</body>
+</html>

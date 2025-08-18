@@ -1,5 +1,6 @@
-go 1.24.5
+go 1.25.0
 
-use (
-	.
-)
+use .
+use ./pkg/auth/example
+use ./pkg/caddy/example
+use ./pkg/deck/wasm

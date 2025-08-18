@@ -36,6 +36,14 @@ Use the ./agents/AGENT.md, following everything it says and its links.
 - This ensures we maintain backward compatibility
 - Internal package commands (pkg/[pkg]/cmd/) don't need to be moved to pkg/cmd/
 
+### Examples Structure
+- **pkg/[package]/example/** contains standalone example modules for each package
+- **Each example has its own go.mod** making it a separate module
+- **Root go.work** includes all example modules as workspace members
+- **Examples should be simple** and focused on demonstrating package API usage
+- **Complex implementation code** belongs in the main package, not examples
+- **No examples in central examples/ directory** - keep examples with their packages
+
 ### pkg/dep Package Rules
 **When editing pkg/dep, follow these exact rules:**
 

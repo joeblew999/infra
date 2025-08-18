@@ -1,0 +1,20 @@
+<div id="logged-in-actions" data-signals-username="'{{.UserID}}'">
+  <div style="margin-top: 1rem;">
+    <button data-on-click="@get('/credentials')" 
+            data-signals-username
+            style="background: #e74c3c; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+      Manage Credentials
+    </button>
+  </div>
+
+  <!-- Credentials section will be loaded here dynamically -->
+
+  <div style="margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
+    <h3>How to use:</h3>
+    <ol>
+      <li><strong>Dashboard:</strong> Click "Go to Dashboard" to see your session info</li>
+      <li><strong>Manage:</strong> Click "Manage Credentials" to view and delete existing passkeys</li>
+      <li><strong>Logout:</strong> Click "Logout" to end your session</li>
+    </ol>
+  </div>
+</div>

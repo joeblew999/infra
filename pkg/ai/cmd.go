@@ -86,53 +86,10 @@ func configureAITools() error {
 	return nil
 }
 
-// MCP command handlers - moved here to avoid duplication
-
+// runMCPInstall handles MCP server installation
 func runMCPInstall(args []string) error {
-	manager, err := NewManager()
-	if err != nil {
-		return fmt.Errorf("failed to create MCP manager: %w", err)
-	}
-
-	// Load our configuration
-	configPath := "pkg/ai/claude-mcp-default.json"
-	if _, err := os.Stat(configPath); err == nil {
-		if err := manager.LoadConfigFromFile(configPath); err != nil {
-			return fmt.Errorf("failed to load MCP config: %w", err)
-		}
-		fmt.Println("✅ MCP servers installed from configuration")
-	} else {
-		fmt.Println("ℹ️  No MCP configuration found, skipping")
-	}
-
-	return nil
-}
-
-func runMCPListClaude() error {
-	manager, err := NewManager()
-	if err != nil {
-		return fmt.Errorf("failed to create MCP manager: %w", err)
-	}
-
-	claudeStatus, err := manager.GetClaudeStatus()
-	if err != nil {
-		return fmt.Errorf("failed to query Claude: %w", err)
-	}
-
-	if len(claudeStatus) == 0 {
-		fmt.Println("No MCP servers currently running in Claude")
-		return nil
-	}
-
-	fmt.Println("MCP servers currently running in Claude:")
-	for _, server := range claudeStatus {
-		status := server.Status
-		if server.Error != "" {
-			status = fmt.Sprintf("%s (Error: %s)", server.Status, server.Error)
-		}
-		fmt.Printf("  - %s [%s]\n", server.Name, status)
-		fmt.Printf("    Command: %s\n", server.Command)
-	}
-
+	fmt.Println("ℹ️  MCP servers are now managed by Claude CLI commands")
+	fmt.Println("   Use: go run . ai claude mcp add [name] [command]")
+	fmt.Println("   Use: go run . ai claude mcp list")
 	return nil
 }

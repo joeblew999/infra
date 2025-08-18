@@ -15,16 +15,16 @@ import (
 // We use interface{} for unused fields to reduce memory usage
 // https://docs.github.com/en/rest/releases/releases#get-the-latest-release
 type GitHubRelease struct {
-	TagName string `json:"tag_name"`
-	Name    string `json:"name"`
-	Draft   bool   `json:"draft"`
-	Prerelease bool `json:"prerelease"`
+	TagName    string `json:"tag_name"`
+	Name       string `json:"name"`
+	Draft      bool   `json:"draft"`
+	Prerelease bool   `json:"prerelease"`
 }
 
 // CheckGitHubRelease checks the latest GitHub release for a repository
 func CheckGitHubRelease(owner, repo string) (GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-	
+
 	client := http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -78,14 +78,14 @@ func CheckAllReleases() error {
 				break
 			}
 		}
-		
+
 		if len(parts) != 2 {
 			log.Warn("Invalid repo format", "repo", binary.Repo)
 			continue
 		}
 
 		owner, repo := parts[0], parts[1]
-		
+
 		release, err := CheckGitHubRelease(owner, repo)
 		if err != nil {
 			log.Error("Failed to check release", "binary", binary.Name, "error", err)
@@ -97,10 +97,10 @@ func CheckAllReleases() error {
 			status = "↑"
 		}
 
-		log.Info("Release check", 
-			"binary", binary.Name, 
-			"current", binary.Version, 
-			"latest", release.TagName, 
+		log.Info("Release check",
+			"binary", binary.Name,
+			"current", binary.Version,
+			"latest", release.TagName,
 			"status", status)
 	}
 

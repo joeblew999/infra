@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Passkey Demo</title>
+  <script type="module" defer
+          src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+</head>
+<body>
+  <main id="main" data-signals-username="'testuser'">
+    <h1>Passkey Demo</h1>
+
+    <!-- Logged-in header section (dynamically loaded if logged in) -->
+    <div id="session-status"></div>
+
+    <!-- Login/Register section (default, hidden if logged in) -->
+    <div id="auth-section">
+      <div>
+        <label for="username">Username:</label>
+        <input id="username" 
+               data-bind-username 
+               placeholder="Click here to see available passkeys" 
+               autocomplete="username webauthn">
+      </div>
+      
+      <div style="margin-top: 1rem;">
+        <button data-on-click="@post('/register/start')" 
+                style="background: #007bff; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; margin-right: 0.5rem;">
+          Register New Passkey (Real)
+        </button>
+        <button onclick="createTestUser()" 
+                style="background: #28a745; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+          Create Test User
+        </button>
+      </div>
+
+      <div style="margin-top: 1rem;">
+        <button data-on-click="@get('/credentials')" 
+                data-signals-username
+                style="background: #e74c3c; color: white; padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer;">
+          Manage Credentials
+        </button>
+      </div>
+
+      <div style="margin-top: 1rem; padding: 1rem; background: #f5f5f5; border-radius: 4px;">
+        <h3>How to use:</h3>
+        <ol>
+          <li><strong>Register:</strong> Click "Register New Passkey" to create a new passkey</li>
+          <li><strong>Login:</strong> Click in the username field above - your browser should show saved passkeys</li>
+          <li><strong>Autofill:</strong> Select a passkey from the dropdown for instant login</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- User actions section (dynamically loaded if logged in) -->
+    <div id="user-actions"></div>
+
+    <pre id="log"></pre>
+  </main>
+
+  <script>
+    // Manual WebAuthn implementation without external dependencies
+    
+    // Base64URL encode/decode helpers
+    function base64URLEncode(arrayBuffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+    
+    function base64URLDecode(str) {
+      // Handle both base64URL and regular base64 from go-webauthn
+      if (!str.includes('-') && !str.includes('_')) {
+        // Regular base64 - add padding if needed
+        const padding = 4 - (str.length % 4);
+        if (padding !== 4) {
+          str += '='.repeat(padding);
+        }
+        return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+      } else {
+        // Base64URL - convert and add padding
+        const padding = 4 - (str.length % 4);
+        if (padding !== 4) {
+          str += '='.repeat(padding);
+        }
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
+        return Uint8Array.from(atob(str), c => c.charCodeAt(0));
+      }
+    }
+
+    // Convert credential creation options for WebAuthn API
+    function processCreationOptions(options) {
+      // Handle nested publicKey structure from go-webauthn
+      const publicKey = options.publicKey || options;
+      
+      return {
+        ...publicKey,
+        challenge: base64URLDecode(publicKey.challenge),
+        user: {
+          ...publicKey.user,
+          id: base64URLDecode(publicKey.user.id)
+        },
+        excludeCredentials: publicKey.excludeCredentials?.map(cred => ({
+          ...cred,
+          id: base64URLDecode(cred.id)
+        }))
+      };
+    }
+
+    // Convert credential request options for WebAuthn API
+    function processRequestOptions(options) {
+      // Handle nested publicKey structure from go-webauthn
+      const publicKey = options.publicKey || options;
+      
+      return {
+        ...publicKey,
+        challenge: base64URLDecode(publicKey.challenge),
+        allowCredentials: publicKey.allowCredentials?.map(cred => ({
+          ...cred,
+          id: base64URLDecode(cred.id)
+        }))
+      };
+    }
+
+    // Format credential creation response
+    function formatCreationResponse(credential) {
+      return {
+        id: credential.id,
+        rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
+        type: credential.type,
+        response: {
+          attestationObject: btoa(String.fromCharCode(...new Uint8Array(credential.response.attestationObject))),
+          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON)))
+        }
+      };
+    }
+
+    // Format credential request response  
+    function formatRequestResponse(credential) {
+      return {
+        id: credential.id,
+        rawId: btoa(String.fromCharCode(...new Uint8Array(credential.rawId))),
+        type: credential.type,
+        response: {
+          authenticatorData: btoa(String.fromCharCode(...new Uint8Array(credential.response.authenticatorData))),
+          clientDataJSON: btoa(String.fromCharCode(...new Uint8Array(credential.response.clientDataJSON))),
+          signature: btoa(String.fromCharCode(...new Uint8Array(credential.response.signature))),
+          userHandle: credential.response.userHandle ? btoa(String.fromCharCode(...new Uint8Array(credential.response.userHandle))) : null
+        }
+      };
+    }
+
+    async function startRegistration(options) {
+      const processedOptions = processCreationOptions(options);
+      const credential = await navigator.credentials.create({
+        publicKey: processedOptions
+      });
+      return formatCreationResponse(credential);
+    }
+
+    async function startAuthentication(options) {
+      const processedOptions = processRequestOptions(options);
+      const credential = await navigator.credentials.get({
+        publicKey: processedOptions
+      });
+      return formatRequestResponse(credential);
+    }
+
+    window.finish = async (kind, options) => {
+      const fn = kind === 'registration' ? startRegistration : startAuthentication;
+      const response = await fn(options);
+      
+      // Map WebAuthn response format to server expectations
+      const endpoint = kind === 'registration' ? '/register/finish' : '/login/finish';
+      const payload = kind === 'registration' ? 
+        { token: window.currentToken, response: response } :
+        { token: window.currentToken, response: response };
+      
+      await fetch(endpoint, {
+        method : 'POST',
+        headers: {'Content-Type':'application/json'},
+        body   : JSON.stringify(payload)
+      });
+      document.getElementById('log').textContent = `${kind} finished`;
+    };
+
+    // Conditional UI: Start WebAuthn authentication on page load
+    async function startConditionalUI() {
+      try {
+        // Check if WebAuthn and conditional UI are supported
+        if (!window.PublicKeyCredential || !PublicKeyCredential.isConditionalMediationAvailable) {
+          console.log('Conditional UI not supported');
+          return;
+        }
+
+        const available = await PublicKeyCredential.isConditionalMediationAvailable();
+        if (!available) {
+          console.log('Conditional mediation not available');
+          return;
+        }
+
+        console.log('Starting conditional UI authentication...');
+        document.getElementById('log').textContent = 'Ready for passkey login - click in username field';
+
+        // Start conditional authentication
+        const credential = await navigator.credentials.get({
+          publicKey: {
+            challenge: new Uint8Array(32), // Dummy challenge, server will provide real one
+            userVerification: 'preferred',
+            timeout: 300000, // 5 minutes
+          },
+          mediation: 'conditional'
+        });
+
+        console.log('Conditional authentication triggered:', credential);
+        
+        // Handle the credential response
+        if (credential) {
+          document.getElementById('log').textContent = 'Passkey selected! Processing login...';
+          
+          // Get proper login options from server for this credential
+          const response = await fetch('/login/conditional', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              credentialId: credential.id
+            })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            document.getElementById('log').textContent = `Logged in successfully! Welcome back.`;
+            
+            // Redirect to dashboard or update UI
+            setTimeout(() => {
+              window.location.href = '/dashboard';
+            }, 2000);
+          }
+        }
+        
+      } catch (error) {
+        console.error('Conditional UI error:', error);
+        if (error.name !== 'AbortError') {
+          document.getElementById('log').textContent = 'Conditional login not available. Use register button to create a passkey.';
+        }
+      }
+    }
+
+    // Start conditional UI when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      // Check session status first
+      fetch('/session/status')
+        .then(response => {
+          if (!response.ok) {
+            // Not logged in, start conditional UI for login
+            startConditionalUI();
+          }
+          // If logged in, the SSE response will update the UI automatically
+        })
+        .catch(() => {
+          // Error checking session, assume not logged in
+          startConditionalUI();
+        });
+    });
+
+    // Logout function for logged-in fragments
+    function logout() {
+      fetch('/logout', {method: 'POST'})
+        .then(() => window.location.href = '/');
+    }
+
+    // Create test user function
+    async function createTestUser() {
+      const username = document.getElementById('username').value || 'testuser';
+      
+      try {
+        const response = await fetch('/test/create-user', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({username: username})
+        });
+        
+        const result = await response.json();
+        if (response.ok) {
+          document.getElementById('log').textContent = `Test user '${result.username}' created successfully! You can now manage credentials.`;
+        } else {
+          document.getElementById('log').textContent = `Error: ${result.message || 'Failed to create test user'}`;
+        }
+      } catch (error) {
+        document.getElementById('log').textContent = `Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -144,15 +144,15 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		log.Info("✅ Caddy directory ready", "path", caddyDir)
 	}
 	
-	// Generate Caddyfile
-	caddyfilePath := filepath.Join(caddyDir, "Caddyfile")
-	caddyfile := caddy.GenerateCaddyfile(80, 1337)
-	if err := os.WriteFile(caddyfilePath, []byte(caddyfile), 0644); err != nil {
-		log.Error("Failed to write Caddyfile", "error", err)
+	// Generate Caddyfile using new preset API
+	caddyConfig := caddy.NewPresetConfig(caddy.PresetDevelopment, 80)
+	if err := caddyConfig.GenerateAndSave("Caddyfile"); err != nil {
+		log.Error("Failed to generate Caddyfile", "error", err)
 	} else {
-		log.Info("✅ Caddyfile generated", "path", caddyfilePath)
+		log.Info("✅ Caddyfile generated", "path", filepath.Join(caddyDir, "Caddyfile"))
 	}
 	
+	caddyfilePath := filepath.Join(caddyDir, "Caddyfile")
 	caddyArgs := []string{"run", "--config", caddyfilePath}
 	caddyCmd := exec.CommandContext(ctx, config.GetCaddyBinPath(), caddyArgs...)
 	caddyCmd.Stdout = os.Stdout

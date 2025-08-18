@@ -1,74 +1,62 @@
-# dep
+# pkg/dep
 
-the .dep folder is loaded up usng the .envrc, one level above this repo.
+**Why**: Go binaries for external tools, without npm or brew.
 
-so you can call a binary inside .dep, by just the name is needed, for basic assertiosn etc .
-
-TODO:
-
-https://github.com/burrowers/garble
-https://github.com/goretk/redress 
-
-Binary dependency management with design-by-contract guarantees. Downloads, caches, and manages external tools required by the system.
-
-Try it it using :
-
-```sh
-go run . dep -h
-```
-
-## How it works
-
-- **Configuration**: `dep.json` defines supported binaries with GitHub release patterns
-- **Selection**: Automatic platform detection (`runtime.GOOS`, `runtime.GOARCH`) with regex matching
-- **Caching**: Versioned downloads stored locally for idempotency
-- **API**: Stable public interface (`Ensure()`, `Get()`) with guaranteed backward compatibility
-
-## Supported sources
-
-| Source | Binaries | Pattern |
-|--------|----------|---------|
-| GitHub releases | flyctl, ko, caddy, task, tofu, bento, garble, bun | Platform-specific asset matching |
-| npm registry | claude | Node.js CLI package |
-
-## claude
-
-**Distribution**: npm registry
-
-Downloads `@anthropic-ai/claude-code` npm package and creates wrapper scripts for the Node.js CLI tool. The package handles native binary downloads internally.
-
-**Current**: 1.0.62  
-**Registry**: `https://registry.npmjs.org/@anthropic-ai/claude-code/-/claude-code-{VERSION}.tgz`
-
-## bun
-
-**Distribution**: GitHub releases
-
-Downloads Bun runtime from oven-sh/bun releases for platform-specific binaries.
-
-**Current**: bun-v1.2.19
-**Release**: `https://github.com/oven-sh/bun/releases`
-
-## Development
-
-### Release checking
-
-Check latest versions for all configured binaries:
+**What**: Downloads tools like bun, claude, flyctl to `.dep/` folder.
 
 ```bash
-go test -run TestCheckAllReleases -v
+go run . dep install   # install all
+go run . dep install bun  # install one
+go run . dep list     # see what's available
 ```
 
-Check specific binary:
+Uses `dep.json` for configuration. Binaries auto-detect your platform.
+
+## Testing
 
 ```bash
-go test -run TestCheckGitHubRelease -v
+# Quick tests (skip downloads)
+go test -v -short ./...
+
+# Full tests (with downloads)
+go test -v ./...
+
+# Coverage report
+go test -coverprofile=coverage.out ./... && go tool cover -html=coverage.out -o coverage.html
+
+# Update README with current binaries
+go test -v -run TestUpdateREADME ./...
 ```
 
-### Testing utilities
+## Development Tools
 
-```go
-// Remove specific binary for testing
-err := dep.Remove("bun")  // Deletes bun and metadata
-err := dep.Remove("claude")  // Also removes claude-code directory
+```bash
+# Check code quality (what VS Code Problems pane shows)
+go vet ./...          # static analysis
+gofmt -l .           # check formatting
+gofmt -w .           # fix formatting
 ```
+
+
+
+
+
+## Binaries
+Currently configured: 16 binaries
+
+- **flyctl**
+- **ko**
+- **caddy**
+- **task**
+- **tofu**
+- **bento**
+- **bun**
+- **claude**
+- **nats**
+- **litestream**
+- **deck-tools**
+- **zig**
+- **toki**
+- **goose**
+- **kosho**
+- **gh**
