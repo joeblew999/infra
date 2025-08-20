@@ -89,11 +89,7 @@ func main() {
 	fmt.Println("💡 Press Ctrl+C to stop all services")
 	fmt.Println("")
 	
-	go func() {
-		if err := runner.Run("run", "--config", ".data/caddy/Caddyfile"); err != nil {
-			fmt.Printf("❌ Caddy failed: %v\n", err)
-		}
-	}()
+	runner.StartInBackground(".data/caddy/Caddyfile")
 
 	// Give Caddy a moment to start
 	time.Sleep(2 * time.Second)

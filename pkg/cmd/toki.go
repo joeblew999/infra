@@ -41,11 +41,16 @@ var tokiVersionCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(tokiCmd)
+	// Build toki command structure
 	tokiCmd.AddCommand(tokiGenerateCmd)
 	tokiCmd.AddCommand(tokiLintCmd)
 	tokiCmd.AddCommand(tokiWebEditCmd)
 	tokiCmd.AddCommand(tokiVersionCmd)
+}
+
+// AddTokiToCLI adds toki commands to the CLI namespace
+func AddTokiToCLI(cliParent *cobra.Command) {
+	cliParent.AddCommand(tokiCmd)
 }
 
 func runTokiGenerate(cmd *cobra.Command, args []string) error {

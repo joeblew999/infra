@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,25 +16,72 @@ import (
 var Cmd = &cobra.Command{
 	Use:   "dep",
 	Short: "Manage binary dependencies",
-	Long:  `Manage binary dependencies including installation, updates, and removal.`,
+	Long: `Manage binary dependencies across development lifecycle phases:
+
+Local Development:
+  dep local:install   - Install/sync binaries to configured versions
+  dep local:remove    - Remove installed binary
+  dep local:list      - List configured binaries  
+  dep local:status    - Show installation status
+  dep local:sync      - Sync all binaries to configured versions
+
+Collection (Multi-platform):
+  dep collect:binary  - Collect binary for all platforms
+  dep collect:all     - Collect all binaries
+  dep collect:status  - Show collection status
+
+Distribution:
+  dep release:binary  - Publish binary to managed releases
+  dep release:all     - Publish all collected binaries
+  dep release:status  - Show release status`,
 }
 
 // ========================
-// Core Dependency Commands
+// Phase Group Commands
 // ========================
 
-var depInstallCmd = &cobra.Command{
+// Local Development Phase
+var localCmd = &cobra.Command{
+	Use:   "local",
+	Short: "Local development binary management",
+	Long:  `Commands for managing binaries in local development environment.`,
+}
+
+// Collection Phase  
+var collectCmd = &cobra.Command{
+	Use:   "collect",
+	Short: "Multi-platform binary collection",
+	Long:  `Commands for collecting binaries across multiple platforms.`,
+}
+
+// Release Phase
+var releaseCmd = &cobra.Command{
+	Use:   "release", 
+	Short: "Binary distribution and releases",
+	Long:  `Commands for publishing collected binaries to managed releases.`,
+}
+
+// ========================
+// Local Phase Commands
+// ========================
+
+var localInstallCmd = &cobra.Command{
 	Use:   "install [binary]",
-	Short: "Install binary dependencies",
-	Long:  `Install all configured binary dependencies or a specific binary.`,
+	Short: "Install/sync binaries to configured versions",
+	Long:  `Install all configured binary dependencies or a specific binary to match dep.json versions.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		debug, _ := cmd.Flags().GetBool("debug")
+		crossPlatform, _ := cmd.Flags().GetBool("cross-platform")
 
 		if len(args) == 0 {
 			// Install all binaries
-			fmt.Println("Installing all configured binaries...")
-			if err := Ensure(debug); err != nil {
+			if crossPlatform {
+				fmt.Println("Installing all configured binaries (cross-platform mode)...")
+			} else {
+				fmt.Println("Installing all configured binaries...")
+			}
+			if err := EnsureWithCrossPlatform(debug, crossPlatform); err != nil {
 				fmt.Fprintf(os.Stderr, "Error installing binaries: %v\n", err)
 				os.Exit(1)
 			}
@@ -41,8 +89,12 @@ var depInstallCmd = &cobra.Command{
 		} else {
 			// Install specific binary
 			binaryName := args[0]
-			fmt.Printf("Installing %s...\n", binaryName)
-			if err := InstallBinary(binaryName, debug); err != nil {
+			if crossPlatform {
+				fmt.Printf("Installing %s (cross-platform mode)...\n", binaryName)
+			} else {
+				fmt.Printf("Installing %s...\n", binaryName)
+			}
+			if err := InstallBinaryWithCrossPlatform(binaryName, debug, crossPlatform); err != nil {
 				fmt.Fprintf(os.Stderr, "Error installing %s: %v\n", binaryName, err)
 				os.Exit(1)
 			}
@@ -51,10 +103,10 @@ var depInstallCmd = &cobra.Command{
 	},
 }
 
-var depRemoveCmd = &cobra.Command{
+var localRemoveCmd = &cobra.Command{
 	Use:   "remove [binary]",
-	Short: "Remove a binary",
-	Long:  `Remove an installed binary dependency.`,
+	Short: "Remove an installed binary",
+	Long:  `Remove an installed binary dependency from local development environment.`,
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		binaryName := args[0]
@@ -67,9 +119,9 @@ var depRemoveCmd = &cobra.Command{
 	},
 }
 
-var depStatusCmd = &cobra.Command{
+var localStatusCmd = &cobra.Command{
 	Use:   "status [binary]",
-	Short: "Show status of installed binaries",
+	Short: "Show installation status of binaries",
 	Long:  `Show installation status and version information for all binaries or a specific binary.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -88,10 +140,10 @@ var depStatusCmd = &cobra.Command{
 	},
 }
 
-var depUpgradeCmd = &cobra.Command{
-	Use:   "upgrade [binary]",
-	Short: "Upgrade binaries to latest versions",
-	Long:  `Upgrade all binaries or a specific binary to their latest versions.`,
+var localSyncCmd = &cobra.Command{
+	Use:   "sync [binary]",
+	Short: "Sync binaries to configured versions",
+	Long:  `Sync all binaries or a specific binary to match their configured versions in dep.json.`,
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		debug, _ := cmd.Flags().GetBool("debug")
@@ -117,10 +169,10 @@ var depUpgradeCmd = &cobra.Command{
 	},
 }
 
-var depListCmd = &cobra.Command{
+var localListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List configured binaries",
-	Long:  `List all configured binary dependencies.`,
+	Long:  `List all configured binary dependencies with their repositories and versions.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		binaries, err := LoadConfigForTest()
 		if err != nil {
@@ -128,35 +180,38 @@ var depListCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Println("Configured binaries:")
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+		fmt.Fprintln(w, "NAME\tREPOSITORY\tVERSION")
+		fmt.Fprintln(w, "----\t----------\t-------")
 		for _, binary := range binaries {
-			fmt.Printf("  %s - %s\n", binary.Name, binary.Repo)
+			fmt.Fprintf(w, "%s\t%s\t%s\n", binary.Name, binary.Repo, binary.Version)
 		}
+		w.Flush()
 	},
 }
 
 // ================================
-// Managed Binary Distribution System
+// Collection Phase Commands
 // ================================
 
-var depCollectCmd = &cobra.Command{
-	Use:   "collect [binary] [version]",
-	Short: "Collect binaries for all platforms",
+var collectBinaryCmd = &cobra.Command{
+	Use:   "binary [binary] [version]",
+	Short: "Collect binary for all platforms",
 	Long: `Collect a binary from its original source for all configured platforms.
 This downloads the binary for all supported platforms and stores them locally
 in preparation for creating managed releases.
 
 Examples:
-  go run . dep collect flyctl v0.3.162
-  go run . dep collect caddy v2.10.0`,
+  go run . dep collect:binary flyctl v0.3.162
+  go run . dep collect:binary caddy v2.10.0`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		runCollectCommand(args[0], args[1])
 	},
 }
 
-var depCollectAllCmd = &cobra.Command{
-	Use:   "collect-all",
+var collectAllCmd = &cobra.Command{
+	Use:   "all",
 	Short: "Collect all configured binaries for all platforms",
 	Long: `Collect all binaries defined in dep.json for all configured platforms.
 This is useful for bulk collection before creating managed releases.`,
@@ -166,15 +221,30 @@ This is useful for bulk collection before creating managed releases.`,
 	},
 }
 
-var depReleaseCmd = &cobra.Command{
-	Use:   "release [binary] [version]",
+var collectStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show collection status",
+	Long: `Show the status of collected binaries.
+This displays what has been collected locally and what platforms are available.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Printf("📊 Collection status not implemented yet\n")
+		fmt.Printf("Would show collection status\n")
+	},
+}
+
+// ================================
+// Release Phase Commands  
+// ================================
+
+var releaseBinaryCmd = &cobra.Command{
+	Use:   "binary [binary] [version]",
 	Short: "Publish collected binary to managed release",
 	Long: `Publish a collected binary to your managed GitHub release.
 This uploads all platform variants as release assets.
 
 Examples:
-  go run . dep release flyctl v0.3.162
-  go run . dep release caddy v2.10.0`,
+  go run . dep release:binary flyctl v0.3.162
+  go run . dep release:binary caddy v2.10.0`,
 	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("📤 Release system not implemented yet\n")
@@ -182,8 +252,8 @@ Examples:
 	},
 }
 
-var depReleaseAllCmd = &cobra.Command{
-	Use:   "release-all",
+var releaseAllCmd = &cobra.Command{
+	Use:   "all",
 	Short: "Publish all collected binaries to managed releases",
 	Long: `Publish all collected binaries to your managed GitHub releases.
 This creates releases and uploads assets for all collected binaries.`,
@@ -193,15 +263,14 @@ This creates releases and uploads assets for all collected binaries.`,
 	},
 }
 
-var depCollectionStatusCmd = &cobra.Command{
-	Use:   "collection-status",
-	Short: "Show collection and release status",
-	Long: `Show the status of collected and published binaries.
-This displays what has been collected locally and what has been published
-to managed releases.`,
+var releaseStatusCmd = &cobra.Command{
+	Use:   "status",
+	Short: "Show release status",
+	Long: `Show the status of published binaries.
+This displays what has been published to managed releases.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("📊 Collection status not implemented yet\n")
-		fmt.Printf("Would show collection and release status\n")
+		fmt.Printf("📊 Release status not implemented yet\n")
+		fmt.Printf("Would show release status\n")
 	},
 }
 
@@ -210,23 +279,32 @@ to managed releases.`,
 // ========================
 
 func init() {
-	// Core dependency commands
-	Cmd.AddCommand(depInstallCmd)
-	Cmd.AddCommand(depRemoveCmd)
-	Cmd.AddCommand(depListCmd)
-	Cmd.AddCommand(depStatusCmd)
-	Cmd.AddCommand(depUpgradeCmd)
+	// Phase group commands
+	Cmd.AddCommand(localCmd)
+	Cmd.AddCommand(collectCmd)
+	Cmd.AddCommand(releaseCmd)
 	
-	// Managed distribution system commands
-	Cmd.AddCommand(depCollectCmd)
-	Cmd.AddCommand(depCollectAllCmd)
-	Cmd.AddCommand(depReleaseCmd)
-	Cmd.AddCommand(depReleaseAllCmd)
-	Cmd.AddCommand(depCollectionStatusCmd)
+	// Local phase commands
+	localCmd.AddCommand(localInstallCmd)
+	localCmd.AddCommand(localRemoveCmd)
+	localCmd.AddCommand(localListCmd)
+	localCmd.AddCommand(localStatusCmd)
+	localCmd.AddCommand(localSyncCmd)
+	
+	// Collection phase commands
+	collectCmd.AddCommand(collectBinaryCmd)
+	collectCmd.AddCommand(collectAllCmd)
+	collectCmd.AddCommand(collectStatusCmd)
+	
+	// Release phase commands
+	releaseCmd.AddCommand(releaseBinaryCmd)
+	releaseCmd.AddCommand(releaseAllCmd)
+	releaseCmd.AddCommand(releaseStatusCmd)
 
 	// Add debug flag to relevant commands
-	depInstallCmd.Flags().Bool("debug", false, "Enable debug output")
-	depUpgradeCmd.Flags().Bool("debug", false, "Enable debug output")
+	localInstallCmd.Flags().Bool("debug", false, "Enable debug output")
+	localInstallCmd.Flags().Bool("cross-platform", false, "Build for all supported platforms (go-build binaries only)")
+	localSyncCmd.Flags().Bool("debug", false, "Enable debug output")
 }
 
 // ========================
@@ -268,8 +346,10 @@ func displayCollectionResult(result *collection.CollectionResult, duration time.
 	successCount := 0
 	failureCount := 0
 	
-	fmt.Printf("%-15s %-8s %-10s %-12s %s\n", "PLATFORM", "STATUS", "SIZE", "DURATION", "ERROR")
-	fmt.Printf(strings.Repeat("-", 70) + "\n")
+	// Use tabwriter for consistent column alignment
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(w, "PLATFORM\tSTATUS\tSIZE\tDURATION\tERROR")
+	fmt.Fprintln(w, "--------\t------\t----\t--------\t-----")
 	
 	for platform, platformResult := range result.Platforms {
 		status := "❌ FAILED"
@@ -284,20 +364,20 @@ func displayCollectionResult(result *collection.CollectionResult, duration time.
 			failureCount++
 			if platformResult.Error != "" {
 				errorStr = platformResult.Error
-				if len(errorStr) > 40 {
-					errorStr = errorStr[:37] + "..."
+				if len(errorStr) > 35 {
+					errorStr = errorStr[:32] + "..."
 				}
 			}
 		}
 		
 		durationStr := platformResult.Duration.Round(time.Millisecond).String()
 		
-		fmt.Printf("%-15s %-8s %-10s %-12s %s\n", 
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", 
 			platform, status, sizeStr, durationStr, errorStr)
 	}
 	
-	fmt.Printf(strings.Repeat("-", 70) + "\n")
-	fmt.Printf("📈 Summary: %d success, %d failed, %s total\n", 
+	w.Flush()
+	fmt.Printf("\n📈 Summary: %d success, %d failed, %s total\n", 
 		successCount, failureCount, duration.Round(time.Second))
 	
 	if result.Success {

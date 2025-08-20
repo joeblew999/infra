@@ -9,6 +9,7 @@ import (
 	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/spf13/cobra"
 )
@@ -140,16 +141,42 @@ func handleCaddyServe(args []string) error {
 	return runner.FileServer(root, port)
 }
 
-// RunCLI adds all CLI-specific commands to the root command.
+// cliCmd is the parent command for all CLI tool wrappers
+var cliCmd = &cobra.Command{
+	Use:   "cli",
+	Short: "CLI tool wrappers",
+	Long:  `Access to various CLI tools and utilities.`,
+}
+
+// RunCLI adds the CLI parent command and management commands to the root.
 func RunCLI() {
-	rootCmd.AddCommand(tofuCmd)
-	rootCmd.AddCommand(taskCmd)
-	rootCmd.AddCommand(caddyCmd)
-	rootCmd.AddCommand(koCmd)
-	rootCmd.AddCommand(flyctlCmd)
-	rootCmd.AddCommand(pocketbase.Cmd)
-	rootCmd.AddCommand(config.Cmd)
-	rootCmd.AddCommand(conduit.Cmd)
+	// Add tool wrappers under 'cli' parent command
+	cliCmd.AddCommand(tofuCmd)
+	cliCmd.AddCommand(taskCmd)
+	cliCmd.AddCommand(caddyCmd)
+	cliCmd.AddCommand(koCmd)
+	cliCmd.AddCommand(flyctlCmd)
+	cliCmd.AddCommand(nats.NewNATSCmd())
+	cliCmd.AddCommand(bento.NewBentoCmd())
+	
+	// Add development/build workflow tools
+	AddWorkflowsToCLI(cliCmd)
+	
+	// Add AI commands
+	AddAIToCLI(cliCmd)
+	
+	// Add debug and translation tools
+	AddDebugToCLI(cliCmd)
+	AddTokiToCLI(cliCmd)
+	
+	// Add CLI parent command to root
+	rootCmd.AddCommand(cliCmd)
+	
+	// Keep essential management commands at root level
 	rootCmd.AddCommand(dep.Cmd)
-	rootCmd.AddCommand(bento.NewBentoCmd())
+	rootCmd.AddCommand(config.Cmd)
+	
+	// Move these to cli namespace
+	cliCmd.AddCommand(pocketbase.Cmd)
+	cliCmd.AddCommand(conduit.Cmd)
 }

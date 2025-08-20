@@ -95,4 +95,20 @@ Use the ./agents/AGENT.md, following everything it says and its links.
 }
 ```
 
+#### 6. Cross-Platform Build Support
+- **`--cross-platform` flag**: Available for `go run . dep local install` command
+- **Supported binaries**: Only works with `"source": "go-build"` binaries
+- **Target platforms**: darwin/amd64, darwin/arm64, linux/amd64, linux/arm64, windows/amd64, windows/arm64
+- **Binary naming**: Multi-platform builds create `binary-name-os-arch` files in `.dep/`
+- **CGO limitations**: Cross-compilation automatically sets `CGO_ENABLED=0` and provides helpful error messages for CGO-dependent binaries
+- **Usage examples**:
+  ```bash
+  # Install single binary for all platforms
+  go run . dep local install garble --cross-platform
+  
+  # Install all binaries for all platforms  
+  go run . dep local install --cross-platform
+  ```
+- **CGO workarounds**: For CGO-dependent binaries like litestream, use CGO-free forks or switch to `github-release` source
+
 

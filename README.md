@@ -76,8 +76,8 @@ go run . --env production   # Production mode (optimized)
 ```
 
 ### CI/CD
-- **GitHub Actions**: Uses same binaries via Taskfiles
-- **Terraform**: Provisions infrastructure via Taskfiles
+- **GitHub Actions**: All IAC based, so DRY, with github actions being close to empty.
+- **Terraform**: Provisions infrastructure via workflows as IAC.
 - **Versioned**: Use git hashes/tags for reproducible builds
 
 ### Multi-Environment
@@ -96,17 +96,18 @@ go run . --env production   # Production mode (optimized)
 
 ## 📦 Dependencies
 
-Manage via `./pkg/dep/` - see [./roadmap/dep.md](./roadmap/dep.md) for details.
+Manage via `./pkg/dep/` - extend by juast matching hte dep.json from any pkg.
 
 ## 🌍 Deployment
 
 ### Primary
 **Hetzner Cloud (Germany)** - European coverage
 
+
 ### Secondary
-**OVH Cloud** - Global coverage
-- [OVH Terraform Provider](https://github.com/ovh/terraform-provider-ovh)
-- Supports: VMs, K8s, DNS, Load Balancers, Storage
+**Fl.io Cloud** - Global coverage
+- 6 NATS Servers protected internally.
+- 22 regions, with autoscaling in each. 
 
 ## 📊 Monitoring
 

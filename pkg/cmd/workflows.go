@@ -304,19 +304,26 @@ func init() {
 
 // RunWorkflows adds all workflow commands to the root command.
 func RunWorkflows() {
+	// Keep core deployment at root
 	rootCmd.AddCommand(deployCmd)
-	rootCmd.AddCommand(buildCmd)
+	
+	// Keep infrastructure status at root
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(preCommitCmd)
-	rootCmd.AddCommand(ciCmd)
-	rootCmd.AddCommand(binaryCmd)
-	rootCmd.AddCommand(devCmd)
-	rootCmd.AddCommand(litestreamCmd)
 	// MCP commands now integrated into AI package
+}
+
+// AddWorkflowsToCLI adds development/build tools to the CLI namespace
+func AddWorkflowsToCLI(cliParent *cobra.Command) {
+	cliParent.AddCommand(buildCmd)
+	cliParent.AddCommand(binaryCmd)
+	cliParent.AddCommand(devCmd)
+	cliParent.AddCommand(preCommitCmd)
+	cliParent.AddCommand(ciCmd)
+	cliParent.AddCommand(litestreamCmd)
 	
-	// Add Fly.io commands
-	fly.AddCommands(rootCmd)
+	// Add Fly.io commands under CLI namespace
+	fly.AddCommands(cliParent)
 }
 
 // runPreCommitChecks implements the pre-commit workflow logic

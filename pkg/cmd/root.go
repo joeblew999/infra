@@ -39,11 +39,10 @@ func Execute() {
 		log.Info("Running in Fly.io production environment - skipping dependency installation")
 	}
 
-	// Always add CLI commands
-	RunCLI()
-	RunWorkflows()
-	RunAI()
-	RunDeck()
+	// Add organized command structure
+	RunCLI()        // Adds 'cli' namespace with tools
+	RunWorkflows()  // Adds core infrastructure commands (deploy, status, init)
+	RunDeck()       // Deck commands (if any)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

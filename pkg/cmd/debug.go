@@ -68,7 +68,12 @@ var debugPathsCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(debugCmd)
+	// Build debug command structure
 	debugCmd.AddCommand(debugEnvCmd)
 	debugCmd.AddCommand(debugPathsCmd)
+}
+
+// AddDebugToCLI adds debug commands to the CLI namespace
+func AddDebugToCLI(cliParent *cobra.Command) {
+	cliParent.AddCommand(debugCmd)
 }

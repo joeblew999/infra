@@ -291,8 +291,6 @@ var shutdownCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(serviceCmd)
-	rootCmd.AddCommand(apiCheckCmd)
 	rootCmd.AddCommand(shutdownCmd)
 	
 	serviceCmd.Flags().String("env", "production", "Environment (production/development)")

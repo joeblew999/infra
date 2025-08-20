@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // AddCommands adds all litestream commands to the root command
@@ -140,7 +141,7 @@ dbs:
 	fmt.Printf("⚙️  Config: %s\n", configPath)
 	
 	// Execute litestream
-	cmd := exec.Command(litestreamBinary, "replicate", "-config", configPath)
+	cmd := exec.Command(getLitestreamBinary(), "replicate", "-config", configPath)
 	if verbose {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -179,7 +180,7 @@ func RunLitestreamRestore(dbPath, backupPath, configPath, timestamp string) erro
 	}
 	
 	// Execute restore
-	cmd := exec.Command(litestreamBinary, cmdArgs...)
+	cmd := exec.Command(getLitestreamBinary(), cmdArgs...)
 	cmd.Dir = filepath.Dir(dbPath)
 	
 	output, err := cmd.CombinedOutput()
@@ -200,7 +201,7 @@ func RunLitestreamStatus(configPath string) error {
 	}
 	
 	// Check if litestream is running
-	cmd := exec.Command(litestreamBinary, "dbs", "-config", configPath)
+	cmd := exec.Command(getLitestreamBinary(), "dbs", "-config", configPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("status check failed: %w\nOutput: %s", err, string(output))
@@ -210,5 +211,7 @@ func RunLitestreamStatus(configPath string) error {
 	return nil
 }
 
-// litestreamBinary is the path to the litestream binary
-var litestreamBinary = filepath.Join(".", ".dep", "litestream")
+// getLitestreamBinary returns the path to the litestream binary using type-safe constants
+func getLitestreamBinary() string {
+	return config.Get(config.BinaryLitestream)
+}

@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, kosho, gh
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -178,6 +178,11 @@ func loadConfig() ([]DepBinary, error) {
 // Ensure downloads and prepares all binaries defined in the manifest.
 // This function will handle both core bootstrapping binaries and generic ones.
 func Ensure(debug bool) error {
+	return EnsureWithCrossPlatform(debug, false)
+}
+
+// EnsureWithCrossPlatform downloads and prepares all binaries with optional cross-platform support
+func EnsureWithCrossPlatform(debug, crossPlatform bool) error {
 	log.Info("Ensuring core binaries...")
 
 	// Load configuration from embedded JSON
@@ -187,7 +192,7 @@ func Ensure(debug bool) error {
 	}
 
 	for _, binary := range binaries {
-		if err := InstallBinary(binary.Name, debug); err != nil {
+		if err := InstallBinaryWithCrossPlatform(binary.Name, debug, crossPlatform); err != nil {
 			return fmt.Errorf("failed to install %s: %w", binary.Name, err)
 		}
 	}
@@ -199,6 +204,11 @@ func Ensure(debug bool) error {
 // InstallBinary installs a single binary by name.
 // This allows selective installation of individual binaries without affecting others.
 func InstallBinary(name string, debug bool) error {
+	return InstallBinaryWithCrossPlatform(name, debug, false)
+}
+
+// InstallBinaryWithCrossPlatform installs a single binary with optional cross-platform support
+func InstallBinaryWithCrossPlatform(name string, debug, crossPlatform bool) error {
 	log.Info("Checking binary", "name", name)
 
 	// Load configuration to find the specific binary
@@ -251,8 +261,23 @@ func InstallBinary(name string, debug bool) error {
 	case "go-build":
 		// Use new builders package for go-build
 		builder := builders.GoBuildInstaller{}
-		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
-			return err
+		if crossPlatform {
+			// Define standard cross-platform targets
+			platforms := []builders.Platform{
+				{OS: "darwin", Arch: "amd64"},
+				{OS: "darwin", Arch: "arm64"},
+				{OS: "linux", Arch: "amd64"},
+				{OS: "linux", Arch: "arm64"},
+				{OS: "windows", Arch: "amd64"},
+				{OS: "windows", Arch: "arm64"},
+			}
+			if err := builder.InstallWithPlatforms(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug, platforms); err != nil {
+				return err
+			}
+		} else {
+			if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+				return err
+			}
 		}
 	case "npm-package":
 		// Use new builders package for npm-package

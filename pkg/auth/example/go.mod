@@ -6,10 +6,8 @@ replace github.com/joeblew999/infra => ../../../
 
 require (
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/go-webauthn/webauthn v0.13.4
 	github.com/joeblew999/infra v0.0.0-00010101000000-000000000000
 	github.com/nats-io/nats.go v1.43.0
-	github.com/nats-io/nkeys v0.4.11
 )
 
 require (
@@ -17,6 +15,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/go-webauthn/webauthn v0.13.4 // indirect
 	github.com/go-webauthn/x v0.1.23 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.3 // indirect
 	github.com/google/go-tpm v0.9.5 // indirect
@@ -26,6 +25,7 @@ require (
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/nats-io/nkeys v0.4.11 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/samber/lo v1.51.0 // indirect

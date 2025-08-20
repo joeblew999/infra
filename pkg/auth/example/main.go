@@ -125,11 +125,10 @@ func main() {
 		}
 	}()
 
-	// Configure Caddy to proxy HTTPS to our auth service
+	// Configure and start Caddy HTTPS proxy
 	config := caddy.NewPresetConfig(caddy.PresetSimple, CaddyPort).
 		WithMainTarget(fmt.Sprintf("localhost:%d", HTTPPort))
 	
-	// Start Caddy with HTTPS
 	fmt.Printf("🔒 Starting Caddy HTTPS proxy on port %d\n", CaddyPort)
 	fmt.Printf("🌍 WebAuthn will be available at: https://localhost:%d\n", CaddyPort)
 	fmt.Println("💡 NATS URL:", os.Getenv("NATS_URL"))
@@ -139,18 +138,8 @@ func main() {
 	fmt.Println("💡 Press Ctrl+C to stop all services")
 	fmt.Println("")
 
-	// Generate and save Caddyfile using standard .data/caddy/ pattern
-	if err := config.GenerateAndSave("Caddyfile"); err != nil {
-		log.Fatal("Failed to generate Caddyfile:", err)
-	}
-
-	// Start Caddy in goroutine
-	runner := caddy.New()
-	go func() {
-		if err := runner.Run("run", "--config", ".data/caddy/Caddyfile"); err != nil {
-			log.Fatal("Caddy failed:", err)
-		}
-	}()
+	// Start Caddy with config generation and background startup
+	caddy.StartWithConfig(&config)
 
 	// Wait for interrupt signal
 	c := make(chan os.Signal, 1)

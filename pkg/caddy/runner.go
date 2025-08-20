@@ -51,6 +51,29 @@ func (r *Runner) RunWithOutput(args ...string) ([]byte, error) {
 	return output, nil
 }
 
+// StartInBackground starts Caddy in a goroutine with the specified config path
+func (r *Runner) StartInBackground(configPath string) {
+	go func() {
+		if err := r.Run("run", "--config", configPath); err != nil {
+			fmt.Printf("Caddy failed: %v\n", err)
+		}
+	}()
+}
+
+// StartWithConfig generates a Caddyfile and starts Caddy in the background
+func StartWithConfig(config *CaddyConfig) *Runner {
+	// Generate and save Caddyfile
+	if err := config.GenerateAndSave("Caddyfile"); err != nil {
+		fmt.Printf("Failed to generate Caddyfile: %v\n", err)
+		return nil
+	}
+	
+	// Create runner and start in background
+	runner := New()
+	runner.StartInBackground(".data/caddy/Caddyfile")
+	return runner
+}
+
 // FileServer starts a file server with environment-aware HTTPS configuration
 // In development: enables HTTPS for localhost
 // In production: uses HTTP only (assumes SSL termination by proxy)

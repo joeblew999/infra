@@ -21,7 +21,7 @@ This package provides Git tooling integrations focused on **stacked branch devel
 #### Installation
 ```bash
 # Available via our dep system
-go run . dep install git-spice
+go run . dep install gs
 ```
 
 #### Usage Patterns

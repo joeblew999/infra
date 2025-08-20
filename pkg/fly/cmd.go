@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // AddCommands adds all Fly.io commands to the root command
@@ -74,7 +75,7 @@ func AddCommands(rootCmd *cobra.Command) {
 func Deploy() error {
 	fmt.Println("🚀 Deploying to Fly.io...")
 	
-	cmd := exec.Command("./.dep/flyctl", "deploy")
+	cmd := exec.Command(config.GetFlyctlBinPath(), "deploy")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -85,7 +86,7 @@ func Deploy() error {
 func Status() error {
 	fmt.Println("📊 Checking Fly.io status...")
 	
-	cmd := exec.Command("./.dep/flyctl", "status")
+	cmd := exec.Command(config.GetFlyctlBinPath(), "status")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -96,7 +97,7 @@ func Status() error {
 func Logs() error {
 	fmt.Println("📋 Showing Fly.io logs...")
 	
-	cmd := exec.Command("./.dep/flyctl", "logs")
+	cmd := exec.Command(config.GetFlyctlBinPath(), "logs")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	
@@ -107,7 +108,7 @@ func Logs() error {
 func SSH() error {
 	fmt.Println("🔧 Connecting to Fly.io machine...")
 	
-	cmd := exec.Command("./.dep/flyctl", "ssh", "console")
+	cmd := exec.Command(config.GetFlyctlBinPath(), "ssh", "console")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -119,7 +120,7 @@ func SSH() error {
 func Scale() error {
 	fmt.Println("⚖️  Scaling Fly.io resources...")
 	
-	cmd := exec.Command("./.dep/flyctl", "scale", "show")
+	cmd := exec.Command(config.GetFlyctlBinPath(), "scale", "show")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	

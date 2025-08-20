@@ -81,6 +81,27 @@ const (
 	// Environment detection
 	EnvProduction = "production"
 	EnvDevelopment = "development"
+	
+	// Binary names - these must match exactly with names in dep.json
+	// Using constants prevents garble obfuscation and provides type safety
+	BinaryFlyctl     = "flyctl"
+	BinaryKo         = "ko"
+	BinaryCaddy      = "caddy"
+	BinaryTask       = "task"
+	BinaryTofu       = "tofu"
+	BinaryBento      = "bento"
+	BinaryGarble     = "garble"
+	BinaryBun        = "bun"
+	BinaryClaude     = "claude"
+	BinaryNats       = "nats"
+	BinaryLitestream = "litestream"
+	BinaryDeckTools  = "deck-tools"
+	BinaryZig        = "zig"
+	BinaryToki       = "toki"
+	BinaryGoose      = "goose"
+	BinaryGs         = "gs"
+	BinaryCrush      = "crush"
+	BinaryGh         = "gh"
 )
 
 // GetDepPath returns the absolute path to the .dep directory.
@@ -130,32 +151,32 @@ func Get(name string) string {
 
 // GetTofuBinPath returns the absolute path to the tofu binary.
 func GetTofuBinPath() string {
-	return Get("tofu")
+	return Get(BinaryTofu)
 }
 
 // GetTaskBinPath returns the absolute path to the task binary.
 func GetTaskBinPath() string {
-	return Get("task")
+	return Get(BinaryTask)
 }
 
 // GetCaddyBinPath returns the absolute path to the caddy binary.
 func GetCaddyBinPath() string {
-	return Get("caddy")
+	return Get(BinaryCaddy)
 }
 
 // GetKoBinPath returns the absolute path to the ko binary.
 func GetKoBinPath() string {
-	return Get("ko")
+	return Get(BinaryKo)
 }
 
 // GetFlyctlBinPath returns the absolute path to the flyctl binary.
 func GetFlyctlBinPath() string {
-	return Get("flyctl")
+	return Get(BinaryFlyctl)
 }
 
 // GetClaudeBinPath returns the absolute path to the claude binary.
 func GetClaudeBinPath() string {
-	return Get("claude")
+	return Get(BinaryClaude)
 }
 
 // GetTerraformPath returns the absolute path to the terraform directory.
