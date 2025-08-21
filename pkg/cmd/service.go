@@ -15,7 +15,9 @@ import (
 	"github.com/joeblew999/infra/pkg/bento"
 	"github.com/joeblew999/infra/pkg/caddy"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/gops"
+	"github.com/joeblew999/infra/pkg/litestream"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
@@ -29,6 +31,15 @@ var serviceCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
 		RunService(true, false, false, env) // Use embedded docs in production
+	},
+}
+
+var supervisedCmd = &cobra.Command{
+	Use:   "supervised",
+	Short: "Run services with goreman supervision (demo)",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Run a demo of the goreman system without starting real services
+		goreman.RunDemo()
 	},
 }
 
@@ -292,7 +303,57 @@ var shutdownCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(shutdownCmd)
+	rootCmd.AddCommand(supervisedCmd)
 	
 	serviceCmd.Flags().String("env", "production", "Environment (production/development)")
+	supervisedCmd.Flags().String("env", "development", "Environment (production/development)")
+}
+
+// RunServiceSupervised demonstrates the new supervised approach
+// Each package registers itself with goreman automatically
+func RunServiceSupervised(mode string) error {
+	log.Info("🚀 Starting services with goreman supervision...")
 	
+	// Each package registers and starts itself idempotently
+	// No need to know what will be started - packages decide
+	
+	// Start infrastructure services
+	if err := nats.StartSupervised(4222); err != nil {
+		log.Warn("NATS failed to start", "error", err)
+	}
+	
+	if err := caddy.StartSupervised(nil); err != nil {
+		log.Warn("Caddy failed to start", "error", err)  
+	}
+	
+	// Start application services
+	if err := bento.StartSupervised(4195); err != nil {
+		log.Warn("Bento failed to start", "error", err)
+	}
+	
+	if err := litestream.StartSupervised("", "", "", false); err != nil {
+		log.Warn("Litestream failed to start", "error", err)
+	}
+	
+	// Setup graceful shutdown for all supervised processes
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Info("🛑 Received shutdown signal, stopping all processes...")
+		goreman.StopAll()
+		os.Exit(0)
+	}()
+	
+	// Show process status
+	status := goreman.GetAllStatus()
+	for name, stat := range status {
+		log.Info("Process status", "name", name, "status", stat)
+	}
+	
+	log.Info("✅ All services started with supervision")
+	log.Info("🔍 Process status available via goreman.GetAllStatus()")
+	
+	// Keep running until shutdown
+	select {}
 }

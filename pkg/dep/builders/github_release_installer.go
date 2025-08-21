@@ -131,8 +131,10 @@ func (i *GitHubReleaseInstaller) installBinary(extractDir, installPath, binaryNa
 	possiblePaths := []string{
 		filepath.Join(extractDir, binaryName),
 		filepath.Join(extractDir, "bin", binaryName),
+		filepath.Join(extractDir, binaryName, "bin", binaryName), // TinyGo pattern: tinygo/bin/tinygo
 		filepath.Join(extractDir, binaryName+".exe"), // Windows
 		filepath.Join(extractDir, "bin", binaryName+".exe"), // Windows
+		filepath.Join(extractDir, binaryName, "bin", binaryName+".exe"), // TinyGo pattern Windows
 	}
 
 	// Also look for binaries in subdirectories (common pattern: binary-name-version-os-arch/binary-name)
@@ -161,7 +163,11 @@ func (i *GitHubReleaseInstaller) installBinary(extractDir, installPath, binaryNa
 	// Find the first existing binary
 	var foundPath string
 	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
+		if stat, err := os.Stat(path); err == nil {
+			if stat.IsDir() {
+				log.Debug("Skipping directory", "path", path)
+				continue // Skip directories
+			}
 			foundPath = path
 			break
 		}

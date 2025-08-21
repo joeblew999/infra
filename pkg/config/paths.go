@@ -1,3 +1,5 @@
+//go:generate go run generate_binaries.go
+
 package config
 
 import (
@@ -82,26 +84,8 @@ const (
 	EnvProduction = "production"
 	EnvDevelopment = "development"
 	
-	// Binary names - these must match exactly with names in dep.json
-	// Using constants prevents garble obfuscation and provides type safety
-	BinaryFlyctl     = "flyctl"
-	BinaryKo         = "ko"
-	BinaryCaddy      = "caddy"
-	BinaryTask       = "task"
-	BinaryTofu       = "tofu"
-	BinaryBento      = "bento"
-	BinaryGarble     = "garble"
-	BinaryBun        = "bun"
-	BinaryClaude     = "claude"
-	BinaryNats       = "nats"
-	BinaryLitestream = "litestream"
-	BinaryDeckTools  = "deck-tools"
-	BinaryZig        = "zig"
-	BinaryToki       = "toki"
-	BinaryGoose      = "goose"
-	BinaryGs         = "gs"
-	BinaryCrush      = "crush"
-	BinaryGh         = "gh"
+	// Binary constants are now auto-generated in binaries_gen.go
+	// Run `go generate` to regenerate from dep.json
 )
 
 // GetDepPath returns the absolute path to the .dep directory.

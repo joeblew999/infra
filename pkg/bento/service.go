@@ -11,6 +11,7 @@ import (
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -116,6 +117,42 @@ func (s *Service) Wait() error {
 		return s.cmd.Wait()
 	}
 	return nil
+}
+
+// StartSupervised starts Bento under goreman supervision (idempotent)
+// This is the recommended way to start Bento in service mode
+func StartSupervised(port int) error {
+	if port == 0 {
+		port = 4195 // Default port
+	}
+	
+	// Ensure bento binary is installed 
+	// Note: In production, binaries should already be installed via dep system
+	
+	// Ensure config directory exists
+	configDir := config.GetBentoPath()
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create bento config directory: %w", err)
+	}
+	
+	// Ensure default config exists
+	if err := CreateDefaultConfig(); err != nil {
+		return fmt.Errorf("failed to create bento config: %w", err)
+	}
+	
+	configPath := filepath.Join(configDir, "bento.yaml")
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("bento", &goreman.ProcessConfig{
+		Command: config.Get(config.BinaryBento),
+		Args: []string{
+			"run",
+			"--config", configPath,
+			"--http.address", fmt.Sprintf("0.0.0.0:%d", port),
+		},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
 }
 
 func (s *Service) createDefaultConfig(configPath string) error {

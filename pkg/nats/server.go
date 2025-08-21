@@ -3,6 +3,7 @@ package nats
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -11,8 +12,9 @@ import (
 
 	"github.com/delaneyj/toolbelt/embeddednats"
 
-	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/goreman"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // StartEmbeddedNATS starts an embedded NATS server and returns its client URL.
@@ -93,4 +95,39 @@ func EnsureLoggingStream(ctx context.Context, nc *gonats.Conn) error {
 	}
 
 	return nil
+}
+
+// StartSupervised starts NATS server under goreman supervision (idempotent)
+// This uses the standalone nats-server binary instead of embedded NATS
+func StartSupervised(port int) error {
+	if port == 0 {
+		port = 4222 // Default NATS port
+	}
+	
+	// Ensure data directory exists
+	natsDataPath := filepath.Join(config.GetDataPath(), "nats")
+	if err := os.MkdirAll(natsDataPath, 0755); err != nil {
+		return fmt.Errorf("failed to create NATS data directory: %w", err)
+	}
+	
+	// Create basic NATS config
+	configPath := filepath.Join(natsDataPath, "nats.conf")
+	natsConfig := fmt.Sprintf(`
+# NATS Server Configuration
+port: %d
+jetstream: enabled
+store_dir: %s
+`, port, natsDataPath)
+	
+	if err := os.WriteFile(configPath, []byte(natsConfig), 0644); err != nil {
+		return fmt.Errorf("failed to create NATS config: %w", err)
+	}
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("nats", &goreman.ProcessConfig{
+		Command:    config.Get(config.BinaryNats),
+		Args:       []string{"--config", configPath},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
 }

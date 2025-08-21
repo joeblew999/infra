@@ -111,4 +111,43 @@ Use the ./agents/AGENT.md, following everything it says and its links.
   ```
 - **CGO workarounds**: For CGO-dependent binaries like litestream, use CGO-free forks or switch to `github-release` source
 
+#### 7. Code Generation for Binary Constants
+- **Garble-proof constants**: Binary names are auto-generated from `dep.json` to prevent obfuscation
+- **Source of truth**: `pkg/dep/dep.json` drives both installation and Go constants
+- **Generation**: Run `go generate ./pkg/config` to regenerate `binaries_gen.go`
+- **Usage**: Use `config.BinaryLitestream` instead of `"litestream"` strings
+- **Automatic**: Constants update automatically when `dep.json` changes
+- **Type-safe**: Compile-time verification of binary references
+
+#### 8. Dynamic Process Supervision with Goreman
+- **Import-based**: No Procfiles needed - packages register themselves
+- **Idempotent**: `goreman.RegisterAndStart()` handles registration + startup
+- **Global registry**: Singleton pattern for automatic process management
+- **Graceful shutdown**: SIGTERM with SIGKILL fallback after timeout
+- **Status monitoring**: Centralized process health checking
+
+**Usage pattern for packages:**
+```go
+// In pkg/myservice/service.go
+func StartSupervised() error {
+    return goreman.RegisterAndStart("myservice", &goreman.ProcessConfig{
+        Command:    config.Get(config.BinaryMyService),
+        Args:       []string{"--config", "./config.yml"},
+        WorkingDir: ".",
+        Env:        os.Environ(),
+    })
+}
+```
+
+**Service orchestration:**
+```go
+// Packages decide what to start - no central orchestration needed
+litestream.StartSupervised("", "", "", false)
+caddy.StartSupervised()
+bento.StartSupervised()
+
+// Graceful shutdown of all processes
+goreman.StopAll()
+```
+
 

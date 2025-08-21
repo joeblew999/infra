@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/fly"
 	"github.com/joeblew999/infra/pkg/workflows"
 	"github.com/spf13/cobra"
@@ -426,7 +427,7 @@ dbs:
 	fmt.Printf("⚙️  Config: %s\n", configPath)
 	
 	// Execute litestream
-	cmd := exec.Command("litestream", "replicate", "-config", configPath)
+	cmd := exec.Command(config.Get(config.BinaryLitestream), "replicate", "-config", configPath)
 	if verbose {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
@@ -465,7 +466,7 @@ func runLitestreamRestore(dbPath, backupPath, configPath, timestamp string) erro
 	}
 	
 	// Execute restore
-	cmd := exec.Command("litestream", cmdArgs...)
+	cmd := exec.Command(config.Get(config.BinaryLitestream), cmdArgs...)
 	cmd.Dir = filepath.Dir(dbPath)
 	
 	output, err := cmd.CombinedOutput()
@@ -486,7 +487,7 @@ func runLitestreamStatus(configPath string) error {
 	}
 	
 	// Check if litestream is running
-	cmd := exec.Command("litestream", "dbs", "-config", configPath)
+	cmd := exec.Command(config.Get(config.BinaryLitestream), "dbs", "-config", configPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("status check failed: %w\nOutput: %s", err, string(output))

@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/goreman"
 )
 
 // AddCommands adds all litestream commands to the root command
@@ -214,4 +215,52 @@ func RunLitestreamStatus(configPath string) error {
 // getLitestreamBinary returns the path to the litestream binary using type-safe constants
 func getLitestreamBinary() string {
 	return config.Get(config.BinaryLitestream)
+}
+
+// StartSupervised starts litestream under goreman supervision (idempotent)
+// This is the recommended way to start litestream in service mode
+func StartSupervised(dbPath, backupPath, configPath string, verbose bool) error {
+	// Set defaults
+	if dbPath == "" {
+		dbPath = "./pb_data/data.db"
+	}
+	if backupPath == "" {
+		backupPath = "./backups/data.db"
+	}
+	if configPath == "" {
+		configPath = "./pkg/litestream/litestream.yml"
+	}
+	
+	// Ensure directories exist
+	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
+		return fmt.Errorf("failed to create db directory: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(backupPath), 0755); err != nil {
+		return fmt.Errorf("failed to create backup directory: %w", err)
+	}
+	
+	// Create default config if not provided
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		config := fmt.Sprintf(`
+dbs:
+  - path: %s
+    replicas:
+      - type: file
+        path: %s
+        sync-interval: 1s
+        retention: 24h
+`, dbPath, backupPath)
+		
+		if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+			return fmt.Errorf("failed to create config: %w", err)
+		}
+	}
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("litestream", &goreman.ProcessConfig{
+		Command:    getLitestreamBinary(),
+		Args:       []string{"replicate", "-config", configPath},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
 }

@@ -76,11 +76,8 @@ func (b *ContainerBuildWorkflow) Execute() (string, error) {
 		os.Setenv("ENVIRONMENT", "development")
 	}
 
-	// Build image - use direct ko binary path
-	koPath := ".dep/ko"
-	if _, err := os.Stat(koPath); os.IsNotExist(err) {
-		koPath = ".dep/ko_darwin_arm64"
-	}
+	// Build image - use config path for ko binary
+	koPath := config.GetKoBinPath()
 	
 	// Build the command
 	args := []string{

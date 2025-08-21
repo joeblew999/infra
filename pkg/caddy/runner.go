@@ -2,13 +2,22 @@ package caddy
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/goreman"
 )
+
+func init() {
+	// Register caddy service factory for decoupled access
+	goreman.RegisterService("caddy", func() error {
+		return StartSupervised(nil)
+	})
+}
 
 // Runner executes caddy commands with environment-aware configuration
 type Runner struct {
@@ -72,6 +81,40 @@ func StartWithConfig(config *CaddyConfig) *Runner {
 	runner := New()
 	runner.StartInBackground(".data/caddy/Caddyfile")
 	return runner
+}
+
+// StartSupervised starts Caddy under goreman supervision (idempotent)
+// This is the recommended way to start Caddy in service mode
+func StartSupervised(caddyConfig *CaddyConfig) error {
+	// Generate Caddyfile if config provided
+	var configPath string
+	if caddyConfig != nil {
+		if err := caddyConfig.GenerateAndSave("Caddyfile"); err != nil {
+			return fmt.Errorf("failed to generate Caddyfile: %w", err)
+		}
+		configPath = filepath.Join(config.GetCaddyPath(), "Caddyfile")
+	} else {
+		// Default config path
+		configPath = ".data/caddy/Caddyfile"
+	}
+	
+	// Ensure config file exists
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		// Create default development config
+		defaultConfig := NewPresetConfig(PresetDevelopment, 80)
+		if err := defaultConfig.GenerateAndSave("Caddyfile"); err != nil {
+			return fmt.Errorf("failed to create default Caddyfile: %w", err)
+		}
+		configPath = filepath.Join(config.GetCaddyPath(), "Caddyfile")
+	}
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("caddy", &goreman.ProcessConfig{
+		Command:    config.GetCaddyBinPath(),
+		Args:       []string{"run", "--config", configPath},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
 }
 
 // FileServer starts a file server with environment-aware HTTPS configuration

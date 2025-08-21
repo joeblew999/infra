@@ -52,12 +52,21 @@ func NewManager() *Manager {
 	}
 }
 
-// AddProcess adds a process to the manager
+// AddProcess adds a process to the manager (idempotent)
+// If process already exists and is running, preserves the running state
 func (m *Manager) AddProcess(name string, config *ProcessConfig) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	
 	config.Name = name
+	
+	// If process already exists and is running, preserve its state
+	if existing, exists := m.processes[name]; exists && existing.Status == "running" {
+		existing.Config = config // Update config but keep running
+		return
+	}
+	
+	// Create new process or replace stopped process
 	m.processes[name] = &Process{
 		Config: config,
 		Status: "stopped",

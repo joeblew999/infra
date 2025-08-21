@@ -339,9 +339,9 @@ func runCollectCommand(binaryName, version string) {
 }
 
 func displayCollectionResult(result *collection.CollectionResult, duration time.Duration) {
-	fmt.Printf("\n" + strings.Repeat("=", 60) + "\n")
+	fmt.Printf("\n%s\n", strings.Repeat("=", 60))
 	fmt.Printf("📊 Collection Results for %s %s\n", result.Binary, result.Version)
-	fmt.Printf(strings.Repeat("=", 60) + "\n")
+	fmt.Printf("%s\n", strings.Repeat("=", 60))
 	
 	successCount := 0
 	failureCount := 0

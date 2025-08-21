@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush, tinygo
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.

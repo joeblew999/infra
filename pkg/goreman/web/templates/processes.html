@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Process Monitor - Goreman</title>
+    <script src="https://cdn.jsdelivr.net/npm/@sudodevnull/datastar@latest/bundles/datastar.js"></script>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header { 
+            background: #2563eb; 
+            color: white; 
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { 
+            margin: 0; 
+            font-size: 24px;
+        }
+        .last-update {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .processes-container { 
+            padding: 20px; 
+        }
+        .process-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+        .process-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .process-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .process-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1f2937;
+        }
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+        .status-running { background: #dcfce7; color: #166534; }
+        .status-stopped { background: #fee2e2; color: #dc2626; }
+        .status-starting { background: #fef3c7; color: #d97706; }
+        .process-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .btn-start { background: #22c55e; color: white; }
+        .btn-stop { background: #ef4444; color: white; }
+        .btn-restart { background: #f59e0b; color: white; }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .summary {
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .summary-item {
+            flex: 1;
+        }
+        .summary-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: #6b7280;
+            text-transform: uppercase;
+            font-weight: 500;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+        .indicator {
+            font-size: 20px;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Process Monitor</h1>
+            <div class="last-update" data-text="'Last updated: ' + $lastUpdate">
+                Last updated: --:--:--
+            </div>
+        </div>
+        
+        <div class="processes-container">
+            <div class="summary" id="summary">
+                <div class="summary-item">
+                    <div class="summary-number" data-text="$summary.total">0</div>
+                    <div class="summary-label">Total</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number" data-text="$summary.running" style="color: #22c55e;">0</div>
+                    <div class="summary-label">Running</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-number" data-text="$summary.stopped" style="color: #ef4444;">0</div>
+                    <div class="summary-label">Stopped</div>
+                </div>
+            </div>
+
+            <div id="processes" data-show="$processes.length > 0">
+                <div class="process-grid">
+                    <template data-for="process in $processes">
+                        <div class="process-card">
+                            <div class="process-header">
+                                <div class="process-name" data-text="process.name">Process Name</div>
+                                <div class="status-badge" 
+                                     data-class="'status-' + process.status.toLowerCase()" 
+                                     data-text="process.status">
+                                    Status
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; margin: 8px 0;">
+                                <span class="indicator" data-text="process.indicator">🔴</span>
+                                <span data-text="process.uptime" style="font-size: 14px; color: #6b7280;">--</span>
+                            </div>
+                            <div class="process-actions">
+                                <button class="btn btn-start" 
+                                        data-show="process.can_start"
+                                        data-on-click="$processAction(process.name, 'start')"
+                                        data-text="'▶️ Start'">Start</button>
+                                <button class="btn btn-stop" 
+                                        data-show="process.can_stop"
+                                        data-on-click="$processAction(process.name, 'stop')"
+                                        data-text="'⏹️ Stop'">Stop</button>
+                                <button class="btn btn-restart" 
+                                        data-show="process.can_stop"
+                                        data-on-click="$processAction(process.name, 'restart')"
+                                        data-text="'🔄 Restart'">Restart</button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div id="empty-state" data-show="$processes.length === 0" class="empty-state">
+                <h3>📭 No supervised processes found</h3>
+                <p>Start some processes or run <code>infra supervised</code> to see them here.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize datastar store
+        window.store = {
+            processes: [],
+            summary: { total: 0, running: 0, stopped: 0 },
+            lastUpdate: '--:--:--',
+            processAction: function(name, action) {
+                fetch('/api/processes/' + name + '/' + action, { method: 'POST' })
+                    .then(() => loadProcesses())
+                    .catch(err => console.error('Process action failed:', err));
+            }
+        };
+
+        function loadProcesses() {
+            fetch('/api/processes')
+                .then(response => response.json())
+                .then(data => {
+                    store.processes = data.processes || [];
+                    store.summary = data.summary || { total: 0, running: 0, stopped: 0 };
+                    store.lastUpdate = new Date().toLocaleTimeString();
+                })
+                .catch(err => console.error('Failed to load processes:', err));
+        }
+
+        // Load processes on page load
+        loadProcesses();
+
+        // Auto-refresh every 3 seconds
+        setInterval(loadProcesses, 3000);
+    </script>
+</body>
+</html>
