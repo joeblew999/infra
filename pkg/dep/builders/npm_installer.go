@@ -31,9 +31,7 @@ func (i *NPMInstaller) Install(name, repo, pkg, version string, debug bool) erro
 
 	// Use bun install to install the package globally to .dep
 	// For claude, this will install @anthropic-ai/claude-code
-	if version == "latest" {
-		pkg = pkg
-	} else {
+	if version != "latest" {
 		pkg = fmt.Sprintf("%s@%s", pkg, version)
 	}
 

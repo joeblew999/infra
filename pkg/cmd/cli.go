@@ -169,6 +169,9 @@ func RunCLI() {
 	AddDebugToCLI(cliCmd)
 	AddTokiToCLI(cliCmd)
 	
+	// Add deck presentation tools
+	AddDeckToCLI(cliCmd)
+	
 	// Add CLI parent command to root
 	rootCmd.AddCommand(cliCmd)
 	

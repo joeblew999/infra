@@ -1,8 +1,11 @@
 go 1.25.0
 
 use .
+
 use ./pkg/auth/example
+
 use ./pkg/caddy/example
-use ./pkg/deck/wasm
+
 use ./pkg/mjml/example/demo
+
 use ./pkg/mjml/example/test_sender

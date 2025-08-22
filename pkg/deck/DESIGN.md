@@ -14,21 +14,20 @@ Core code we will use:
 PNG REF CODE:
 /Users/apple/workspace/go/src/github.com/joeblew999/infra/pkg/deck/.source/deck/cmd/pngdeck/
 
-
 PDF ref code:
 /Users/apple/workspace/go/src/github.com/joeblew999/infra/pkg/deck/.source/deck/cmd/pdfdeck/
 
 SVG Ref Code:
 /Users/apple/workspace/go/src/github.com/joeblew999/infra/pkg/deck/.source/deck/cmd/svgdeck/
 
-- its a bummer that all the logic is in the cmd folders, because we cant import it, but most copy it and use it.
+- its a bummer that all the logic is in the cmd folders, because we cant import it, but must copy it and use it.
 
 Examples we can use:
 - https://github.com/ajstarks/dubois-data-portraits - examples
 - https://github.com/ajstarks/deckviz - examples
 
 
-nee fonts from pkg fonts packake in this repo.
+need fonts from pkg/font package in this repo.
 
 The main thing we are interessted in is the SVG output, becaue we can stream that through using Datastar to have a real time updating Web GUI.
 

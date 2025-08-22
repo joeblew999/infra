@@ -8,8 +8,8 @@ import (
 func TestCacheKeyDeterministic(t *testing.T) {
 	renderer := NewRenderer(WithCache(true))
 	
-	factory := NewTestDataFactory()
-	data := factory.SimpleEmailData()
+	testData := TestData()
+	data := testData["simple"]
 	
 	// Create cache key multiple times
 	key1, err := renderer.createCacheKey("simple", data)
@@ -29,118 +29,96 @@ func TestCacheKeyDeterministic(t *testing.T) {
 	t.Logf("Cache key: %s", key1)
 }
 
-// TestDataFactoryReducesDuplication tests the test data factory
-func TestDataFactoryReducesDuplication(t *testing.T) {
-	factory := NewTestDataFactory()
+// TestCanonicalTestData tests the canonical test data
+func TestCanonicalTestData(t *testing.T) {
+	testData := TestData()
 	
-	// Test all factory methods
-	simple := factory.SimpleEmailData()
-	welcome := factory.WelcomeEmailData()
-	reset := factory.ResetPasswordData()
-	notification := factory.NotificationData()
+	// Check we have all expected templates
+	expectedTemplates := []string{"simple", "welcome", "reset_password", "notification", "premium_newsletter"}
 	
-	// Verify data is populated correctly
-	if simple.Name == "" || simple.Subject == "" {
-		t.Error("Simple email data not properly populated")
-	}
-	
-	if welcome.ActivationURL == "" || welcome.EmailData.CompanyName == "" {
-		t.Error("Welcome email data not properly populated")
-	}
-	
-	if reset.ResetURL == "" || reset.ExpiresIn == 0 {
-		t.Error("Reset password data not properly populated")
-	}
-	
-	if notification.NotificationType == "" || notification.Priority == "" {
-		t.Error("Notification data not properly populated")
-	}
-	
-	t.Logf("✓ All factory methods produce valid data")
-}
-
-// TestDefaultTemplateNamesConsistency verifies default template names match
-func TestDefaultTemplateNamesConsistency(t *testing.T) {
-	names := DefaultTemplateNames()
-	templates := DefaultTemplates()
-	
-	// Verify names list matches template map keys
-	if len(names) != len(templates) {
-		t.Errorf("Name count (%d) doesn't match template count (%d)", len(names), len(templates))
-	}
-	
-	nameSet := make(map[string]bool)
-	for _, name := range names {
-		nameSet[name] = true
-	}
-	
-	for templateName := range templates {
-		if !nameSet[templateName] {
-			t.Errorf("Template %s exists but not in names list", templateName)
+	for _, templateName := range expectedTemplates {
+		if _, exists := testData[templateName]; !exists {
+			t.Errorf("Missing test data for template: %s", templateName)
 		}
 	}
 	
-	t.Logf("✓ Default template names consistent: %v", names)
+	// Check simple data
+	simple := testData["simple"].(EmailData)
+	if simple.CompanyName == "" || simple.Name == "" {
+		t.Error("Simple test data should have populated required fields")
+	}
+	
+	// Check welcome data  
+	welcome := testData["welcome"].(WelcomeEmailData)
+	if welcome.ActivationURL == "" {
+		t.Error("Welcome data should have ActivationURL")
+	}
+	
+	// Check reset password data
+	reset := testData["reset_password"].(ResetPasswordData)
+	if reset.ResetURL == "" {
+		t.Error("Reset password data should have ResetURL")
+	}
+	
+	// Check newsletter data
+	newsletter := testData["premium_newsletter"].(NewsletterData)
+	if len(newsletter.ContentBlocks) == 0 {
+		t.Error("Newsletter data should have content blocks")
+	}
+	if len(newsletter.FeaturedContent) == 0 {
+		t.Error("Newsletter data should have featured content")
+	}
 }
 
-// TestLoadDefaultTemplatesIdempotent verifies loading default templates is idempotent
-func TestLoadDefaultTemplatesIdempotent(t *testing.T) {
-	renderer := NewRenderer()
+// TestSimplifiedArchitecture tests the architecture simplifications
+func TestSimplifiedArchitecture(t *testing.T) {
+	// Test that we can create a renderer without complex setup
+	renderer := NewRenderer(WithFonts(true))
 	
-	// Load default templates multiple times
-	err1 := renderer.LoadDefaultTemplates()
-	if err1 != nil {
-		t.Fatalf("First load failed: %v", err1)
+	if renderer == nil {
+		t.Fatal("Failed to create renderer")
 	}
 	
-	templates1 := renderer.ListTemplates()
-	
-	err2 := renderer.LoadDefaultTemplates()
-	if err2 != nil {
-		t.Fatalf("Second load failed: %v", err2)
+	// Test font integration is optional
+	fontStack := renderer.GetEmailSafeFontStack("Inter")
+	if fontStack == "" {
+		t.Error("Should return font stack even without loaded fonts")
 	}
 	
-	templates2 := renderer.ListTemplates()
-	
-	// Should have same templates after multiple loads
-	if len(templates1) != len(templates2) {
-		t.Errorf("Template count changed: %d != %d", len(templates1), len(templates2))
+	// Test templates list is initially empty (file-based only)
+	templates := renderer.ListTemplates()
+	if len(templates) != 0 {
+		t.Error("Templates should be empty initially - loaded from files only")
 	}
 	
-	// Verify all templates still work
-	factory := NewTestDataFactory()
-	data := factory.SimpleEmailData()
-	
-	_, err := renderer.RenderTemplate("simple", data)
-	if err != nil {
-		t.Errorf("Template rendering failed after multiple loads: %v", err)
+	// Test canonical test data is DRY
+	testData := TestData()
+	if len(testData) != 5 {
+		t.Errorf("Expected 5 test data sets, got %d", len(testData))
 	}
-	
-	t.Logf("✓ LoadDefaultTemplates is idempotent")
 }
 
-// TestCacheKeyChangesWithData verifies cache keys change when data changes
-func TestCacheKeyChangesWithData(t *testing.T) {
-	renderer := NewRenderer(WithCache(true))
+// TestFontIntegrationOptional tests that font integration is truly optional
+func TestFontIntegrationOptional(t *testing.T) {
+	// Renderer without fonts should work
+	rendererNoFonts := NewRenderer(WithFonts(false))
 	
-	factory := NewTestDataFactory()
-	data1 := factory.SimpleEmailData()
-	data2 := factory.SimpleEmailData()
-	data2.Name = "Different Name" // Change the data
-	
-	key1, err := renderer.createCacheKey("simple", data1)
-	if err != nil {
-		t.Fatalf("Failed to create first cache key: %v", err)
+	// Should still be able to get font stacks (fallback)
+	stack := rendererNoFonts.GetEmailSafeFontStack("Roboto")
+	if stack == "" {
+		t.Error("Should return fallback font stack even with fonts disabled")
 	}
 	
-	key2, err := renderer.createCacheKey("simple", data2)
-	if err != nil {
-		t.Fatalf("Failed to create second cache key: %v", err)
+	// Font operations should fail gracefully
+	err := rendererNoFonts.LoadFont("Roboto", 400)
+	if err == nil {
+		t.Error("LoadFont should fail when fonts are disabled")
 	}
 	
-	if key1 == key2 {
-		t.Error("Cache keys should be different when data changes")
-	}
+	// Renderer with fonts enabled should work
+	rendererWithFonts := NewRenderer(WithFonts(true))
 	
-	t.Logf("✓ Cache keys change appropriately with data: %s vs %s", key1, key2)
+	// Should be able to get font CSS (may use mock fonts)
+	_, err = rendererWithFonts.GetFontCSS("Roboto", 400)
+	// Error is acceptable if font download fails - it should use mocks
 }

@@ -45,15 +45,9 @@ func NewServiceWithOptions(templateDir string, opts ...RendererOption) *Service 
 func (s *Service) Start() error {
 	log.Info("Starting MJML email service", "template_dir", s.templateDir)
 	
-	// Load default templates first
-	if err := s.renderer.LoadDefaultTemplates(); err != nil {
-		log.Warn("Failed to load default templates", "error", err)
-	}
-	
-	// Load templates from directory if it exists
+	// Load templates from directory
 	if err := s.renderer.LoadTemplatesFromDir(s.templateDir); err != nil {
-		log.Warn("Failed to load templates from directory", "dir", s.templateDir, "error", err)
-		// This is not a fatal error - service can work with default templates
+		return fmt.Errorf("failed to load templates from directory %s: %w", s.templateDir, err)
 	}
 	
 	templates := s.renderer.ListTemplates()
@@ -119,18 +113,10 @@ func (s *Service) LoadTemplateFromFile(name, filePath string) error {
 func (s *Service) ReloadTemplates() error {
 	log.Info("Reloading templates", "dir", s.templateDir)
 	
-	// Clear existing templates (except defaults)
+	// Clear existing templates
 	templates := s.renderer.ListTemplates()
-	defaultNames := make(map[string]bool)
-	for _, name := range DefaultTemplateNames() {
-		defaultNames[name] = true
-	}
-	
 	for _, tmpl := range templates {
-		// Keep default templates, remove others
-		if !defaultNames[tmpl] {
-			s.renderer.RemoveTemplate(tmpl)
-		}
+		s.renderer.RemoveTemplate(tmpl)
 	}
 	
 	// Reload from directory

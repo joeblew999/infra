@@ -18,22 +18,25 @@ import (
 	"sync"
 
 	"github.com/preslavrachev/gomjml/mjml"
+	"github.com/joeblew999/infra/pkg/font"
 )
 
 // Renderer handles MJML template loading, caching, and rendering
 type Renderer struct {
-	templates map[string]*template.Template
-	cache     map[string]string // Cache for rendered HTML
-	mu        sync.RWMutex
-	options   *RenderOptions
+	templates   map[string]*template.Template
+	cache       map[string]string // Cache for rendered HTML
+	mu          sync.RWMutex
+	options     *RenderOptions
+	fontManager *font.Manager
 }
 
 // RenderOptions configures the MJML renderer behavior
 type RenderOptions struct {
-	EnableCache      bool // Cache rendered HTML for performance
-	EnableDebug      bool // Add debug attributes to HTML
-	EnableValidation bool // Validate MJML before rendering
+	EnableCache      bool   // Cache rendered HTML for performance
+	EnableDebug      bool   // Add debug attributes to HTML
+	EnableValidation bool   // Validate MJML before rendering
 	TemplateDir      string // Default directory for templates
+	EnableFonts      bool   // Enable Google Fonts integration
 }
 
 // RendererOption configures the renderer
@@ -67,6 +70,13 @@ func WithTemplateDir(dir string) RendererOption {
 	}
 }
 
+// WithFonts enables Google Fonts integration for email templates
+func WithFonts(enabled bool) RendererOption {
+	return func(opts *RenderOptions) {
+		opts.EnableFonts = enabled
+	}
+}
+
 // NewRenderer creates a new MJML renderer with the specified options
 func NewRenderer(opts ...RendererOption) *Renderer {
 	options := &RenderOptions{
@@ -74,17 +84,25 @@ func NewRenderer(opts ...RendererOption) *Renderer {
 		EnableDebug:      false,
 		EnableValidation: true,
 		TemplateDir:      "templates",
+		EnableFonts:      true,
 	}
 	
 	for _, opt := range opts {
 		opt(options)
 	}
 
-	return &Renderer{
+	renderer := &Renderer{
 		templates: make(map[string]*template.Template),
 		cache:     make(map[string]string),
 		options:   options,
 	}
+
+	// Initialize font manager if fonts are enabled
+	if options.EnableFonts {
+		renderer.fontManager = font.NewManager()
+	}
+
+	return renderer
 }
 
 // LoadTemplate loads a single MJML template with the given name
@@ -286,4 +304,92 @@ func (r *Renderer) createCacheKey(name string, data interface{}) (string, error)
 	hash := fmt.Sprintf("%x", hasher.Sum(nil))
 	
 	return fmt.Sprintf("%s_%s", name, hash[:16]), nil // Use first 16 chars of hash
+}
+
+// LoadFont downloads and caches a Google Font for use in email templates
+func (r *Renderer) LoadFont(family string, weight int) error {
+	if !r.options.EnableFonts || r.fontManager == nil {
+		return fmt.Errorf("font management is disabled")
+	}
+	
+	return r.fontManager.Cache(family, weight)
+}
+
+// GetFontCSS generates CSS for embedding a cached font in email templates
+func (r *Renderer) GetFontCSS(family string, weight int) (string, error) {
+	if !r.options.EnableFonts || r.fontManager == nil {
+		return "", fmt.Errorf("font management is disabled")
+	}
+	
+	// Get font path
+	path, err := r.fontManager.Get(family, weight)
+	if err != nil {
+		return "", fmt.Errorf("failed to get font: %w", err)
+	}
+	
+	// Create font object for CSS generation
+	fontObj := font.Font{
+		Family: family,
+		Weight: weight,
+		Style:  "normal",
+		Format: "woff2",
+	}
+	
+	return font.GetFontCSS(fontObj, path), nil
+}
+
+// GetEmailSafeFontStack returns a CSS font stack with email-safe fallbacks
+func (r *Renderer) GetEmailSafeFontStack(primaryFont string) string {
+	emailSafeFonts := font.GetEmailSafeFonts()
+	
+	// Build font stack: primary font + email-safe fallbacks
+	stack := fmt.Sprintf("'%s'", primaryFont)
+	for _, safeFont := range emailSafeFonts {
+		// Add relevant fallbacks based on font type
+		switch {
+		case strings.Contains(strings.ToLower(primaryFont), "sans"):
+			if safeFont == "Arial" || safeFont == "Helvetica" || safeFont == "Verdana" {
+				stack += fmt.Sprintf(", '%s'", safeFont)
+			}
+		case strings.Contains(strings.ToLower(primaryFont), "serif"):
+			if safeFont == "Georgia" || safeFont == "Times" {
+				stack += fmt.Sprintf(", '%s'", safeFont)
+			}
+		case strings.Contains(strings.ToLower(primaryFont), "mono"):
+			if safeFont == "Courier" || safeFont == "Lucida Console" {
+				stack += fmt.Sprintf(", '%s'", safeFont)
+			}
+		}
+	}
+	
+	// Add generic fallback
+	if strings.Contains(strings.ToLower(primaryFont), "sans") {
+		stack += ", sans-serif"
+	} else if strings.Contains(strings.ToLower(primaryFont), "serif") {
+		stack += ", serif"
+	} else if strings.Contains(strings.ToLower(primaryFont), "mono") {
+		stack += ", monospace"
+	} else {
+		stack += ", sans-serif" // Default fallback
+	}
+	
+	return stack
+}
+
+// ListCachedFonts returns all currently cached fonts
+func (r *Renderer) ListCachedFonts() []font.FontInfo {
+	if !r.options.EnableFonts || r.fontManager == nil {
+		return nil
+	}
+	
+	return r.fontManager.List()
+}
+
+// IsFontCached checks if a specific font is already cached
+func (r *Renderer) IsFontCached(family string, weight int) bool {
+	if !r.options.EnableFonts || r.fontManager == nil {
+		return false
+	}
+	
+	return r.fontManager.Available(family, weight)
 }
