@@ -51,7 +51,7 @@ func (w *Watcher) Start() error {
 	// Watch loop
 	for {
 		w.scanFiles()
-		time.Sleep(2 * time.Second)
+		time.Sleep(time.Duration(WatcherPollInterval) * time.Second)
 	}
 }
 
@@ -84,7 +84,7 @@ func (w *Watcher) processFile(path string, info os.FileInfo, err error) error {
 	}
 	
 	// Check if file has been modified recently
-	if time.Since(info.ModTime()) > 10*time.Second {
+	if time.Since(info.ModTime()) > time.Duration(FileModificationTimeout)*time.Second {
 		return nil
 	}
 	

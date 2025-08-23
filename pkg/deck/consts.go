@@ -22,10 +22,8 @@ const (
 	PackageName = "deck-tools"
 
 	// Source repository URLs
-	DeckshRepo  = "https://github.com/ajstarks/deck.git"
-	SvgdeckRepo = "https://github.com/ajstarks/svgo.git"
-	DshfmtRepo  = "https://github.com/ajstarks/dshfmt.git"
-	DshlintRepo = "https://github.com/ajstarks/dshlint.git"
+	DeckshRepo  = "https://github.com/ajstarks/decksh.git"  // decksh, dshfmt, dshlint tools
+	SvgdeckRepo = "https://github.com/ajstarks/deck.git"    // svgdeck, pngdeck, pdfdeck tools
 
 	// Build directory structure
 	BuildRoot  = "pkg/deck/.build"
@@ -48,6 +46,10 @@ const (
 	DecksvgWASM    = "decksvg.wasm"
 	DeckpngWASM    = "deckpng.wasm"
 	DeckpdfWASM    = "deckpdf.wasm"
+
+	// File watcher timing constants
+	WatcherPollInterval     = 2  // seconds between filesystem scans
+	FileModificationTimeout = 10 // seconds to wait before processing modified files
 )
 
 // GetBuildTarget returns the build target for the current platform

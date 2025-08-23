@@ -226,16 +226,23 @@ func (b *Builder) BuildAll() error {
 
 	log.Info("Building all deck tools...")
 	
+	var buildErrors []error
 	for _, tool := range Tools {
 		// Build native binary
 		if _, err := b.BuildNative(tool); err != nil {
+			buildErrors = append(buildErrors, fmt.Errorf("native build failed for %s: %w", tool.Name, err))
 			log.Warn("Failed to build native binary", "tool", tool.Name, "error", err)
 		}
 
 		// Build WASM module
 		if _, err := b.BuildWASM(tool); err != nil {
+			buildErrors = append(buildErrors, fmt.Errorf("WASM build failed for %s: %w", tool.Name, err))
 			log.Warn("Failed to build WASM module", "tool", tool.Name, "error", err)
 		}
+	}
+
+	if len(buildErrors) > 0 {
+		log.Warn("Some builds failed", "errors", len(buildErrors))
 	}
 
 	log.Info("All deck tools built successfully")
