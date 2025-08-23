@@ -3,6 +3,7 @@ module github.com/joeblew999/infra
 go 1.24.5
 
 require (
+	codeberg.org/go-pdf/fpdf v0.11.1
 	github.com/ajstarks/deck v0.0.0-20250603153621-d300efa64c01
 	github.com/ajstarks/decksh v0.0.0-20250816213930-ef76d2da9cd5
 	github.com/ajstarks/svgo v0.0.0-20211024235047-1546f124cd8b
@@ -33,6 +34,7 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/disintegration/gift v1.2.1 // indirect
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect

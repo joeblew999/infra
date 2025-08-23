@@ -1,0 +1,959 @@
+{
+  "version": "1.0",
+  "description": "Complete golden test cases for deck binary pipeline testing",
+  "generated": "2025-08-23T17:15:00Z",
+  "source_base": "pkg/deck/.source/",
+  "total_tests": 90,
+  "test_cases": [
+    {
+      "name": "toc",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/toc.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/toc.pdf"
+      }
+    },
+    {
+      "name": "layoutmap",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate31/layoutmap.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/plate31/layoutmap.xml",
+        "png": "dubois-data-portraits/plate31/layoutmap.png"
+      }
+    },
+    {
+      "name": "workshop",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/workshop/workshop.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/workshop/workshop.pdf"
+      }
+    },
+    {
+      "name": "dcdv",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/dcdv/dcdv.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/dcdv/dcdv.pdf"
+      }
+    },
+    {
+      "name": "pie",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate37/pie.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/plate37/pie.xml"
+      }
+    },
+    {
+      "name": "incar",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/dubois-stem/module/incar.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/dubois-stem/module/incar.pdf"
+      }
+    },
+    {
+      "name": "columbus",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/columbus/columbus.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/columbus/columbus.pdf"
+      }
+    },
+    {
+      "name": "baldwin",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/baldwin/baldwin.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/baldwin/baldwin.xml",
+        "pdf": "dubois-data-portraits/baldwin/baldwin.pdf"
+      }
+    },
+    {
+      "name": "uspop",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate02/uspop.dsh"
+      },
+      "outputs": {
+        "svg": "dubois-data-portraits/plate02/uspop.svg",
+        "png": "dubois-data-portraits/plate02/uspop.png"
+      }
+    },
+    {
+      "name": "plate-list",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/challenge/2025/plate-list.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/challenge/2025/plate-list.xml",
+        "pdf": "dubois-data-portraits/challenge/2025/plate-list.pdf"
+      }
+    },
+    {
+      "name": "title",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/challenge/2025/blk-in-tableau/title.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/challenge/2025/blk-in-tableau/title.pdf"
+      }
+    },
+    {
+      "name": "bit",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/challenge/2025/blk-in-tableau/bit.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/challenge/2025/blk-in-tableau/bit.pdf"
+      }
+    },
+    {
+      "name": "dc2024",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/challenge/2024/presentation/dc2024.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/challenge/2024/presentation/dc2024.pdf"
+      }
+    },
+    {
+      "name": "challenge2023",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/challenge/2023/presentation/challenge2023.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/challenge/2023/presentation/challenge2023.pdf"
+      }
+    },
+    {
+      "name": "dubois",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/presentation/dubois.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/presentation/dubois.pdf"
+      }
+    },
+    {
+      "name": "galand",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate20/galand.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/plate20/galand.xml",
+        "pdf": "dubois-data-portraits/plate20/galand.pdf"
+      }
+    },
+    {
+      "name": "ga",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate20/ga.dsh"
+      },
+      "outputs": {
+        "xml": "dubois-data-portraits/plate20/ga.xml",
+        "pdf": "dubois-data-portraits/plate20/ga.pdf"
+      }
+    },
+    {
+      "name": "f",
+      "category": "dubois-data-portraits",
+      "input": {
+        "dsh": "dubois-data-portraits/plate26/f.dsh"
+      },
+      "outputs": {
+        "pdf": "dubois-data-portraits/plate26/f.pdf"
+      }
+    },
+    {
+      "name": "test",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/test.dsh"
+      },
+      "outputs": {
+        "xml": "decksh/test.xml",
+        "pdf": "decksh/test.pdf"
+      }
+    },
+    {
+      "name": "test",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/cmd/decksh/test.dsh"
+      },
+      "outputs": {
+        "xml": "decksh/cmd/decksh/test.xml",
+        "pdf": "decksh/cmd/decksh/test.pdf"
+      }
+    },
+    {
+      "name": "objref",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/objref.dsh"
+      },
+      "outputs": {
+        "xml": "decksh/doc/objref.xml",
+        "pdf": "decksh/doc/objref.pdf"
+      }
+    },
+    {
+      "name": "objindex",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/objindex.dsh"
+      },
+      "outputs": {
+        "pdf": "decksh/doc/objindex.pdf"
+      }
+    },
+    {
+      "name": "decksh-short",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/decksh-short.dsh"
+      },
+      "outputs": {
+        "pdf": "decksh/doc/decksh-short.pdf"
+      }
+    },
+    {
+      "name": "decksh",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/decksh.dsh"
+      },
+      "outputs": {
+        "pdf": "decksh/doc/decksh.pdf"
+      }
+    },
+    {
+      "name": "install-run",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/install-run.dsh"
+      },
+      "outputs": {
+        "pdf": "decksh/doc/install-run.pdf"
+      }
+    },
+    {
+      "name": "hbcard",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/images/hbcard.dsh"
+      },
+      "outputs": {
+        "png": "decksh/doc/images/hbcard.png"
+      }
+    },
+    {
+      "name": "example",
+      "category": "decksh",
+      "input": {
+        "dsh": "decksh/doc/code/example.dsh"
+      },
+      "outputs": {
+        "xml": "decksh/doc/code/example.xml"
+      }
+    },
+    {
+      "name": "aapl",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/aapl/aapl.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/aapl/aapl.pdf"
+      }
+    },
+    {
+      "name": "em",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/domestica/em.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/domestica/em.xml",
+        "pdf": "deckviz/domestica/em.pdf"
+      }
+    },
+    {
+      "name": "lamp",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/bauhaus-lamp/lamp.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/bauhaus-lamp/lamp.xml",
+        "pdf": "deckviz/bauhaus-lamp/lamp.pdf"
+      }
+    },
+    {
+      "name": "wg",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/wealth-gap/wg.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/wealth-gap/wg.png",
+        "pdf": "deckviz/wealth-gap/wg.pdf"
+      }
+    },
+    {
+      "name": "absense",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/absence/absense.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/absence/absense.pdf"
+      }
+    },
+    {
+      "name": "b17",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/b17/b17.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/b17/b17.png",
+        "pdf": "deckviz/b17/b17.pdf"
+      }
+    },
+    {
+      "name": "middle",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/middle/middle.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/middle/middle.xml",
+        "pdf": "deckviz/middle/middle.pdf"
+      }
+    },
+    {
+      "name": "weeksville",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/seneca/weeksville.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/seneca/weeksville.pdf"
+      }
+    },
+    {
+      "name": "pop",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/seneca/pop.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/seneca/pop.pdf"
+      }
+    },
+    {
+      "name": "seneca",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/seneca/seneca.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/seneca/seneca.pdf"
+      }
+    },
+    {
+      "name": "billions",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/billions/billions.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/billions/billions.pdf"
+      }
+    },
+    {
+      "name": "pv",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/dubois-stem/pv.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/dubois-stem/pv.png"
+      }
+    },
+    {
+      "name": "d",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/dubois-stem/d.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/dubois-stem/d.xml"
+      }
+    },
+    {
+      "name": "bp",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/bp/bp.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/bp/bp.pdf"
+      }
+    },
+    {
+      "name": "popi",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/popi/popi.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/popi/popi.pdf"
+      }
+    },
+    {
+      "name": "gomod",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/gomod/gomod.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/gomod/gomod.pdf"
+      }
+    },
+    {
+      "name": "warlife",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/warlife/warlife.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/warlife/warlife.png",
+        "pdf": "deckviz/warlife/warlife.pdf"
+      }
+    },
+    {
+      "name": "odita",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/odita/odita.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/odita/odita.xml",
+        "pdf": "deckviz/odita/odita.pdf"
+      }
+    },
+    {
+      "name": "astrobang",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/astrobang/astrobang.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/astrobang/astrobang.png",
+        "pdf": "deckviz/astrobang/astrobang.pdf"
+      }
+    },
+    {
+      "name": "multigen",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/multigen/multigen.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/multigen/multigen.pdf"
+      }
+    },
+    {
+      "name": "speed",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/speed/speed.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/speed/speed.pdf"
+      }
+    },
+    {
+      "name": "nba",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/nba/nba.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/nba/nba.pdf"
+      }
+    },
+    {
+      "name": "victory",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/tuskegee/victory.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/tuskegee/victory.pdf"
+      }
+    },
+    {
+      "name": "tuskegee",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/tuskegee/tuskegee.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/tuskegee/tuskegee.xml",
+        "pdf": "deckviz/tuskegee/tuskegee.pdf"
+      }
+    },
+    {
+      "name": "voyager",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/voyager/voyager.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/voyager/voyager.xml",
+        "png": "deckviz/voyager/voyager.png",
+        "pdf": "deckviz/voyager/voyager.pdf"
+      }
+    },
+    {
+      "name": "qs",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/qs/qs.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/qs/qs.pdf"
+      }
+    },
+    {
+      "name": "hsv",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/hsv/hsv.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/hsv/hsv.xml",
+        "pdf": "deckviz/hsv/hsv.pdf"
+      }
+    },
+    {
+      "name": "babynames",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/babynames/babynames.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/babynames/babynames.pdf"
+      }
+    },
+    {
+      "name": "modelt",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/modelt/modelt.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/modelt/modelt.pdf"
+      }
+    },
+    {
+      "name": "af",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/swd/af.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/swd/af.pdf"
+      }
+    },
+    {
+      "name": "sep",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/swd/sep.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/swd/sep.pdf"
+      }
+    },
+    {
+      "name": "t3",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/t3/t3.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/t3/t3.png",
+        "pdf": "deckviz/t3/t3.pdf"
+      }
+    },
+    {
+      "name": "litany",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/litany/litany.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/litany/litany.pdf"
+      }
+    },
+    {
+      "name": "netflix",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/netflix/netflix.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/netflix/netflix.pdf"
+      }
+    },
+    {
+      "name": "hlito",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/hlito/hlito.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/hlito/hlito.png",
+        "pdf": "deckviz/hlito/hlito.pdf"
+      }
+    },
+    {
+      "name": "pic",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/pic/pic.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/pic/pic.png",
+        "pdf": "deckviz/pic/pic.pdf"
+      }
+    },
+    {
+      "name": "iam",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/iam/iam.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/iam/iam.xml",
+        "pdf": "deckviz/iam/iam.pdf"
+      }
+    },
+    {
+      "name": "ibm2",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/ceo-stock/ibm2.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/ceo-stock/ibm2.pdf"
+      }
+    },
+    {
+      "name": "ceo",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/ceo-stock/ceo.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/ceo-stock/ceo.pdf"
+      }
+    },
+    {
+      "name": "fire",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/fire/fire.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/fire/fire.pdf"
+      }
+    },
+    {
+      "name": "slave-trade",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/slave/slave-trade.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/slave/slave-trade.pdf"
+      }
+    },
+    {
+      "name": "toni",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/toni/toni.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/toni/toni.pdf"
+      }
+    },
+    {
+      "name": "gauge",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/gauge/gauge.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/gauge/gauge.png"
+      }
+    },
+    {
+      "name": "prison",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/prison/prison.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/prison/prison.pdf"
+      }
+    },
+    {
+      "name": "nat",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/tailscale/nat.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/tailscale/nat.pdf"
+      }
+    },
+    {
+      "name": "cyano",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/cyano/cyano.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/cyano/cyano.xml",
+        "pdf": "deckviz/cyano/cyano.pdf"
+      }
+    },
+    {
+      "name": "weather",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/weather/weather.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/weather/weather.pdf"
+      }
+    },
+    {
+      "name": "gift-women",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/gift-women/gift-women.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/gift-women/gift-women.xml",
+        "pdf": "deckviz/gift-women/gift-women.pdf"
+      }
+    },
+    {
+      "name": "diptych",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/diptych/diptych.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/diptych/diptych.xml",
+        "pdf": "deckviz/diptych/diptych.pdf"
+      }
+    },
+    {
+      "name": "juneteenth",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/juneteenth/juneteenth.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/juneteenth/juneteenth.png",
+        "pdf": "deckviz/juneteenth/juneteenth.pdf"
+      }
+    },
+    {
+      "name": "lynch",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/lynch/lynch.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/lynch/lynch.xml",
+        "pdf": "deckviz/lynch/lynch.pdf"
+      }
+    },
+    {
+      "name": "goog",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/stockgrid/goog.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/stockgrid/goog.png"
+      }
+    },
+    {
+      "name": "aapl",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/stockgrid/aapl.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/stockgrid/aapl.png"
+      }
+    },
+    {
+      "name": "fb",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/stockgrid/fb.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/stockgrid/fb.png"
+      }
+    },
+    {
+      "name": "nflx",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/stockgrid/nflx.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/stockgrid/nflx.png"
+      }
+    },
+    {
+      "name": "amzn",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/stockgrid/amzn.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/stockgrid/amzn.png"
+      }
+    },
+    {
+      "name": "hf",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/human-freedom/hf.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/human-freedom/hf.png"
+      }
+    },
+    {
+      "name": "aid",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/aid/aid.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/aid/aid.pdf"
+      }
+    },
+    {
+      "name": "bracket",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/mlb/bracket.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/mlb/bracket.pdf"
+      }
+    },
+    {
+      "name": "elections",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/elections/elections.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/elections/elections.pdf"
+      }
+    },
+    {
+      "name": "lift",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/lift/lift.dsh"
+      },
+      "outputs": {
+        "png": "deckviz/lift/lift.png",
+        "pdf": "deckviz/lift/lift.pdf"
+      }
+    },
+    {
+      "name": "giftsh",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/giftsh/giftsh.dsh"
+      },
+      "outputs": {
+        "pdf": "deckviz/giftsh/giftsh.pdf"
+      }
+    },
+    {
+      "name": "messiah",
+      "category": "deckviz",
+      "input": {
+        "dsh": "deckviz/messiah/messiah.dsh"
+      },
+      "outputs": {
+        "xml": "deckviz/messiah/messiah.xml",
+        "pdf": "deckviz/messiah/messiah.pdf"
+      }
+    }
+  ],
+  "statistics": {
+    "categories": {
+      "dubois-data-portraits": 18,
+      "decksh": 9,
+      "deckviz": 63
+    },
+    "formats": {
+      "xml": 24,
+      "svg": 1,
+      "png": 21,
+      "pdf": 76
+    }
+  },
+  "usage": {
+    "description": "Use this JSON file to automate golden tests for the deck binary pipeline",
+    "test_command": "go run . deck build install && run golden tests",
+    "pipeline": ".dsh \u2192 decksh \u2192 .xml \u2192 [svgdeck|pngdeck|pdfdeck] \u2192 output"
+  }
+}

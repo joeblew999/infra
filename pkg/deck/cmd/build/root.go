@@ -10,3 +10,9 @@ var BuildCmd = &cobra.Command{
 	Short: "Build management commands",
 	Long:  "Commands for managing deck tool builds and releases",
 }
+
+func init() {
+	BuildCmd.AddCommand(installCmd)
+	BuildCmd.AddCommand(statusCmd)
+	BuildCmd.AddCommand(testCmd)
+}

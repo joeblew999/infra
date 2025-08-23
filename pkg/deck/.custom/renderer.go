@@ -120,6 +120,18 @@ func (r *Renderer) DeckshToSVG(dshInput string, opts RenderOptions) (string, err
 	return svgContent, nil
 }
 
+// DeckshToPNG converts decksh DSL directly to PNG (convenience method)
+func (r *Renderer) DeckshToPNG(dshInput string, opts RenderOptions) ([]byte, error) {
+	pngRenderer := NewPNGRenderer(r.Width, r.Height)
+	return pngRenderer.DeckshToPNG(dshInput, opts)
+}
+
+// DeckshToPDF converts decksh DSL directly to PDF (convenience method)
+func (r *Renderer) DeckshToPDF(dshInput string, opts RenderOptions) ([]byte, error) {
+	pdfRenderer := NewPDFRenderer(r.Width, r.Height)
+	return pdfRenderer.DeckshToPDF(dshInput, opts)
+}
+
 // LoadFont loads a font for use in presentations
 func (r *Renderer) LoadFont(family string, weight int) error {
 	if r.fontManager == nil {
