@@ -15,4 +15,9 @@ func init() {
 	BuildCmd.AddCommand(installCmd)
 	BuildCmd.AddCommand(statusCmd)
 	BuildCmd.AddCommand(testCmd)
+	BuildCmd.AddCommand(updateSourceCmd)
+	
+	// Set up flags for update-source command
+	updateSourceCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
+	updateSourceCmd.Flags().BoolP("dry-run", "n", false, "Show what would be done without making changes")
 }

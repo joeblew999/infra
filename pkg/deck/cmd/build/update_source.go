@@ -1,4 +1,4 @@
-package cmd
+package build
 
 import (
 	"fmt"
@@ -11,8 +11,8 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// UpdateSourceCmd represents the update-source command
-var UpdateSourceCmd = &cobra.Command{
+// updateSourceCmd represents the update-source command  
+var updateSourceCmd = &cobra.Command{
 		Use:   "update-source",
 		Short: "Update the .source directory with latest upstream deck repositories",
 		Long: `Updates the .source directory by cloning or pulling the latest versions

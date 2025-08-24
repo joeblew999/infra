@@ -23,13 +23,10 @@ func init() {
 	deckCmd.AddCommand(build.BuildCmd)
 	deckCmd.AddCommand(WatchCmd)
 	deckCmd.AddCommand(UpdateCmd)
-	deckCmd.AddCommand(UpdateSourceCmd)
 	deckCmd.AddCommand(HealthCmd)
 	
-	// Set up flags for update commands
+	// Set up flags for update command (simplified)
 	UpdateCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
-	UpdateSourceCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
-	UpdateSourceCmd.Flags().BoolP("dry-run", "n", false, "Show what would be done without making changes")
 	
 	// Set up flags for health command
 	HealthCmd.Flags().BoolP("verbose", "v", false, "Verbose output during health checks")

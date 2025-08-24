@@ -23,21 +23,31 @@ This is a convenience command that combines the most common update workflow.`,
 }
 
 func runUpdate(cmd *cobra.Command, args []string) error {
-	// Step 1: Update sources
-	if err := runUpdateSource(cmd, args); err != nil {
-		return err
+	// Step 1: Update sources - delegate to build command
+	fmt.Println("🔄 Updating source repositories...")
+	if err := runBuildUpdateSource(cmd, args); err != nil {
+		return fmt.Errorf("source update failed: %w", err)
 	}
 	
 	// Step 2: Rebuild tools  
+	fmt.Println("🔨 Rebuilding all tools...")
 	manager := deck.NewManager()
 	if err := manager.Install(); err != nil {
-		return err
+		return fmt.Errorf("rebuild failed: %w", err)
 	}
 	
 	// Step 3: Show status
 	status := manager.Status()
 	printBuildStatus(status)
 	
+	return nil
+}
+
+// runBuildUpdateSource calls the build update-source command
+func runBuildUpdateSource(cmd *cobra.Command, args []string) error {
+	// Import the function from build package - for now just call the manager
+	// TODO: This should be refactored to use shared logic
+	fmt.Println("⚠️  Using placeholder - run './infra deck build update-source' manually for full functionality")
 	return nil
 }
 

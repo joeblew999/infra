@@ -66,7 +66,7 @@ func (h *HealthChecker) RunFullHealthCheck() *HealthReport {
 
 	// Create temp directory for testing
 	var err error
-	h.tempDir, err = os.MkdirTemp("", "deck-health-*")
+	h.tempDir, err = os.MkdirTemp("", TempDirPrefix+"*")
 	if err != nil {
 		report.Issues = append(report.Issues, HealthIssue{
 			Type:      "system",
@@ -129,24 +129,24 @@ func (h *HealthChecker) ValidateTool(toolName string) error {
 
 // getToolPath returns the path to a deck tool binary
 func (h *HealthChecker) getToolPath(toolName string) string {
-	// Map tool names to actual binaries - use the newer "deck*" names
+	// Map tool names to actual binaries using constants
 	binaryName := toolName
 	switch toolName {
 	case "decksh":
-		binaryName = "decksh"
+		binaryName = DeckshBinary
 	case "deckfmt", "dshfmt":
-		binaryName = "deckfmt" 
+		binaryName = DeckfmtBinary 
 	case "decklint", "dshlint":
-		binaryName = "decklint"
+		binaryName = DecklintBinary
 	case "decksvg", "svgdeck":
-		binaryName = "decksvg"
+		binaryName = DecksvgBinary
 	case "deckpng", "pngdeck":
-		binaryName = "deckpng"
+		binaryName = DeckpngBinary
 	case "deckpdf", "pdfdeck":
-		binaryName = "deckpdf"
+		binaryName = DeckpdfBinary
 	}
 	
-	// Return absolute path
+	// Return absolute path using constants
 	path := filepath.Join(BuildRoot, "bin", binaryName)
 	absPath, _ := filepath.Abs(path)
 	return absPath
@@ -162,8 +162,8 @@ func (h *HealthChecker) checkSystemDependencies() []HealthIssue {
 		required   bool
 		suggestion string
 	}{
-		{"git", "Git", true, "Install Git to enable source updates"},
-		{"go", "Go compiler", true, "Install Go 1.21+ to build tools from source"},
+		{GitCommand, "Git", true, "Install Git to enable source updates"},
+		{GoCommand, "Go compiler", true, "Install Go 1.21+ to build tools from source"},
 	}
 
 	for _, dep := range dependencies {
@@ -280,7 +280,7 @@ func (h *HealthChecker) checkAssets() []HealthIssue {
 	var issues []HealthIssue
 
 	// Check font directory
-	fontDir := filepath.Join(config.GetDataPath(), "deck", "fonts")
+	fontDir := filepath.Join(config.GetDataPath(), FontsDirPath)
 	if _, err := os.Stat(fontDir); os.IsNotExist(err) {
 		issues = append(issues, HealthIssue{
 			Type:       "assets",
@@ -294,7 +294,7 @@ func (h *HealthChecker) checkAssets() []HealthIssue {
 	}
 
 	// Check output directories are writable
-	outputDir := filepath.Join(config.GetDataPath(), "deck", "cache")
+	outputDir := filepath.Join(config.GetDataPath(), CacheDirPath)
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		issues = append(issues, HealthIssue{
 			Type:       "assets",
@@ -368,7 +368,7 @@ func (h *HealthChecker) testDSHToXML(dshFile, xmlFile string) error {
 	}
 
 	cmd := exec.Command(toolPath, dshFile)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), "deck", "fonts"))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), FontsDirPath))
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -388,7 +388,7 @@ func (h *HealthChecker) testXMLToSVG(xmlFile, svgFile string) error {
 	}
 
 	cmd := exec.Command(toolPath, xmlFile)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), "deck", "fonts"))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), FontsDirPath))
 	cmd.Dir = filepath.Dir(svgFile)
 
 	output, err := cmd.CombinedOutput()

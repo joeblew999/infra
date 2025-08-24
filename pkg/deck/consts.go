@@ -50,6 +50,16 @@ const (
 	// File watcher timing constants
 	WatcherPollInterval     = 2  // seconds between filesystem scans
 	FileModificationTimeout = 10 // seconds to wait before processing modified files
+
+	// Health check constants
+	HealthCheckTimeout     = 30 // seconds timeout for health operations
+	TempDirPrefix         = "deck-health-"
+	FontsDirPath          = "deck/fonts"
+	CacheDirPath          = "deck/cache"
+	
+	// System dependencies
+	GitCommand = "git"
+	GoCommand  = "go"
 )
 
 // GetBuildTarget returns the build target for the current platform
