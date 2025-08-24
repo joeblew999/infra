@@ -21,4 +21,12 @@ func GetDeckCmd() *cobra.Command {
 
 func init() {
 	deckCmd.AddCommand(build.BuildCmd)
+	deckCmd.AddCommand(WatchCmd)
+	deckCmd.AddCommand(UpdateCmd)
+	deckCmd.AddCommand(UpdateSourceCmd)
+	
+	// Set up flags for update commands
+	UpdateCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
+	UpdateSourceCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
+	UpdateSourceCmd.Flags().BoolP("dry-run", "n", false, "Show what would be done without making changes")
 }

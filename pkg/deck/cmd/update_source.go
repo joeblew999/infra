@@ -11,7 +11,8 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-var updateSourceCmd = &cobra.Command{
+// UpdateSourceCmd represents the update-source command
+var UpdateSourceCmd = &cobra.Command{
 		Use:   "update-source",
 		Short: "Update the .source directory with latest upstream deck repositories",
 		Long: `Updates the .source directory by cloning or pulling the latest versions
@@ -26,11 +27,8 @@ This ensures our binary pipeline can be rebuilt with the latest upstream changes
 	RunE: runUpdateSource,
 }
 
-func init() {
-	deckCmd.AddCommand(updateSourceCmd)
-	updateSourceCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
-	updateSourceCmd.Flags().BoolP("dry-run", "n", false, "Show what would be done without making changes")
-}
+// Removed init() - command is registered in root.go  
+// Flags are set up in root.go init()
 
 func runUpdateSource(cmd *cobra.Command, args []string) error {
 	force, _ := cmd.Flags().GetBool("force")

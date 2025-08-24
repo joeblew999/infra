@@ -9,7 +9,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var watchCmd = &cobra.Command{
+// WatchCmd represents the watch command
+var WatchCmd = &cobra.Command{
 	Use:   "watch [path...]",
 	Short: "Watch .dsh files and auto-process to XML/SVG",
 	Long: `Watch directories for .dsh file changes and automatically
@@ -51,6 +52,4 @@ Examples:
 	},
 }
 
-func init() {
-	deckCmd.AddCommand(watchCmd)
-}
+// Removed init() - command is registered in root.go
