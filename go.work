@@ -9,3 +9,5 @@ use ./pkg/caddy/example
 use ./pkg/mjml/example/demo
 
 use ./pkg/mjml/example/test_sender
+
+use ./pkg/ai/go-zero/mcpserver

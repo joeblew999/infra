@@ -1,0 +1,313 @@
+{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "schemes": [
+    "https"
+  ],
+  "swagger": "2.0",
+  "info": {
+    "title": "Deck API",
+    "version": "v1.0"
+  },
+  "basePath": "/",
+  "paths": {
+    "/api/v1/deck/download/{id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "summary": "DownloadDeckHandler",
+        "operationId": "downloadDeckHandler",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "content": {
+                  "description": "file content (base64 for binary)",
+                  "type": "string"
+                },
+                "content_type": {
+                  "description": "mime type",
+                  "type": "string"
+                },
+                "filename": {
+                  "description": "suggested filename",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deck/generate": {
+      "post": {
+        "consumes": [
+          "application/json"
+        ],
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "summary": "GenerateDeckHandler",
+        "operationId": "generateDeckHandler",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "required": [
+                "description"
+              ],
+              "properties": {
+                "description": {
+                  "description": "\"pack of playing cards\"",
+                  "type": "string"
+                },
+                "format": {
+                  "description": "svg, png, pdf, xml, dsh",
+                  "type": "string",
+                  "default": "svg",
+                  "example": "svg"
+                },
+                "height": {
+                  "description": "deck height",
+                  "type": "integer",
+                  "default": 6,
+                  "example": 6
+                },
+                "style": {
+                  "description": "clean, minimal, detailed",
+                  "type": "string",
+                  "default": "clean",
+                  "example": "clean"
+                },
+                "width": {
+                  "description": "deck width",
+                  "type": "integer",
+                  "default": 10,
+                  "example": 10
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "created_at": {
+                  "description": "timestamp",
+                  "type": "string"
+                },
+                "dsh_content": {
+                  "description": "generated .dsh source",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "deck-123",
+                  "type": "string"
+                },
+                "message": {
+                  "description": "status message",
+                  "type": "string"
+                },
+                "output_url": {
+                  "description": "download URL for final output",
+                  "type": "string"
+                },
+                "status": {
+                  "description": "processing, completed, failed",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deck/health": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "summary": "HealthHandler",
+        "operationId": "healthHandler",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "status": {
+                  "type": "string"
+                },
+                "tools": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "name",
+                      "available"
+                    ],
+                    "properties": {
+                      "available": {
+                        "type": "boolean"
+                      },
+                      "name": {
+                        "description": "decksh, svgdeck, etc.",
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "version": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deck/list": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "summary": "ListDecksHandler",
+        "operationId": "listDecksHandler",
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "decks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "id",
+                      "description",
+                      "status",
+                      "format",
+                      "created_at"
+                    ],
+                    "properties": {
+                      "created_at": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "format": {
+                        "type": "string"
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "total": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deck/status/{id}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "https"
+        ],
+        "summary": "GetDeckStatusHandler",
+        "operationId": "getDeckStatusHandler",
+        "parameters": [
+          {
+            "type": "string",
+            "name": "id",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "created_at": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "progress": {
+                  "description": "0-100",
+                  "type": "integer"
+                },
+                "status": {
+                  "description": "processing, completed, failed",
+                  "type": "string"
+                },
+                "updated_at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-date": "2025-08-29 16:23:35",
+  "x-description": "This is a goctl generated swagger file.",
+  "x-github": "https://github.com/zeromicro/go-zero",
+  "x-go-zero-doc": "https://go-zero.dev/",
+  "x-goctl-version": "1.8.5"
+}

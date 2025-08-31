@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-08-21 13:28:38.255517 +0800 +08 m=+0.001346835
+// Generated at 2025-08-29 17:26:29.027107 +0700 +07 m=+0.001474209
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -27,6 +27,7 @@ const (
 	BinaryCrush = "crush" // SSH client with advanced features and modern interface
 	BinaryGh = "gh" // GitHub CLI for managing repositories, releases, and GitHub operations
 	BinaryTinygo = "tinygo" // Go compiler for microcontrollers and WebAssembly
+	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
 )
 
 // AllBinaryNames returns all available binary names from dep.json
@@ -51,6 +52,7 @@ func AllBinaryNames() []string {
 		BinaryCrush,
 		BinaryGh,
 		BinaryTinygo,
+		BinaryGoctl,
 	}
 }
 

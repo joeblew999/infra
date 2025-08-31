@@ -2,7 +2,7 @@
 
 A complete pipeline for transforming declarative `.dsh` markup into SVG graphics.
 
-Deck Org does not make binary or wasm releaes, so we do it oursouce in cmd/build
+Deck Org does not make binary or wasm releaes, so we do it oursleves in cmd/build
 
 pkg/dep then downloads them off our github releases.
 

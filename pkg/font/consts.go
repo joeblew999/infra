@@ -4,8 +4,8 @@ const (
 	// GoogleFontsAPI is the base URL for Google Fonts CSS API
 	GoogleFontsAPI = "https://fonts.googleapis.com/css2"
 	
-	// DefaultFontFormat is the preferred font format for web compatibility
-	DefaultFontFormat = "woff2"
+	// DefaultFontFormat is the preferred font format for deck tools compatibility  
+	DefaultFontFormat = "ttf"
 	
 	// RegistryFilename is the name of the font registry file
 	RegistryFilename = "registry.json"

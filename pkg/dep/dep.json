@@ -607,5 +607,13 @@
         "arch": "amd64"
       }
     ]
+  },
+  {
+    "name": "goctl",
+    "description": "Code generation tool for go-zero microservices framework",
+    "source": "go-build",
+    "repo": "zeromicro/go-zero",
+    "package": "tools/goctl", 
+    "version": "v1.9.0"
   }
 ]

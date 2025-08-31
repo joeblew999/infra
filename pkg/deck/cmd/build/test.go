@@ -1,8 +1,6 @@
 package build
 
 import (
-	"path/filepath"
-
 	"github.com/joeblew999/infra/pkg/deck"
 	"github.com/spf13/cobra"
 )
@@ -22,10 +20,9 @@ var testAllCmd = &cobra.Command{
 	Use:   "all",
 	Short: "Run all golden tests",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sourceDir := filepath.Join("pkg", "deck", ".source")
-		buildDir := filepath.Join("pkg", "deck", ".build")
+		buildDir := deck.BuildRoot
 
-		runner, err := deck.NewGoldenTestRunner(sourceDir, buildDir)
+		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {
 			return err
 		}
@@ -40,10 +37,9 @@ var testCategoryCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		category := args[0]
-		sourceDir := filepath.Join("pkg", "deck", ".source")
-		buildDir := filepath.Join("pkg", "deck", ".build")
+		buildDir := deck.BuildRoot
 
-		runner, err := deck.NewGoldenTestRunner(sourceDir, buildDir)
+		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {
 			return err
 		}
@@ -56,10 +52,9 @@ var testCleanupCmd = &cobra.Command{
 	Use:   "cleanup",
 	Short: "Clean up golden test output files",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		sourceDir := filepath.Join("pkg", "deck", ".source")
-		buildDir := filepath.Join("pkg", "deck", ".build")
+		buildDir := deck.BuildRoot
 
-		runner, err := deck.NewGoldenTestRunner(sourceDir, buildDir)
+		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {
 			return err
 		}

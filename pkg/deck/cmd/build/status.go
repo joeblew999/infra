@@ -67,5 +67,5 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	BuildCmd.AddCommand(statusCmd)
-	statusCmd.Flags().BoolP("health", "h", false, "Include health checks in status report")
+	statusCmd.Flags().Bool("health", false, "Include health checks in status report")
 }

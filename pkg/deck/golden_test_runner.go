@@ -34,33 +34,41 @@ type GoldenTestRunner struct {
 	sourceDir   string
 	buildDir    string
 	outputDir   string
+	expectedDir string
 	goldenTests []GoldenTest
 }
 
-// NewGoldenTestRunner creates a new golden test runner
-func NewGoldenTestRunner(sourceDir, buildDir string) (*GoldenTestRunner, error) {
-	// Convert to absolute paths
-	absSourceDir, err := filepath.Abs(sourceDir)
+// NewGoldenTestRunner creates a new golden test runner using pkg/deck/testdata
+func NewGoldenTestRunner(buildDir string) (*GoldenTestRunner, error) {
+	// Use pkg/deck/testdata structure
+	deckPkgDir, err := filepath.Abs(PkgDir)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve source dir: %w", err)
+		return nil, fmt.Errorf("failed to resolve deck package dir: %w", err)
 	}
+	
+	sourceDir := filepath.Join(deckPkgDir, "testdata", "input")
+	outputDir := filepath.Join(deckPkgDir, "testdata", "output")
+	expectedDir := filepath.Join(deckPkgDir, "testdata", "expected")
 	
 	absBuildDir, err := filepath.Abs(buildDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve build dir: %w", err)
 	}
 
-	// Create output directory path
-	outputDir := filepath.Join(filepath.Dir(absSourceDir), ".golden-test-output")
+	// Ensure output directory exists
+	if err := os.MkdirAll(outputDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create output directory: %w", err)
+	}
 	
 	runner := &GoldenTestRunner{
-		sourceDir: absSourceDir,
+		sourceDir: sourceDir,
 		buildDir:  absBuildDir,
 		outputDir: outputDir,
+		expectedDir: expectedDir,
 	}
 
-	// Load golden tests from JSON
-	testsFile := filepath.Join(absSourceDir, "..", "golden_tests.json")
+	// Load golden tests from JSON in pkg/deck
+	testsFile := filepath.Join(deckPkgDir, "golden_tests.json")
 	data, err := os.ReadFile(testsFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read golden tests: %w", err)
@@ -82,6 +90,8 @@ type TestResult struct {
 	Passed     bool
 	XMLPassed  bool
 	SVGPassed  bool
+	PNGPassed  bool
+	PDFPassed  bool
 	Errors     []string
 }
 
@@ -127,16 +137,27 @@ func (r *GoldenTestRunner) RunTest(test GoldenTest) (*TestResult, error) {
 		if err := r.compareSVGGeneration(test, outputTestDir, baseName, result); err != nil {
 			return result, err
 		}
+		
+		// Step 3: XML → PNG comparison
+		if err := r.comparePNGGeneration(test, outputTestDir, baseName, result); err != nil {
+			return result, err
+		}
+		
+		// Step 4: XML → PDF comparison
+		if err := r.comparePDFGeneration(test, outputTestDir, baseName, result); err != nil {
+			return result, err
+		}
 	}
 
 	// Overall result
-	result.Passed = result.XMLPassed && result.SVGPassed
+	result.Passed = result.XMLPassed && result.SVGPassed && result.PNGPassed && result.PDFPassed
 
 	if result.Passed {
-		fmt.Printf("  ✓ Test passed (XML: ✓, SVG: ✓)\n")
+		fmt.Printf("  ✓ Test passed (XML: ✓, SVG: ✓, PNG: ✓, PDF: ✓)\n")
 	} else {
-		fmt.Printf("  ✗ Test failed (XML: %s, SVG: %s)\n", 
-			boolToStatus(result.XMLPassed), boolToStatus(result.SVGPassed))
+		fmt.Printf("  ✗ Test failed (XML: %s, SVG: %s, PNG: %s, PDF: %s)\n", 
+			boolToStatus(result.XMLPassed), boolToStatus(result.SVGPassed),
+			boolToStatus(result.PNGPassed), boolToStatus(result.PDFPassed))
 		for _, err := range result.Errors {
 			fmt.Printf("    - %s\n", err)
 		}
@@ -156,7 +177,7 @@ func boolToStatus(b bool) string {
 // compareXMLGeneration runs DSH → XML pipeline stage and compares result
 func (r *GoldenTestRunner) compareXMLGeneration(test GoldenTest, dshPath, outputTestDir, baseName string, result *TestResult) error {
 	// Check if golden XML exists
-	goldenXMLPath := filepath.Join(r.sourceDir, filepath.Dir(test.Input.Dsh), baseName+".xml")
+	goldenXMLPath := filepath.Join(r.expectedDir, baseName+".xml")
 	if _, err := os.Stat(goldenXMLPath); os.IsNotExist(err) {
 		result.XMLPassed = false
 		result.Errors = append(result.Errors, fmt.Sprintf("Golden XML not found: %s", goldenXMLPath))
@@ -165,7 +186,7 @@ func (r *GoldenTestRunner) compareXMLGeneration(test GoldenTest, dshPath, output
 
 	// Generate XML from DSH
 	outputXMLPath := filepath.Join(outputTestDir, baseName+".xml")
-	deckshPath := filepath.Join(r.buildDir, "bin", "decksh")
+	deckshPath := filepath.Join(r.buildDir, "bin", DeckshBinary)
 	
 	cmd := exec.Command(deckshPath, "-o", outputXMLPath, dshPath)
 	if err := cmd.Run(); err != nil {
@@ -192,7 +213,7 @@ func (r *GoldenTestRunner) compareXMLGeneration(test GoldenTest, dshPath, output
 // compareSVGGeneration runs XML → SVG pipeline stage and compares result
 func (r *GoldenTestRunner) compareSVGGeneration(test GoldenTest, outputTestDir, baseName string, result *TestResult) error {
 	// Check if golden SVG exists
-	goldenSVGPath := filepath.Join(r.sourceDir, filepath.Dir(test.Input.Dsh), baseName+"-00001.svg")
+	goldenSVGPath := filepath.Join(r.expectedDir, baseName+".svg")
 	if _, err := os.Stat(goldenSVGPath); os.IsNotExist(err) {
 		result.SVGPassed = false
 		result.Errors = append(result.Errors, fmt.Sprintf("Golden SVG not found: %s", goldenSVGPath))
@@ -201,7 +222,7 @@ func (r *GoldenTestRunner) compareSVGGeneration(test GoldenTest, outputTestDir, 
 
 	// Generate SVG from XML
 	xmlPath := filepath.Join(outputTestDir, baseName+".xml")
-	decksvgPath := filepath.Join(r.buildDir, "bin", "decksvg")
+	decksvgPath := filepath.Join(r.buildDir, "bin", DecksvgBinary)
 	
 	cmd := exec.Command(decksvgPath, xmlPath)
 	cmd.Dir = outputTestDir
@@ -212,7 +233,7 @@ func (r *GoldenTestRunner) compareSVGGeneration(test GoldenTest, outputTestDir, 
 	}
 
 	// Compare generated SVG with golden SVG
-	outputSVGPath := filepath.Join(outputTestDir, baseName+"-00001.svg")
+	outputSVGPath := filepath.Join(outputTestDir, baseName+".svg")
 	if equal, err := r.compareFiles(outputSVGPath, goldenSVGPath); err != nil {
 		result.SVGPassed = false
 		result.Errors = append(result.Errors, fmt.Sprintf("Failed to compare SVG files: %v", err))
@@ -224,6 +245,82 @@ func (r *GoldenTestRunner) compareSVGGeneration(test GoldenTest, outputTestDir, 
 	}
 
 	result.SVGPassed = true
+	return nil
+}
+
+// comparePNGGeneration runs XML → PNG pipeline stage and compares result
+func (r *GoldenTestRunner) comparePNGGeneration(test GoldenTest, outputTestDir, baseName string, result *TestResult) error {
+	// Check if golden PNG exists
+	goldenPNGPath := filepath.Join(r.expectedDir, baseName+".png")
+	if _, err := os.Stat(goldenPNGPath); os.IsNotExist(err) {
+		result.PNGPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Golden PNG not found: %s", goldenPNGPath))
+		return nil
+	}
+
+	// Generate PNG from XML
+	xmlPath := filepath.Join(outputTestDir, baseName+".xml")
+	deckpngPath := filepath.Join(r.buildDir, "bin", DeckpngBinary)
+	
+	cmd := exec.Command(deckpngPath, xmlPath)
+	cmd.Dir = outputTestDir
+	if err := cmd.Run(); err != nil {
+		result.PNGPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to generate PNG: %v", err))
+		return nil
+	}
+
+	// Compare generated PNG with golden PNG
+	outputPNGPath := filepath.Join(outputTestDir, baseName+".png")
+	if equal, err := r.compareFiles(outputPNGPath, goldenPNGPath); err != nil {
+		result.PNGPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to compare PNG files: %v", err))
+		return nil
+	} else if !equal {
+		result.PNGPassed = false
+		result.Errors = append(result.Errors, "Generated PNG differs from golden PNG")
+		return nil
+	}
+
+	result.PNGPassed = true
+	return nil
+}
+
+// comparePDFGeneration runs XML → PDF pipeline stage and compares result
+func (r *GoldenTestRunner) comparePDFGeneration(test GoldenTest, outputTestDir, baseName string, result *TestResult) error {
+	// Check if golden PDF exists
+	goldenPDFPath := filepath.Join(r.expectedDir, baseName+".pdf")
+	if _, err := os.Stat(goldenPDFPath); os.IsNotExist(err) {
+		result.PDFPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Golden PDF not found: %s", goldenPDFPath))
+		return nil
+	}
+
+	// Generate PDF from XML
+	xmlPath := filepath.Join(outputTestDir, baseName+".xml")
+	deckpdfPath := filepath.Join(r.buildDir, "bin", DeckpdfBinary)
+	
+	cmd := exec.Command(deckpdfPath, xmlPath)
+	cmd.Dir = outputTestDir
+	if err := cmd.Run(); err != nil {
+		result.PDFPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to generate PDF: %v", err))
+		return nil
+	}
+
+	// Compare generated PDF with golden PDF
+	outputPDFPath := filepath.Join(outputTestDir, baseName+".pdf")
+	if equal, err := r.compareFiles(outputPDFPath, goldenPDFPath); err != nil {
+		result.PDFPassed = false
+		result.Errors = append(result.Errors, fmt.Sprintf("Failed to compare PDF files: %v", err))
+		return nil
+	} else if !equal {
+		result.PDFPassed = false
+		result.Errors = append(result.Errors, "Generated PDF differs from golden PDF")
+		return nil
+	}
+
+	result.PDFPassed = true
 	return nil
 }
 
@@ -250,6 +347,8 @@ func (r *GoldenTestRunner) RunAllTests() error {
 	failed := 0
 	xmlPassed := 0
 	svgPassed := 0
+	pngPassed := 0
+	pdfPassed := 0
 
 	for _, test := range r.goldenTests {
 		result, err := r.RunTest(test)
@@ -271,12 +370,20 @@ func (r *GoldenTestRunner) RunAllTests() error {
 		if result.SVGPassed {
 			svgPassed++
 		}
+		if result.PNGPassed {
+			pngPassed++
+		}
+		if result.PDFPassed {
+			pdfPassed++
+		}
 	}
 
 	fmt.Printf("\nResults Summary:\n")
 	fmt.Printf("Overall: %d passed, %d failed\n", passed, failed)
 	fmt.Printf("XML Pipeline: %d passed, %d failed\n", xmlPassed, len(r.goldenTests)-xmlPassed)
 	fmt.Printf("SVG Pipeline: %d passed, %d failed\n", svgPassed, len(r.goldenTests)-svgPassed)
+	fmt.Printf("PNG Pipeline: %d passed, %d failed\n", pngPassed, len(r.goldenTests)-pngPassed)
+	fmt.Printf("PDF Pipeline: %d passed, %d failed\n", pdfPassed, len(r.goldenTests)-pdfPassed)
 	
 	if failed > 0 {
 		return fmt.Errorf("%d tests failed", failed)
@@ -304,6 +411,8 @@ func (r *GoldenTestRunner) RunTestsInCategory(category string) error {
 	failed := 0
 	xmlPassed := 0
 	svgPassed := 0
+	pngPassed := 0
+	pdfPassed := 0
 
 	for _, test := range categoryTests {
 		result, err := r.RunTest(test)
@@ -325,12 +434,20 @@ func (r *GoldenTestRunner) RunTestsInCategory(category string) error {
 		if result.SVGPassed {
 			svgPassed++
 		}
+		if result.PNGPassed {
+			pngPassed++
+		}
+		if result.PDFPassed {
+			pdfPassed++
+		}
 	}
 
 	fmt.Printf("\nResults for '%s':\n", category)
 	fmt.Printf("Overall: %d passed, %d failed\n", passed, failed)
 	fmt.Printf("XML Pipeline: %d passed, %d failed\n", xmlPassed, len(categoryTests)-xmlPassed)
 	fmt.Printf("SVG Pipeline: %d passed, %d failed\n", svgPassed, len(categoryTests)-svgPassed)
+	fmt.Printf("PNG Pipeline: %d passed, %d failed\n", pngPassed, len(categoryTests)-pngPassed)
+	fmt.Printf("PDF Pipeline: %d passed, %d failed\n", pdfPassed, len(categoryTests)-pdfPassed)
 	
 	if failed > 0 {
 		return fmt.Errorf("%d tests failed in category %s", failed, category)

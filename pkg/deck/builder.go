@@ -21,37 +21,37 @@ type Tool struct {
 // Tools to build from source
 var Tools = []Tool{
 	{
-		Name:    "decksh",
+		Name:    DeckshBinary,
 		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/decksh",
 		Binary:  DeckshBinary,
 	},
 	{
-		Name:    "deckfmt",
+		Name:    DeckfmtBinary,
 		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/dshfmt",
 		Binary:  DeckfmtBinary,
 	},
 	{
-		Name:    "decklint",
+		Name:    DecklintBinary,
 		Repo:    DeckshRepo,
 		Package: "github.com/ajstarks/decksh/cmd/dshlint",
 		Binary:  DecklintBinary,
 	},
 	{
-		Name:    "decksvg",
+		Name:    DecksvgBinary,
 		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/svgdeck",
 		Binary:  DecksvgBinary,
 	},
 	{
-		Name:    "deckpng",
+		Name:    DeckpngBinary,
 		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/pngdeck",
 		Binary:  DeckpngBinary,
 	},
 	{
-		Name:    "deckpdf",
+		Name:    DeckpdfBinary,
 		Repo:    SvgdeckRepo,
 		Package: "github.com/ajstarks/deck/cmd/pdfdeck",
 		Binary:  DeckpdfBinary,

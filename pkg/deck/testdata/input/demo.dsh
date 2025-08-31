@@ -1,0 +1,15 @@
+deck
+	text "Multi-Format Pipeline Demo!" 50 25 3
+	text "SVG • PNG • PDF Support" 50 35 2 "serif" "gray"
+	
+	circle 25 60 8 "blue" 0.8
+	text "Circle" 25 75 1.5 "sans" "blue"
+	
+	rect 50 55 15 10 "red" 0.7
+	text "Rectangle" 50 75 1.5 "sans" "red"
+	
+	ellipse 75 60 12 6 "green" 0.6
+	text "Ellipse" 75 75 1.5 "sans" "green"
+	
+	text "Generated: .dsh → XML → SVG/PNG/PDF" 50 90 1.2 "mono" "black"
+edeck

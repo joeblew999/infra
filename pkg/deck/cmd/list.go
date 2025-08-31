@@ -40,12 +40,12 @@ func init() {
 // GetToolDescription returns description for a specific tool
 func GetToolDescription(name string) string {
 	descriptions := map[string]string{
-		"decksh":     "Compiler that transforms .dsh files into XML",
-		"deckshfmt":  "Code formatter for .dsh files",
-		"deckshlint": "Syntax validator for .dsh files",
-		"decksvg":    "Converts XML deck markup to SVG graphics",
-		"deckpng":    "Converts XML deck markup to PNG images",
-		"deckpdf":    "Converts XML deck markup to PDF documents",
+		deck.DeckshBinary:     "Compiler that transforms .dsh files into XML",
+		deck.DeckfmtBinary:  "Code formatter for .dsh files",
+		deck.DecklintBinary: "Syntax validator for .dsh files",
+		deck.DecksvgBinary:    "Converts XML deck markup to SVG graphics",
+		deck.DeckpngBinary:    "Converts XML deck markup to PNG images",
+		deck.DeckpdfBinary:    "Converts XML deck markup to PDF documents",
 	}
 	
 	if desc, ok := descriptions[name]; ok {

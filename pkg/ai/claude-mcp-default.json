@@ -5,8 +5,8 @@
       "version": "2025.1.24",
       "repo": "modelcontextprotocol/server-github",
       "type": "stdio",
-      "command": "bun",
-      "args": ["x", "-y", "@modelcontextprotocol/server-github"],
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
@@ -16,8 +16,8 @@
       "version": "2025.1.24",
       "repo": "modelcontextprotocol/server-filesystem",
       "type": "stdio",
-      "command": "bun",
-      "args": ["x", "-y", "@modelcontextprotocol/server-filesystem"],
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem"],
       "env": {
         "ALLOWED_PATHS": "${HOME}"
       }
@@ -27,8 +27,8 @@
       "version": "2025.1.24",
       "repo": "modelcontextprotocol/server-fetch",
       "type": "stdio",
-      "command": "bun",
-      "args": ["x", "-y", "@modelcontextprotocol/server-fetch"]
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"]
     }
   ]
 }

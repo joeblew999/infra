@@ -135,7 +135,7 @@ func (r *Release) buildForPlatform(targetOS, targetArch string) error {
 
 // buildBinaries copies existing binaries for packaging
 func (r *Release) buildBinaries(packageDir, targetOS, _ string) error {
-	tools := []string{"decksh", "dshfmt", "dshlint", "svgdeck", "pngdeck", "pdfdeck"}
+	tools := AllBinaries
 	
 	for _, tool := range tools {
 		sourcePath := filepath.Join(r.BuildDir, tool)
@@ -164,7 +164,7 @@ func (r *Release) buildBinaries(packageDir, targetOS, _ string) error {
 
 // copyWASM copies WASM modules to package
 func (r *Release) copyWASM(packageDir, _, _ string) error {
-	wasmTools := []string{"decksh", "svgdeck"} // Key WASM modules
+	wasmTools := WASMBinaries // Key WASM modules
 	
 	for _, tool := range wasmTools {
 		source := filepath.Join(r.WASMDir, tool+".wasm")
@@ -190,8 +190,8 @@ func (r *Release) buildWASM(tool string) error {
 	var sourceDir, packagePath string
 	
 	switch tool {
-	case "decksh":
-		sourceDir = filepath.Join("pkg", "deck", "source", "decksh")
+	case DeckshBinary:
+		sourceDir = filepath.Join(PkgDir, "source", DeckshBinary)
 		packagePath = "github.com/ajstarks/decksh/cmd/decksh"
 	case "svgdeck":
 		sourceDir = filepath.Join("pkg", "deck", "source", "deck")

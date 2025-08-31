@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/joeblew999/infra/pkg/ai"
+	aicmd "github.com/joeblew999/infra/pkg/ai/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -12,5 +12,5 @@ func RunAI() {
 
 // AddAIToCLI adds AI commands to the CLI namespace
 func AddAIToCLI(cliParent *cobra.Command) {
-	cliParent.AddCommand(ai.NewAICmd())
+	cliParent.AddCommand(aicmd.NewAICmd())
 }

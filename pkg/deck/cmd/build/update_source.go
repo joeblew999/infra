@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/joeblew999/infra/pkg/deck"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -89,9 +90,9 @@ func runUpdateSource(cmd *cobra.Command, args []string) error {
 			description: "Main deck library and command-line tools",
 		},
 		{
-			name:        "decksh", 
+			name:        deck.DeckshBinary, 
 			url:         "https://github.com/ajstarks/decksh.git",
-			dir:         "decksh",
+			dir:         deck.DeckshBinary,
 			description: "Decksh DSL processor and language tools",
 		},
 		{
@@ -134,11 +135,11 @@ func runUpdateSource(cmd *cobra.Command, args []string) error {
 func findDeckDirectory(startDir string) string {
 	// Common paths to try
 	candidates := []string{
-		"pkg/deck",
-		"./pkg/deck", 
-		"../pkg/deck",
-		"../../pkg/deck",
-		filepath.Join(startDir, "pkg/deck"),
+		deck.PkgDir,
+		"." + string(filepath.Separator) + deck.PkgDir, 
+		".." + string(filepath.Separator) + deck.PkgDir,
+		"../.." + string(filepath.Separator) + deck.PkgDir,
+		filepath.Join(startDir, deck.PkgDir),
 	}
 
 	for _, candidate := range candidates {

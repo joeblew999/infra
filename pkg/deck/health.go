@@ -97,6 +97,17 @@ func (h *HealthChecker) RunFullHealthCheck() *HealthReport {
 		pipelineOK, pipelineIssues := h.TestPipeline()
 		report.PipelineOK = pipelineOK
 		report.Issues = append(report.Issues, pipelineIssues...)
+		
+		// Test PNG pipeline
+		pngOK, pngIssues := h.TestPNGPipeline()
+		report.Issues = append(report.Issues, pngIssues...)
+		
+		// Test PDF pipeline  
+		pdfOK, pdfIssues := h.TestPDFPipeline()
+		report.Issues = append(report.Issues, pdfIssues...)
+		
+		// Pipeline is OK only if all formats work
+		report.PipelineOK = pipelineOK && pngOK && pdfOK
 	}
 
 	// Check fonts and assets
@@ -132,17 +143,17 @@ func (h *HealthChecker) getToolPath(toolName string) string {
 	// Map tool names to actual binaries using constants
 	binaryName := toolName
 	switch toolName {
-	case "decksh":
+	case DeckshBinary:
 		binaryName = DeckshBinary
-	case "deckfmt", "dshfmt":
+	case DeckfmtBinary, "dshfmt":
 		binaryName = DeckfmtBinary 
-	case "decklint", "dshlint":
+	case DecklintBinary, "dshlint":
 		binaryName = DecklintBinary
-	case "decksvg", "svgdeck":
+	case DecksvgBinary, "svgdeck":
 		binaryName = DecksvgBinary
-	case "deckpng", "pngdeck":
+	case DeckpngBinary, "pngdeck":
 		binaryName = DeckpngBinary
-	case "deckpdf", "pdfdeck":
+	case DeckpdfBinary, "pdfdeck":
 		binaryName = DeckpdfBinary
 	}
 	
@@ -275,12 +286,142 @@ edeck`
 	return len(issues) == 0, issues
 }
 
+// TestPNGPipeline runs a complete .dsh → PNG pipeline test
+func (h *HealthChecker) TestPNGPipeline() (bool, []HealthIssue) {
+	h.logf("🔄 Testing complete .dsh → XML → PNG pipeline...")
+	
+	var issues []HealthIssue
+
+	// Create test .dsh content
+	testDSH := `deck
+	text "PNG Health Check Test" 50 50 2
+	circle 25 75 5 "green"
+	rect 75 75 10 5 "blue" 0.8
+edeck`
+
+	// Write test file
+	dshFile := filepath.Join(h.tempDir, "health-test-png.dsh")
+	if err := os.WriteFile(dshFile, []byte(testDSH), 0644); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("Failed to create test .dsh file for PNG: %v", err),
+			Severity:  "error",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Test .dsh → XML
+	xmlFile := filepath.Join(h.tempDir, "health-test-png.xml")
+	if err := h.testDSHToXML(dshFile, xmlFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("PNG pipeline DSH→XML conversion failed: %v", err),
+			Severity:  "error",
+			Suggestion: "Check decksh tool and font configuration",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Test XML → PNG
+	pngFile := filepath.Join(h.tempDir, "health-test-png.png")
+	if err := h.testXMLToPNG(xmlFile, pngFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("XML→PNG conversion failed: %v", err),
+			Severity:  "error",
+			Suggestion: "Check pngdeck tool configuration",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Validate PNG output
+	if err := h.validatePNGOutput(pngFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("PNG output validation failed: %v", err),
+			Severity:  "warning",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+	}
+
+	h.logf("✅ Pipeline test: Complete .dsh → XML → PNG")
+	return len(issues) == 0, issues
+}
+
+// TestPDFPipeline runs a complete .dsh → PDF pipeline test
+func (h *HealthChecker) TestPDFPipeline() (bool, []HealthIssue) {
+	h.logf("🔄 Testing complete .dsh → XML → PDF pipeline...")
+	
+	var issues []HealthIssue
+
+	// Create test .dsh content
+	testDSH := `deck
+	text "PDF Health Check Test" 50 50 2
+	circle 25 75 5 "purple"
+	rect 75 75 10 5 "orange" 0.8
+edeck`
+
+	// Write test file
+	dshFile := filepath.Join(h.tempDir, "health-test-pdf.dsh")
+	if err := os.WriteFile(dshFile, []byte(testDSH), 0644); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("Failed to create test .dsh file for PDF: %v", err),
+			Severity:  "error",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Test .dsh → XML
+	xmlFile := filepath.Join(h.tempDir, "health-test-pdf.xml")
+	if err := h.testDSHToXML(dshFile, xmlFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("PDF pipeline DSH→XML conversion failed: %v", err),
+			Severity:  "error",
+			Suggestion: "Check decksh tool and font configuration",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Test XML → PDF
+	pdfFile := filepath.Join(h.tempDir, "health-test-pdf.pdf")
+	if err := h.testXMLToPDF(xmlFile, pdfFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("XML→PDF conversion failed: %v", err),
+			Severity:  "error",
+			Suggestion: "Check pdfdeck tool configuration",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return false, issues
+	}
+
+	// Validate PDF output
+	if err := h.validatePDFOutput(pdfFile); err != nil {
+		issues = append(issues, HealthIssue{
+			Type:      "pipeline",
+			Message:   fmt.Sprintf("PDF output validation failed: %v", err),
+			Severity:  "warning",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+	}
+
+	h.logf("✅ Pipeline test: Complete .dsh → XML → PDF")
+	return len(issues) == 0, issues
+}
+
 // checkAssets verifies fonts and other required assets
 func (h *HealthChecker) checkAssets() []HealthIssue {
 	var issues []HealthIssue
 
 	// Check font directory
-	fontDir := filepath.Join(config.GetDataPath(), FontsDirPath)
+	fontDir := config.GetFontPath()
 	if _, err := os.Stat(fontDir); os.IsNotExist(err) {
 		issues = append(issues, HealthIssue{
 			Type:       "assets",
@@ -312,7 +453,7 @@ func (h *HealthChecker) checkAssets() []HealthIssue {
 
 // Helper methods
 
-func (h *HealthChecker) checkFileExecutable(path, toolName string) error {
+func (h *HealthChecker) checkFileExecutable(path, _ string) error {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("binary not found at: %s", path)
@@ -329,7 +470,7 @@ func (h *HealthChecker) checkFileExecutable(path, toolName string) error {
 	return nil
 }
 
-func (h *HealthChecker) testToolVersion(path, toolName string) error {
+func (h *HealthChecker) testToolVersion(path, _ string) error {
 	// Try --version first
 	cmd := exec.Command(path, "--version")
 	output, err := cmd.CombinedOutput()
@@ -360,7 +501,7 @@ func (h *HealthChecker) testToolVersion(path, toolName string) error {
 }
 
 func (h *HealthChecker) testDSHToXML(dshFile, xmlFile string) error {
-	toolPath := h.getToolPath("decksh")
+	toolPath := h.getToolPath(DeckshBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(toolPath); os.IsNotExist(err) {
@@ -368,7 +509,7 @@ func (h *HealthChecker) testDSHToXML(dshFile, xmlFile string) error {
 	}
 
 	cmd := exec.Command(toolPath, dshFile)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), FontsDirPath))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -380,7 +521,7 @@ func (h *HealthChecker) testDSHToXML(dshFile, xmlFile string) error {
 }
 
 func (h *HealthChecker) testXMLToSVG(xmlFile, svgFile string) error {
-	toolPath := h.getToolPath("decksvg")
+	toolPath := h.getToolPath(DecksvgBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(toolPath); os.IsNotExist(err) {
@@ -388,7 +529,7 @@ func (h *HealthChecker) testXMLToSVG(xmlFile, svgFile string) error {
 	}
 
 	cmd := exec.Command(toolPath, xmlFile)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), FontsDirPath))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
 	cmd.Dir = filepath.Dir(svgFile)
 
 	output, err := cmd.CombinedOutput()
@@ -400,6 +541,58 @@ func (h *HealthChecker) testXMLToSVG(xmlFile, svgFile string) error {
 	expectedSVG := strings.TrimSuffix(xmlFile, ".xml") + ".svg"
 	if _, err := os.Stat(expectedSVG); err == nil {
 		return os.Rename(expectedSVG, svgFile)
+	}
+
+	return nil
+}
+
+func (h *HealthChecker) testXMLToPNG(xmlFile, pngFile string) error {
+	toolPath := h.getToolPath(DeckpngBinary)
+	
+	// Check if tool exists
+	if _, err := os.Stat(toolPath); os.IsNotExist(err) {
+		return fmt.Errorf("deckpng not built: %s", toolPath)
+	}
+
+	cmd := exec.Command(toolPath, xmlFile)
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
+	cmd.Dir = filepath.Dir(pngFile)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("pngdeck execution failed: %w, output: %s", err, string(output))
+	}
+
+	// Check if PNG was created
+	expectedPNG := strings.TrimSuffix(xmlFile, ".xml") + ".png"
+	if _, err := os.Stat(expectedPNG); err == nil {
+		return os.Rename(expectedPNG, pngFile)
+	}
+
+	return nil
+}
+
+func (h *HealthChecker) testXMLToPDF(xmlFile, pdfFile string) error {
+	toolPath := h.getToolPath(DeckpdfBinary)
+	
+	// Check if tool exists
+	if _, err := os.Stat(toolPath); os.IsNotExist(err) {
+		return fmt.Errorf("deckpdf not built: %s", toolPath)
+	}
+
+	cmd := exec.Command(toolPath, xmlFile)
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
+	cmd.Dir = filepath.Dir(pdfFile)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("pdfdeck execution failed: %w, output: %s", err, string(output))
+	}
+
+	// Check if PDF was created
+	expectedPDF := strings.TrimSuffix(xmlFile, ".xml") + ".pdf"
+	if _, err := os.Stat(expectedPDF); err == nil {
+		return os.Rename(expectedPDF, pdfFile)
 	}
 
 	return nil
@@ -421,6 +614,36 @@ func (h *HealthChecker) validateSVGOutput(svgFile string) error {
 	}
 
 	h.logf("  SVG size: %d bytes", len(content))
+	return nil
+}
+
+func (h *HealthChecker) validatePNGOutput(pngFile string) error {
+	content, err := os.ReadFile(pngFile)
+	if err != nil {
+		return fmt.Errorf("cannot read PNG file: %w", err)
+	}
+
+	// Check PNG magic number
+	if len(content) < 8 || string(content[:8]) != "\x89PNG\r\n\x1a\n" {
+		return fmt.Errorf("invalid PNG format")
+	}
+
+	h.logf("  PNG size: %d bytes", len(content))
+	return nil
+}
+
+func (h *HealthChecker) validatePDFOutput(pdfFile string) error {
+	content, err := os.ReadFile(pdfFile)
+	if err != nil {
+		return fmt.Errorf("cannot read PDF file: %w", err)
+	}
+
+	// Check PDF magic number
+	if len(content) < 4 || string(content[:4]) != "%PDF" {
+		return fmt.Errorf("invalid PDF format")
+	}
+
+	h.logf("  PDF size: %d bytes", len(content))
 	return nil
 }
 

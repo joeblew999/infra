@@ -12,7 +12,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
 )
@@ -24,6 +23,7 @@ type Watcher struct {
 	OutputDir    string
 	CacheDir     string
 	Processing   map[string]bool
+	Formats      []string // Output formats to generate (svg, png, pdf)
 	mu           sync.RWMutex
 	ctx          context.Context
 	cancel       context.CancelFunc
@@ -35,12 +35,18 @@ func NewWatcher() *Watcher {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Watcher{
 		Builder:    NewBuilder(),
-		OutputDir:  filepath.Join(config.GetDataPath(), "deck", "cache"),
-		CacheDir:   filepath.Join(config.GetDataPath(), "deck", "cache"),
+		OutputDir:  filepath.Join(config.GetDataPath(), CacheDirPath),
+		CacheDir:   filepath.Join(config.GetDataPath(), CacheDirPath),
 		Processing: make(map[string]bool),
+		Formats:    []string{"svg"}, // Default to SVG only
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+}
+
+// SetFormats configures which output formats to generate
+func (w *Watcher) SetFormats(formats []string) {
+	w.Formats = formats
 }
 
 // AddPath adds a path to watch
@@ -187,30 +193,48 @@ func (w *Watcher) processDSHFile(dshPath string) {
 		return
 	}
 	
-	// Step 2: XML -> SVG
-	svgPath := filepath.Join(w.OutputDir, filepath.Base(dshPath)+".svg")
-	if err := w.runSvgdeck(xmlPath, svgPath); err != nil {
-		log.Error("Failed to convert XML to SVG", "error", err)
-		return
+	// Step 2: XML -> Multiple formats
+	var outputPaths []string
+	baseName := filepath.Base(dshPath)
+	
+	for _, format := range w.Formats {
+		outputPath := filepath.Join(w.OutputDir, baseName+"."+format)
+		
+		var err error
+		switch format {
+		case "svg":
+			err = w.runSvgdeck(xmlPath, outputPath)
+		case "png":
+			err = w.runPngdeck(xmlPath, outputPath)
+		case "pdf":
+			err = w.runPdfdeck(xmlPath, outputPath)
+		default:
+			log.Warn("Unsupported format", "format", format, "file", dshPath)
+			continue
+		}
+		
+		if err != nil {
+			log.Error("Failed to convert XML to format", "format", format, "error", err)
+			continue
+		}
+		
+		outputPaths = append(outputPaths, outputPath)
 	}
 	
-	log.Info("Pipeline completed", "dsh", dshPath, "xml", xmlPath, "svg", svgPath)
+	log.Info("Pipeline completed", "dsh", dshPath, "xml", xmlPath, "outputs", outputPaths)
 }
 
 // runDecksh runs decksh to compile .dsh to XML
 func (w *Watcher) runDecksh(inputPath, outputPath string) error {
-	deckshPath, err := dep.Get("decksh")
-	if err != nil {
-		return fmt.Errorf("decksh not found in .dep: %w", err)
-	}
+	deckshPath := filepath.Join(BuildRoot, "bin", DeckshBinary)
 	
-	// Validate tool exists and is executable
-	if err := validateTool(deckshPath, "decksh"); err != nil {
-		return fmt.Errorf("decksh validation failed: %w", err)
+	// Check if tool exists
+	if _, err := os.Stat(deckshPath); os.IsNotExist(err) {
+		return fmt.Errorf("decksh not built: %s", deckshPath)
 	}
 	
 	cmd := exec.Command(deckshPath, inputPath)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), "deck", "fonts"))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -227,23 +251,20 @@ func (w *Watcher) runDecksh(inputPath, outputPath string) error {
 
 // runSvgdeck runs svgdeck to convert XML to SVG
 func (w *Watcher) runSvgdeck(inputPath, outputPath string) error {
-	svgdeckPath, err := dep.Get("svgdeck")
-	if err != nil {
-		return fmt.Errorf("svgdeck not found in .dep: %w", err)
-	}
+	svgdeckPath := filepath.Join(BuildRoot, "bin", DecksvgBinary)
 	
-	// Validate tool exists and is executable
-	if err := validateTool(svgdeckPath, "svgdeck"); err != nil {
-		return fmt.Errorf("svgdeck validation failed: %w", err)
+	// Check if tool exists
+	if _, err := os.Stat(svgdeckPath); os.IsNotExist(err) {
+		return fmt.Errorf("decksvg not built: %s", svgdeckPath)
 	}
 	
 	cmd := exec.Command(svgdeckPath, inputPath)
-	cmd.Env = append(os.Environ(), "DECKFONTS="+filepath.Join(config.GetDataPath(), "deck", "fonts"))
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
 	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("svgdeck failed: %w, output: %s", err, string(output))
+		return fmt.Errorf("decksvg failed: %w, output: %s", err, string(output))
 	}
 	
 	// Rename the output file to match our expected name
@@ -255,20 +276,57 @@ func (w *Watcher) runSvgdeck(inputPath, outputPath string) error {
 	return nil
 }
 
-// validateTool checks if a tool exists and is executable
-func validateTool(toolPath, toolName string) error {
-	// Check if file exists
-	if _, err := os.Stat(toolPath); os.IsNotExist(err) {
-		return fmt.Errorf("tool %s not found at path: %s", toolName, toolPath)
+// runPngdeck runs pngdeck to convert XML to PNG
+func (w *Watcher) runPngdeck(inputPath, outputPath string) error {
+	pngdeckPath := filepath.Join(BuildRoot, "bin", DeckpngBinary)
+	
+	// Check if tool exists
+	if _, err := os.Stat(pngdeckPath); os.IsNotExist(err) {
+		return fmt.Errorf("deckpng not built: %s", pngdeckPath)
 	}
 	
-	// Check if executable
-	if err := exec.Command(toolPath, "--version").Run(); err != nil {
-		// Fallback: try --help if --version fails
-		if err := exec.Command(toolPath, "--help").Run(); err != nil {
-			return fmt.Errorf("tool %s at %s is not executable or functioning properly", toolName, toolPath)
-		}
+	cmd := exec.Command(pngdeckPath, inputPath)
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
+	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
+	
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("deckpng failed: %w, output: %s", err, string(output))
+	}
+	
+	// Rename the output file to match our expected name
+	expectedPNG := strings.TrimSuffix(inputPath, ".xml") + ".png"
+	if _, err := os.Stat(expectedPNG); err == nil {
+		return os.Rename(expectedPNG, outputPath)
 	}
 	
 	return nil
 }
+
+// runPdfdeck runs pdfdeck to convert XML to PDF
+func (w *Watcher) runPdfdeck(inputPath, outputPath string) error {
+	pdfdeckPath := filepath.Join(BuildRoot, "bin", DeckpdfBinary)
+	
+	// Check if tool exists
+	if _, err := os.Stat(pdfdeckPath); os.IsNotExist(err) {
+		return fmt.Errorf("deckpdf not built: %s", pdfdeckPath)
+	}
+	
+	cmd := exec.Command(pdfdeckPath, inputPath)
+	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
+	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
+	
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("deckpdf failed: %w, output: %s", err, string(output))
+	}
+	
+	// Rename the output file to match our expected name
+	expectedPDF := strings.TrimSuffix(inputPath, ".xml") + ".pdf"
+	if _, err := os.Stat(expectedPDF); err == nil {
+		return os.Rename(expectedPDF, outputPath)
+	}
+	
+	return nil
+}
+

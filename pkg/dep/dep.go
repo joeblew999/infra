@@ -279,6 +279,12 @@ func InstallBinaryWithCrossPlatform(name string, debug, crossPlatform bool) erro
 				return err
 			}
 		}
+	case "go-install":
+		// Use go install for packages that support it
+		builder := builders.GoInstallInstaller{}
+		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+			return err
+		}
 	case "npm-package":
 		// Use new builders package for npm-package
 		builder := builders.NPMInstaller{}

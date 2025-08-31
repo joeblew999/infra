@@ -1,0 +1,11 @@
+<deck>
+<text xp="50" yp="25" sp="3" >Multi-Format Pipeline Demo!</text>
+<text xp="50" yp="35" sp="2" font="serif" color="gray">SVG • PNG • PDF Support</text>
+<ellipse xp="25" yp="60" wp="8" hr="100" color="blue" opacity="0.8"/>
+<text xp="25" yp="75" sp="1.5" font="sans" color="blue">Circle</text>
+<rect xp="50" yp="55" wp="15" hp="10" color="red" opacity="0.7"/>
+<text xp="50" yp="75" sp="1.5" font="sans" color="red">Rectangle</text>
+<ellipse xp="75" yp="60" wp="12" hp="6" color="green" opacity="0.6"/>
+<text xp="75" yp="75" sp="1.5" font="sans" color="green">Ellipse</text>
+<text xp="50" yp="90" sp="1.2" font="mono" color="black">Generated: .dsh → XML → SVG/PNG/PDF</text>
+</deck>

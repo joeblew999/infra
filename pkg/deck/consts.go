@@ -25,6 +25,9 @@ const (
 	DeckshRepo  = "https://github.com/ajstarks/decksh.git"  // decksh, dshfmt, dshlint tools
 	SvgdeckRepo = "https://github.com/ajstarks/deck.git"    // svgdeck, pngdeck, pdfdeck tools
 
+	// Package directory structure
+	PkgDir     = "pkg/deck"
+	
 	// Build directory structure
 	BuildRoot  = "pkg/deck/.build"
 	SourceDir  = "pkg/deck/.source"
@@ -54,12 +57,17 @@ const (
 	// Health check constants
 	HealthCheckTimeout     = 30 // seconds timeout for health operations
 	TempDirPrefix         = "deck-health-"
-	FontsDirPath          = "deck/fonts"
 	CacheDirPath          = "deck/cache"
 	
 	// System dependencies
 	GitCommand = "git"
 	GoCommand  = "go"
+)
+
+// Tool collections for packaging (use constants to prevent obfuscation)
+var (
+	AllBinaries = []string{DeckshBinary, DeckfmtBinary, DecklintBinary, DecksvgBinary, DeckpngBinary, DeckpdfBinary}
+	WASMBinaries = []string{DeckshBinary, DecksvgBinary}
 )
 
 // GetBuildTarget returns the build target for the current platform

@@ -400,7 +400,7 @@ func (r *ClaudeRunner) MCPRemove(name string) error {
 
 // InstallDefaultMCP installs the default MCP servers from config
 func (r *ClaudeRunner) InstallDefaultMCP() error {
-	configFile := "claude-mcp-default.json"
+	configFile := "pkg/ai/claude-mcp-default.json"
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to read default config: %w", err)
@@ -421,6 +421,86 @@ func (r *ClaudeRunner) InstallDefaultMCP() error {
 	}
 
 	fmt.Println("🎉 Default MCP servers installed successfully!")
+	return nil
+}
+
+// PresetList lists all available preset MCP servers from the default config
+func (r *ClaudeRunner) PresetList() error {
+	configFile := "pkg/ai/claude-mcp-default.json"
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read default config: %w", err)
+	}
+
+	var config ClaudeMCPConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	fmt.Println("📋 Available Preset MCP Servers")
+	fmt.Println(strings.Repeat("=", 35))
+	
+	if len(config.Servers) == 0 {
+		fmt.Println("No preset servers found.")
+		return nil
+	}
+
+	for _, server := range config.Servers {
+		fmt.Printf("\n🔌 %s\n", server.Name)
+		fmt.Printf("   Version: %s\n", server.Version)
+		fmt.Printf("   Repo: %s\n", server.Repo)
+		fmt.Printf("   Command: %s %s\n", server.Command, strings.Join(server.Args, " "))
+		if len(server.Env) > 0 {
+			fmt.Println("   Environment:")
+			for key, value := range server.Env {
+				fmt.Printf("     %s: %s\n", key, value)
+			}
+		}
+	}
+
+	fmt.Printf("\n💡 Install with: go run . cli ai claude mcp preset-install [server-name]\n")
+	return nil
+}
+
+// InstallMCPByName installs a specific MCP server by name from the default config
+func (r *ClaudeRunner) InstallMCPByName(serverName string) error {
+	configFile := "pkg/ai/claude-mcp-default.json"
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read default config: %w", err)
+	}
+
+	var config ClaudeMCPConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return fmt.Errorf("failed to parse config: %w", err)
+	}
+
+	// Find the requested server
+	var targetServer *ClaudeMCPServer
+	for _, server := range config.Servers {
+		if server.Name == serverName {
+			targetServer = &server
+			break
+		}
+	}
+
+	if targetServer == nil {
+		availableServers := make([]string, len(config.Servers))
+		for i, server := range config.Servers {
+			availableServers[i] = server.Name
+		}
+		return fmt.Errorf("server '%s' not found. Available servers: %s", 
+			serverName, strings.Join(availableServers, ", "))
+	}
+
+	// Install the specific server
+	fullCommand := targetServer.Command + " " + strings.Join(targetServer.Args, " ")
+	
+	if err := r.MCPAdd(targetServer.Name, fullCommand); err != nil {
+		return fmt.Errorf("failed to install %s: %w", targetServer.Name, err)
+	}
+	
+	fmt.Printf("✅ Installed %s: %s\n", targetServer.Name, fullCommand)
 	return nil
 }
 

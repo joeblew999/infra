@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/joeblew999/infra/pkg/deck/cmd/build"
+	"github.com/joeblew999/infra/pkg/deck/cmd/web"
 	"github.com/spf13/cobra"
 )
 
@@ -21,9 +22,13 @@ func GetDeckCmd() *cobra.Command {
 
 func init() {
 	deckCmd.AddCommand(build.BuildCmd)
+	deckCmd.AddCommand(web.WebCmd)
 	deckCmd.AddCommand(WatchCmd)
 	deckCmd.AddCommand(UpdateCmd)
 	deckCmd.AddCommand(HealthCmd)
+	
+	// Set up flags for watch command
+	WatchCmd.Flags().String("formats", "svg", "Output formats to generate (comma-separated): svg,png,pdf")
 	
 	// Set up flags for update command (simplified)
 	UpdateCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")

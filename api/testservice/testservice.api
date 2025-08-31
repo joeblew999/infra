@@ -1,0 +1,36 @@
+syntax = "v1"
+
+info(
+    title: "testservice API"
+    desc: "Test MCP service for validation"
+    author: "infra"
+    version: "v1.0"
+)
+
+type McpRequest {
+    Jsonrpc string `json:"jsonrpc"`
+    Method  string `json:"method"`
+    Id      int64  `json:"id"`
+    Params  string `json:"params,optional"`
+}
+
+type McpResponse {
+    Jsonrpc string `json:"jsonrpc"`
+    Id      int64  `json:"id"`
+    Result  string `json:"result,optional"`
+    Error   string `json:"error,optional"`
+}
+
+type HealthResponse {
+    Status  string `json:"status"`
+    Version string `json:"version"`
+    Ready   bool   `json:"ready"`
+}
+
+service testservice-api {
+    @handler McpHandler
+    post /mcp (McpRequest) returns (McpResponse)
+    
+    @handler HealthHandler
+    get /health returns (HealthResponse)
+}

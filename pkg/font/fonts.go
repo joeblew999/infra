@@ -42,11 +42,16 @@ func NewManager() *Manager {
 
 // Get returns the path to a cached font, downloading if necessary
 func (m *Manager) Get(family string, weight int) (string, error) {
+	return m.GetFormat(family, weight, DefaultFontFormat)
+}
+
+// GetFormat returns the path to a cached font in a specific format
+func (m *Manager) GetFormat(family string, weight int, format string) (string, error) {
 	font := Font{
 		Family: family,
 		Weight: weight,
 		Style:  DefaultFontStyle,
-		Format: DefaultFontFormat,
+		Format: format,
 	}
 
 	// Check if font is already cached
@@ -86,6 +91,24 @@ func (m *Manager) Available(family string, weight int) bool {
 	}
 	_, exists := m.registry.GetPath(font)
 	return exists
+}
+
+// CacheTTF downloads and caches a font in TTF format (for deck tools)
+func (m *Manager) CacheTTF(family string, weight int) error {
+	font := Font{
+		Family: family,
+		Weight: weight,
+		Style:  DefaultFontStyle,
+		Format: "ttf",
+	}
+
+	_, err := m.cacheFont(font)
+	return err
+}
+
+// GetTTF returns the path to a cached TTF font, downloading if necessary
+func (m *Manager) GetTTF(family string, weight int) (string, error) {
+	return m.GetFormat(family, weight, "ttf")
 }
 
 // cacheFont downloads and caches a font

@@ -22,6 +22,12 @@ type Platform struct {
 // GoBuildInstaller uses pkg/deck's build pattern for Go source compilation
 type GoBuildInstaller struct{}
 
+// fileExists checks if a file exists
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func (i *GoBuildInstaller) Install(name, repo, pkg, version string, debug bool) error {
 	return i.InstallWithPlatforms(name, repo, pkg, version, debug, nil)
 }
@@ -102,12 +108,17 @@ func (i *GoBuildInstaller) InstallWithPlatforms(name, repo, pkg, version string,
 		}
 	}
 
-	// Determine the build path - extract relative path from full package
+	// Determine the build path - handle both full package paths and relative paths
 	// e.g., github.com/benbjohnson/litestream/cmd/litestream -> ./cmd/litestream
+	// e.g., tools/goctl -> ./tools/goctl
 	repoPrefix := fmt.Sprintf("github.com/%s/", repo)
 	buildPath := "./"
 	if suffix, found := strings.CutPrefix(pkg, repoPrefix); found {
+		// Full package path - extract relative part
 		buildPath = "./" + suffix
+	} else if pkg != "" && pkg != "." {
+		// Already relative path - use as is
+		buildPath = "./" + pkg
 	}
 
 	var builtPaths []string
@@ -136,11 +147,27 @@ func (i *GoBuildInstaller) InstallWithPlatforms(name, repo, pkg, version string,
 			return fmt.Errorf("failed to get absolute path for %s: %w", outputPath, err)
 		}
 
-		// Build the binary for this platform
-		log.Info("Building binary", "platform", fmt.Sprintf("%s/%s", platform.OS, platform.Arch), "build_path", buildPath, "output", absOutputPath)
+		// Determine working directory and build command
+		workDir := buildDir
+		buildTarget := "."
 		
-		buildCmd := exec.Command("go", "build", "-o", absOutputPath, buildPath)
-		buildCmd.Dir = buildDir
+		// If the package is a subdirectory with its own go.mod, change to that directory
+		if pkg != "" && pkg != "." {
+			packageDir := filepath.Join(buildDir, pkg)
+			if goModPath := filepath.Join(packageDir, "go.mod"); fileExists(goModPath) {
+				workDir = packageDir
+				buildTarget = "."
+				log.Info("Found separate go.mod in package directory", "package", pkg, "workdir", workDir)
+			} else {
+				buildTarget = buildPath
+			}
+		}
+
+		// Build the binary for this platform
+		log.Info("Building binary", "platform", fmt.Sprintf("%s/%s", platform.OS, platform.Arch), "build_target", buildTarget, "workdir", workDir, "output", absOutputPath)
+		
+		buildCmd := exec.Command("go", "build", "-o", absOutputPath, buildTarget)
+		buildCmd.Dir = workDir
 		// Prepare environment for cross-compilation
 		env := append(os.Environ(), 
 			"GO111MODULE=on",
