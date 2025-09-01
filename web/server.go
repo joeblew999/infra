@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -132,6 +133,14 @@ func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
 	filePath := r.URL.Path[len(config.DocsHTTPPath):]
 	log.Info("Requested filePath", "path", filePath)
 
+	// Handle folder access - if path ends with /, append README.md
+	if strings.HasSuffix(filePath, "/") {
+		filePath = filePath + "README.md"
+	} else if filePath != "" && !strings.HasSuffix(filePath, ".md") {
+		// If no extension, assume it's a folder and redirect to folder/README.md
+		filePath = filePath + "/README.md"
+	}
+
 	// Read document content
 	content, err := app.docsService.ReadFile(filePath)
 	if err != nil {
@@ -150,7 +159,7 @@ func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
 
 	// Wrap in HTML page structure with navigation
 	nav := app.docsService.GetNavigation()
-	fullHTML := app.docsRenderer.RenderToHTMLPage("Docs", htmlContent, nav)
+	fullHTML := app.docsRenderer.RenderToHTMLPage("Docs", htmlContent, nav, filePath)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(fullHTML))
