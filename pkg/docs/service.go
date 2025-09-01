@@ -35,9 +35,9 @@ func New(devMode bool, docsDir string) *Service {
 
 // ReadFile reads a document file from either filesystem or embedded source
 func (s *Service) ReadFile(filePath string) ([]byte, error) {
-	// Default to main roadmap if no specific file requested
+	// Default to main README if no specific file requested
 	if filePath == "" {
-		filePath = "roadmap/ROADMAP.md"
+		filePath = "README.md"
 	}
 
 	if s.devMode {
