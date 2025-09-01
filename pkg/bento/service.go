@@ -146,9 +146,8 @@ func StartSupervised(port int) error {
 	return goreman.RegisterAndStart("bento", &goreman.ProcessConfig{
 		Command: config.Get(config.BinaryBento),
 		Args: []string{
-			"run",
-			"--config", configPath,
-			"--http.address", fmt.Sprintf("0.0.0.0:%d", port),
+			"--set", fmt.Sprintf("http.address=0.0.0.0:%d", port),
+			"run", configPath,
 		},
 		WorkingDir: ".",
 		Env:        os.Environ(),

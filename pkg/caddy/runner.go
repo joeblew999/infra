@@ -109,11 +109,15 @@ func StartSupervised(caddyConfig *CaddyConfig) error {
 	}
 	
 	// Register and start with goreman supervision
+	// Create environment with reduced logging
+	env := os.Environ()
+	env = append(env, "CADDY_LOG_LEVEL=ERROR")
+	
 	return goreman.RegisterAndStart("caddy", &goreman.ProcessConfig{
 		Command:    config.GetCaddyBinPath(),
-		Args:       []string{"run", "--config", configPath},
+		Args:       []string{"run", "--config", configPath, "--adapter", "caddyfile"},
 		WorkingDir: ".",
-		Env:        os.Environ(),
+		Env:        env,
 	})
 }
 

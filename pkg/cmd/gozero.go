@@ -149,9 +149,13 @@ var goZeroQuickstartCmd = &cobra.Command{
 	},
 }
 
+// AddGoZeroToCLI adds gozero commands to the CLI namespace
+func AddGoZeroToCLI(cliParent *cobra.Command) {
+	cliParent.AddCommand(goZeroCmd)
+}
+
 func init() {
-	// Add to root command
-	rootCmd.AddCommand(goZeroCmd)
+	// Commands will be added to CLI namespace via AddGoZeroToCLI()
 	
 	// Add subcommands
 	goZeroCmd.AddCommand(goZeroApiCmd)

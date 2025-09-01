@@ -387,7 +387,7 @@ func StartWatcherSupervised(watchPaths []string, formats []string) error {
 	)
 	
 	// Register and start with goreman supervision  
-	args := append([]string{"run", ".", "deck", "watch"}, watchPaths...)
+	args := append([]string{"run", ".", "cli", "deck", "watch"}, watchPaths...)
 	args = append(args, "--formats", strings.Join(formats, ","))
 	
 	return goreman.RegisterAndStart("deck-watcher", &goreman.ProcessConfig{

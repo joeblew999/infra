@@ -26,9 +26,7 @@ INFRASTRUCTURE COMMANDS:
 
 DEVELOPMENT COMMANDS:
   config         Print current configuration
-  deck           Deck visualization tools
   dep            Manage binary dependencies  
-  gozero         Go-zero microservices operations
   init           Initialize new project
 
 ADVANCED COMMANDS:
@@ -66,7 +64,6 @@ func Execute() {
 	// Add organized command structure
 	RunCLI()        // Adds 'cli' namespace with tools
 	RunWorkflows()  // Adds core infrastructure commands (deploy, status, init)
-	RunDeck()       // Deck commands (if any)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

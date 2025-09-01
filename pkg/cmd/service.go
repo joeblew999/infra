@@ -79,28 +79,36 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	// Start all services using goreman supervision
 	log.Info("🚀 Starting all infrastructure services...")
 	
-	// Start NATS server  
+	// Start embedded NATS server  
+	var natsAddr string
 	if !noNATS {
-		log.Info("🚀 Step 1: Starting NATS server...")
-		if err := nats.StartSupervised(4222); err != nil {
-			log.Warn("NATS failed to start", "error", err)
+		log.Info("🚀 Step 1: Starting embedded NATS server...")
+		var err error
+		natsAddr, err = nats.StartEmbeddedNATS(context.Background())
+		if err != nil {
+			log.Warn("⚠️  Failed to start embedded NATS server, continuing without NATS", "error", err)
+			natsAddr = "" // Mark as disabled
 		} else {
-			log.Info("✅ NATS server started supervised", "port", 4222)
+			log.Info("✅ Embedded NATS server started", "address", natsAddr)
 		}
 	}
 
-	// Start PocketBase server
+	// Start embedded PocketBase server
 	if !noPocketbase {
-		log.Info("🚀 Step 2: Starting PocketBase server...")
+		log.Info("🚀 Step 2: Starting embedded PocketBase server...")
 		pbEnv := "production"
 		if mode == "development" {
 			pbEnv = "development"
 		}
-		if err := pocketbase.StartSupervised(pbEnv, "8090"); err != nil {
-			log.Warn("PocketBase failed to start", "error", err)
-		} else {
-			log.Info("✅ PocketBase server started supervised", "port", 8090)
-		}
+		
+		pbServer := pocketbase.NewServer(pbEnv)
+		// Start PocketBase in a goroutine since it blocks
+		go func() {
+			if err := pbServer.Start(context.Background()); err != nil {
+				log.Warn("PocketBase failed to start", "error", err)
+			}
+		}()
+		log.Info("✅ Embedded PocketBase server started", "port", 8090)
 	}
 
 	// Start Caddy reverse proxy
@@ -136,11 +144,11 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		log.Info("✅ Deck watcher service started supervised")
 	}
 
-	// Show process status from goreman
-	log.Info("📊 All services started with goreman supervision")
+	// Show process status from goreman (external services only)
+	log.Info("📊 External services started with goreman supervision")
 	status := goreman.GetAllStatus()
 	for name, stat := range status {
-		log.Info("Process status", "name", name, "status", stat)
+		log.Info("External process status", "name", name, "status", stat)
 	}
 	
 	// Start web server (this runs in current process for now)
@@ -152,8 +160,10 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	}
 
 	log.Info("🌐 Starting web server", "address", "http://localhost:1337", "embedded_docs", noDevDocs)
-	// Start the web server (blocking) - for now we use basic NATS connection
-	natsAddr := "nats://localhost:4222"
+	// Use the embedded NATS address if available, otherwise use default
+	if natsAddr == "" {
+		natsAddr = "nats://localhost:4222" // Default fallback
+	}
 	if err := web.StartServer(natsAddr, noDevDocs); err != nil {
 		log.Error("❌ Failed to start web server", "error", err)
 		os.Exit(1)

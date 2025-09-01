@@ -1,24 +1,25 @@
 # Fly.io Deployment Guide
 
-This guide walks you through deploying the infrastructure management system to Fly.io with automated database backups.
+This guide walks you through deploying the infrastructure management system to Fly.io with goreman supervision and scaling capabilities.
 
 ## Prerequisites
 
 1. **Fly.io Account**: Sign up at [fly.io](https://fly.io)
-2. **Fly CLI**: Install with `go run . dep install flyctl`
+2. **Dependencies**: Automatically managed via `go run . dep`
 3. **API Token**: Get from [Fly.io dashboard](https://fly.io/dashboard/personal/access_tokens)
 
 ## Quick Start
 
 ```bash
-# 1. Install flyctl
-./.dep/flyctl version
+# 1. Clone and setup
+git clone https://github.com/joeblew999/infra.git
+cd infra
 
-# 2. Login to Fly.io
-./.dep/flyctl auth login
+# 2. Test locally with goreman supervision
+go run .                    # Starts all services locally
 
-# 3. Deploy the application
-./.dep/flyctl deploy
+# 3. Deploy to Fly.io  
+go run . deploy             # Idempotent deployment workflow
 ```
 
 ## Detailed Setup
@@ -34,24 +35,46 @@ export FLY_APP_NAME="my-infra-mgmt"
 export FLY_REGION="syd"
 ```
 
-### 2. Using Our CLI
+### 2. Deployment Commands
 
 ```bash
-# Deploy with our custom commands
-go run . fly deploy
+# Infrastructure management
+go run . deploy              # Idempotent deployment workflow
+go run . status              # Check deployment health
+go run . shutdown            # Stop all services
 
-# Check status
-go run . fly status
+# Fly.io specific commands
+go run . cli fly status      # Fly.io machine status  
+go run . cli fly logs        # View application logs
+go run . cli fly ssh         # SSH into machine
+go run . cli fly deploy      # Direct flyctl deploy
 
-# View logs
-go run . fly logs
-
-# SSH into the machine
-go run . fly ssh
-
-# Scale resources
-go run . fly scale
+# Scaling (see scaling section below)
+go run . cli fly scale       # Show current scaling
 ```
+
+### 3. Local Development & Testing
+
+Before deploying, test the full stack locally:
+
+```bash
+# Start all services with goreman supervision
+go run .
+
+# Check service status
+go run . -h                  # See organized command help
+curl http://localhost:1337/status    # Health endpoint
+curl http://localhost:8090/         # PocketBase admin  
+curl http://localhost:8888/api/v1/deck/health  # Deck API health
+```
+
+All services run under goreman supervision:
+- **NATS Server** (4222) - Message streaming
+- **PocketBase** (8090) - Database with admin UI
+- **Caddy** (80/443) - Reverse proxy  
+- **Bento** (4195) - Stream processing
+- **Deck API** (8888) - Go-zero visualization API
+- **Web Server** (1337) - Main dashboard
 
 ### 3. Database Setup with Litestream
 
@@ -176,18 +199,62 @@ go run . litestream status
    litestream status -config /app/litestream.yml
    ```
 
-### Scaling
+## Scaling and Management
+
+### Scaling Commands
+
+The infrastructure supports comprehensive scaling options:
 
 ```bash
-# Scale memory
-./.dep/flyctl scale memory 1GB
+# Show current scaling configuration
+go run . cli fly scale
+
+# Horizontal scaling (add/remove machines)
+go run . cli fly scale --count 2          # Scale to 2 machines
+go run . cli fly scale --count 1          # Scale back to 1 machine
+
+# Vertical scaling (resources per machine)  
+go run . cli fly scale --memory 1024      # Scale memory to 1GB
+go run . cli fly scale --memory 2048      # Scale memory to 2GB
+go run . cli fly scale --cpu 2            # Scale to 2 CPU cores
+
+# VM type scaling (machine performance)
+go run . cli fly scale --vm shared-cpu-2x      # 2 shared CPUs
+go run . cli fly scale --vm performance-2x     # 2 dedicated CPUs
+
+# Combined scaling operations
+go run . cli fly scale --count 2 --memory 2048 --cpu 2
+```
+
+### Scale Application
+
+```bash
+# Scale to multiple instances
+go run . cli fly scale --count 2 -a your-app-name
+
+# Scale memory  
+go run . cli fly scale --memory 1024 -a your-app-name
 
 # Scale CPU
-./.dep/flyctl scale cpu 2
-
-# Scale machines
-./.dep/flyctl scale count 2
+go run . cli fly scale --vm shared-cpu-2x -a your-app-name
 ```
+
+### Auto-scaling
+
+The system supports manual scaling as shown above. For automatic scaling based on metrics, you can:
+
+1. **Monitor metrics** via `/metrics` endpoint
+2. **Set up alerts** based on CPU/memory usage
+3. **Use external tools** to call scaling commands
+4. **Implement custom logic** using the NATS event system
+
+### Scaling Best Practices
+
+- **Start small**: Begin with 1 machine and scale as needed
+- **Monitor first**: Use `/metrics` and `/status` to understand usage
+- **Scale gradually**: Increase resources incrementally  
+- **Test scaling**: Verify application works correctly at different scales
+- **Regional distribution**: Use `--region` for multi-region deployments
 
 ## Monitoring
 

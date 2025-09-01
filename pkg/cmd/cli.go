@@ -145,7 +145,25 @@ func handleCaddyServe(args []string) error {
 var cliCmd = &cobra.Command{
 	Use:   "cli",
 	Short: "CLI tool wrappers",
-	Long:  `Access to various CLI tools and utilities.`,
+	Long: `Access to various CLI tools and utilities:
+
+SCALING & DEPLOYMENT:
+  fly              Fly.io operations and scaling
+  
+DEVELOPMENT TOOLS:
+  deck             Deck visualization tools  
+  gozero           Go-zero microservices operations
+  
+BINARY TOOLS:
+  tofu             OpenTofu infrastructure as code
+  task             Task runner and build automation
+  caddy            Web server with automatic HTTPS
+  ko               Container image builder for Go
+  flyctl           Direct flyctl commands
+  nats             NATS messaging operations
+  bento            Stream processing operations
+
+Use "infra cli [tool] --help" for detailed information about each tool.`,
 }
 
 // RunCLI adds the CLI parent command and management commands to the root.
@@ -171,6 +189,9 @@ func RunCLI() {
 	
 	// Add deck presentation tools
 	AddDeckToCLI(cliCmd)
+	
+	// Add go-zero microservices tools
+	AddGoZeroToCLI(cliCmd)
 	
 	// Add CLI parent command to root
 	rootCmd.AddCommand(cliCmd)
