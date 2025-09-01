@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeblew999/infra/pkg/api/deck/internal/svc"
-	"github.com/joeblew999/infra/pkg/api/deck/internal/types"
+	"github.com/joeblew999/infra/api/deck/internal/svc"
+	"github.com/joeblew999/infra/api/deck/internal/types"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )

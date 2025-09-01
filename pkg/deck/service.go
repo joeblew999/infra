@@ -14,6 +14,7 @@ import (
 
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/goreman"
 )
 
 // Watcher monitors filesystem for .dsh file changes
@@ -328,5 +329,72 @@ func (w *Watcher) runPdfdeck(inputPath, outputPath string) error {
 	}
 	
 	return nil
+}
+
+// StartAPISupervised starts the deck API service under goreman supervision (idempotent)
+// This starts the go-zero based deck API server on the configured port
+func StartAPISupervised(port int) error {
+	if port == 0 {
+		port = 8888 // Default deck API port
+	}
+	
+	// Ensure config directory exists for deck API
+	configDir := filepath.Join(config.GetDataPath(), "deck-api")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create deck API config directory: %w", err)
+	}
+	
+	// Create deck API config file
+	configPath := filepath.Join(configDir, "deck-api.yaml")
+	configContent := fmt.Sprintf(`Name: deck-api
+Host: 0.0.0.0
+Port: %d
+`, port)
+	
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		return fmt.Errorf("failed to create deck API config: %w", err)
+	}
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("deck-api", &goreman.ProcessConfig{
+		Command:    "go",
+		Args:       []string{"run", "api/deck/deck.go", "-f", configPath},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
+}
+
+// StartWatcherSupervised starts the deck file watcher service under goreman supervision (idempotent)  
+// This starts the background .dsh file processing service
+func StartWatcherSupervised(watchPaths []string, formats []string) error {
+	if len(watchPaths) == 0 {
+		watchPaths = []string{"test/deck", "docs/deck"} // Default watch paths
+	}
+	if len(formats) == 0 {
+		formats = []string{"svg", "png", "pdf"} // Default formats
+	}
+	
+	// Create a simple config file for the watcher
+	configDir := filepath.Join(config.GetDataPath(), "deck-watcher")
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create deck watcher config directory: %w", err)
+	}
+	
+	// We'll use environment variables to configure the watcher
+	env := append(os.Environ(),
+		fmt.Sprintf("DECK_WATCH_PATHS=%s", filepath.Join(watchPaths...)),
+		fmt.Sprintf("DECK_FORMATS=%s", filepath.Join(formats...)),
+	)
+	
+	// Register and start with goreman supervision  
+	args := append([]string{"run", ".", "deck", "watch"}, watchPaths...)
+	args = append(args, "--formats", strings.Join(formats, ","))
+	
+	return goreman.RegisterAndStart("deck-watcher", &goreman.ProcessConfig{
+		Command:    "go", 
+		Args:       args,
+		WorkingDir: ".",
+		Env:        env,
+	})
 }
 

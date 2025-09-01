@@ -6,7 +6,7 @@ package handler
 import (
 	"net/http"
 
-	"github.com/joeblew999/infra/pkg/api/deck/internal/svc"
+	"github.com/joeblew999/infra/api/deck/internal/svc"
 
 	"github.com/zeromicro/go-zero/rest"
 )

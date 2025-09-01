@@ -2,10 +2,13 @@ package pocketbase
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/pocketbase/pocketbase"
 )
 
@@ -91,4 +94,29 @@ func GetAppURL(port string) string {
 // GetAPIURL returns the API URL for the PocketBase app
 func GetAPIURL(port string) string {
 	return GetAppURL(port) + "/api"
+}
+
+// StartSupervised starts PocketBase under goreman supervision (idempotent)
+// This starts PocketBase using the standalone pocketbase binary
+func StartSupervised(env string, port string) error {
+	if port == "" {
+		port = "8090" // Default PocketBase port
+	}
+	if env == "" {
+		env = "production"
+	}
+	
+	// Ensure data directory exists
+	dataDir := config.GetPocketBaseDataPath()
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		return fmt.Errorf("failed to create PocketBase data directory: %w", err)
+	}
+	
+	// Register and start with goreman supervision
+	return goreman.RegisterAndStart("pocketbase", &goreman.ProcessConfig{
+		Command:    filepath.Join(".dep", "pocketbase"),
+		Args:       []string{"serve", "--dir", dataDir, "--http", "localhost:" + port},
+		WorkingDir: ".",
+		Env:        append(os.Environ(), "ENVIRONMENT="+env),
+	})
 }

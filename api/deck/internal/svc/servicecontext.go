@@ -1,7 +1,7 @@
 package svc
 
 import (
-	"github.com/joeblew999/infra/pkg/api/deck/internal/config"
+	"github.com/joeblew999/infra/api/deck/internal/config"
 )
 
 type ServiceContext struct {

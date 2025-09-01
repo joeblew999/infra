@@ -11,8 +11,32 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:     "infra",
-	Short:   "Infra is a tool for managing infrastructure",
-	Long:    `A comprehensive tool for managing infrastructure, including dependencies, services, and more.`,
+	Short:   "Infrastructure management system with goreman supervision",
+	Long:    `Infrastructure Management System
+
+QUICK START:
+  infra          Start all services (NATS, Caddy, Bento, Deck API, Web Server)
+  infra shutdown Stop all services
+
+INFRASTRUCTURE COMMANDS:
+  service        Run infrastructure services with goreman supervision  
+  shutdown       Kill running service processes
+  status         Check deployment status and health
+  deploy         Deploy application using idempotent workflow
+
+DEVELOPMENT COMMANDS:
+  config         Print current configuration
+  deck           Deck visualization tools
+  dep            Manage binary dependencies  
+  gozero         Go-zero microservices operations
+  init           Initialize new project
+
+ADVANCED COMMANDS:
+  api-check      Check API compatibility between commits
+  cli            CLI tool wrappers
+  completion     Generate shell autocompletion
+
+Use "infra [command] --help" for detailed information about any command.`,
 	Version: "0.0.1",
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
@@ -54,4 +78,21 @@ func Execute() {
 func init() {
 	rootCmd.PersistentFlags().String("env", "production", "Environment: production or development")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug mode")
+	
+	// Set custom help template that shows only our organized structure
+	rootCmd.SetHelpTemplate(`{{.Long}}
+
+Usage:
+  {{.UseLine}}{{if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}
+`)
 }

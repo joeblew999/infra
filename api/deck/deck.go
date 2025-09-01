@@ -4,9 +4,9 @@ import (
 	"flag"
 	"fmt"
 
-	"github.com/joeblew999/infra/pkg/api/deck/internal/config"
-	"github.com/joeblew999/infra/pkg/api/deck/internal/handler"
-	"github.com/joeblew999/infra/pkg/api/deck/internal/svc"
+	"github.com/joeblew999/infra/api/deck/internal/config"
+	"github.com/joeblew999/infra/api/deck/internal/handler"
+	"github.com/joeblew999/infra/api/deck/internal/svc"
 
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"

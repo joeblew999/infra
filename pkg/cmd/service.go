@@ -2,22 +2,16 @@ package cmd
 
 import (
 	"context"
-	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
-	gonats "github.com/nats-io/nats.go"
-
 	"github.com/joeblew999/infra/pkg/bento"
 	"github.com/joeblew999/infra/pkg/caddy"
-	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/deck"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/gops"
-	"github.com/joeblew999/infra/pkg/litestream"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
@@ -27,21 +21,14 @@ import (
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "Run in service mode",
+	Short: "Run in service mode (same as root command)",
+	Long:  "Start all infrastructure services with goreman supervision. This is identical to running the root command without arguments.",
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
 		RunService(true, false, false, env) // Use embedded docs in production
 	},
 }
 
-var supervisedCmd = &cobra.Command{
-	Use:   "supervised",
-	Short: "Run services with goreman supervision (demo)",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Run a demo of the goreman system without starting real services
-		goreman.RunDemo()
-	},
-}
 
 // apiCheckCmd provides API compatibility checking
 var apiCheckCmd = &cobra.Command{
@@ -73,205 +60,103 @@ func init() {
 }
 
 func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
-	log.Info("Running in Service mode...")
+	log.Info("Running in Service mode with goreman supervision...")
 
-	ctx, cancel := context.WithCancel(context.Background())
+	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Setup graceful shutdown
+	// Setup graceful shutdown using goreman
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
-		log.Info("🛑 Received shutdown signal, shutting down gracefully...")
+		log.Info("🛑 Received shutdown signal, stopping all supervised processes...")
+		goreman.StopAll()
 		cancel()
 		os.Exit(0)
 	}()
 
-	// Start NATS server (but don't fail if it doesn't work)
-	log.Info("🚀 Step 1: Starting embedded NATS server...")
-	natsAddr, err := nats.StartEmbeddedNATS(ctx)
-	if err != nil {
-		log.Warn("⚠️  Failed to start embedded NATS server, continuing without NATS", "error", err)
-		natsAddr = "" // Mark as disabled
-	} else {
-		log.Info("✅ NATS server started", "address", natsAddr)
-	}
-
-	// Connect to NATS for client operations (only if NATS started)
-	var nc *gonats.Conn
-	if natsAddr != "" {
-		log.Info("🔗 Connecting to NATS client...")
-		nc, err = gonats.Connect(natsAddr)
-		if err != nil {
-			log.Warn("⚠️  Failed to connect to NATS client, continuing without NATS", "error", err)
-			natsAddr = "" // Mark as disabled
+	// Start all services using goreman supervision
+	log.Info("🚀 Starting all infrastructure services...")
+	
+	// Start NATS server  
+	if !noNATS {
+		log.Info("🚀 Step 1: Starting NATS server...")
+		if err := nats.StartSupervised(4222); err != nil {
+			log.Warn("NATS failed to start", "error", err)
 		} else {
-			log.Info("✅ NATS client connected")
-			defer nc.Close()
+			log.Info("✅ NATS server started supervised", "port", 4222)
 		}
 	}
 
-	// Start PocketBase server (optional for now)
-	pbEnv := "production"
-	if mode == "development" {
-		pbEnv = "development"
-	}
-	
-	log.Info("🚀 Step 2: Starting PocketBase server...")
-	pbPort := config.GetPocketBasePort()
-	dataDir := config.GetPocketBaseDataPath()
-	log.Info("📱 PocketBase configuration", "port", pbPort, "env", pbEnv, "data_dir", dataDir)
-	
-	// Ensure data directory exists
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		log.Error("Failed to create PocketBase data directory", "error", err)
-	} else {
-		log.Info("✅ PocketBase data directory ready", "path", dataDir)
-	}
-	
-	pbServer := pocketbase.NewServer(pbEnv)
-	if err := pbServer.Start(ctx); err != nil {
-		log.Error("❌ PocketBase server failed to start", "error", err)
-	} else {
-		log.Info("✅ PocketBase server started", "url", pocketbase.GetAppURL(pbPort))
-		defer func() {
-			log.Info("⏹️  Stopping PocketBase server...")
-			pbServer.Stop()
-		}()
+	// Start PocketBase server
+	if !noPocketbase {
+		log.Info("🚀 Step 2: Starting PocketBase server...")
+		pbEnv := "production"
+		if mode == "development" {
+			pbEnv = "development"
+		}
+		if err := pocketbase.StartSupervised(pbEnv, "8090"); err != nil {
+			log.Warn("PocketBase failed to start", "error", err)
+		} else {
+			log.Info("✅ PocketBase server started supervised", "port", 8090)
+		}
 	}
 
-	// Start Caddy reverse proxy (includes bento playground proxy)
+	// Start Caddy reverse proxy
 	log.Info("🚀 Step 3: Starting Caddy reverse proxy...")
-	caddyPort := "80"
-	if config.ShouldUseHTTPS() {
-		caddyPort = "443"
-	}
-	
-	caddyDir := config.GetCaddyPath()
-	if err := os.MkdirAll(caddyDir, 0755); err != nil {
-		log.Error("Failed to create Caddy directory", "error", err)
+	if err := caddy.StartSupervised(nil); err != nil {
+		log.Warn("Caddy failed to start", "error", err)  
 	} else {
-		log.Info("✅ Caddy directory ready", "path", caddyDir)
-	}
-	
-	// Generate Caddyfile using new preset API
-	caddyConfig := caddy.NewPresetConfig(caddy.PresetDevelopment, 80)
-	if err := caddyConfig.GenerateAndSave("Caddyfile"); err != nil {
-		log.Error("Failed to generate Caddyfile", "error", err)
-	} else {
-		log.Info("✅ Caddyfile generated", "path", filepath.Join(caddyDir, "Caddyfile"))
-	}
-	
-	caddyfilePath := filepath.Join(caddyDir, "Caddyfile")
-	caddyArgs := []string{"run", "--config", caddyfilePath}
-	caddyCmd := exec.CommandContext(ctx, config.GetCaddyBinPath(), caddyArgs...)
-	caddyCmd.Stdout = os.Stdout
-	caddyCmd.Stderr = os.Stderr
-	
-	if err := caddyCmd.Start(); err != nil {
-		log.Error("❌ Caddy failed to start", "error", err)
-	} else {
-		log.Info("✅ Caddy reverse proxy started", "url", fmt.Sprintf("http://localhost:%s", caddyPort))
-		defer func() {
-			log.Info("⏹️  Stopping Caddy reverse proxy...")
-			caddyCmd.Process.Signal(syscall.SIGTERM)
-			caddyCmd.Wait()
-		}()
+		log.Info("✅ Caddy reverse proxy started supervised")
 	}
 
 	// Start Bento service
 	log.Info("🚀 Step 4: Starting Bento stream processing service...")
-	bentoPort := config.GetBentoPort()
-	bentoDataDir := config.GetBentoPath()
-	log.Info("🍱 Bento configuration", "port", bentoPort, "data_dir", bentoDataDir)
-	
-	// Ensure bento data directory exists
-	if err := os.MkdirAll(bentoDataDir, 0755); err != nil {
-		log.Error("Failed to create Bento data directory", "error", err)
+	if err := bento.StartSupervised(4195); err != nil {
+		log.Warn("Bento failed to start", "error", err)
 	} else {
-		log.Info("✅ Bento data directory ready", "path", bentoDataDir)
+		log.Info("✅ Bento service started supervised", "port", 4195)
 	}
+
+	// Start deck services
+	log.Info("🚀 Step 5: Starting deck services...")
 	
-	// Ensure bento config exists
-	if err := bento.CreateDefaultConfig(); err != nil {
-		log.Error("Failed to create default bento config", "error", err)
+	// Start deck API service
+	if err := deck.StartAPISupervised(8888); err != nil {
+		log.Warn("Deck API failed to start", "error", err)
 	} else {
-		log.Info("✅ Bento configuration ready")
+		log.Info("✅ Deck API service started supervised", "port", 8888)
 	}
 	
-	bentoService, err := bento.NewService(4195)
-	if err != nil {
-		log.Error("❌ Failed to create Bento service", "error", err)
+	// Start deck file watcher service  
+	if err := deck.StartWatcherSupervised([]string{"test/deck", "docs/deck"}, []string{"svg", "png", "pdf"}); err != nil {
+		log.Warn("Deck watcher failed to start", "error", err)
 	} else {
-		if err := bentoService.Start(); err != nil {
-			log.Error("❌ Bento service failed to start", "error", err)
-		} else {
-			log.Info("✅ Bento service started", "url", "http://localhost:4195", "proxy_url", fmt.Sprintf("http://localhost:%s/bento-playground", caddyPort))
-			defer func() {
-				log.Info("⏹️  Stopping Bento service...")
-				bentoService.Stop()
-			}()
-		}
+		log.Info("✅ Deck watcher service started supervised")
 	}
 
-	// Initialize multi-destination logging with NATS support (only if NATS started)
-	loggingConfig := log.LoadConfig()
-	if len(loggingConfig.Destinations) > 0 {
-		if natsAddr != "" {
-			// Use NATS-aware initialization since NATS is available
-			if err := log.InitMultiLoggerWithNATS(loggingConfig, nc); err != nil {
-				log.Warn("Failed to initialize NATS-aware multi-destination logging", "error", err)
-			}
-		} else {
-			log.Info("Using basic logging (NATS unavailable)")
-		}
-	} else {
-		// Use basic logging if no config
-		log.Info("Using basic logging (no multi-destination config found)")
+	// Show process status from goreman
+	log.Info("📊 All services started with goreman supervision")
+	status := goreman.GetAllStatus()
+	for name, stat := range status {
+		log.Info("Process status", "name", name, "status", stat)
+	}
+	
+	// Start web server (this runs in current process for now)
+	log.Info("🚀 Step 6: Starting web server...")
+	// Check web server port availability
+	if !gops.IsPortAvailable(1337) {
+		log.Error("❌ Web server port 1337 is already in use. Please free the port and try again.")
+		os.Exit(1)
 	}
 
-	// Determine the service role based on the mode flag
-	if mode == "" {
-		mode = "service" // Default to service mode if not specified
-	}
-
-	switch mode {
-	case "metric-agent":
-		log.Info("Starting as Metric Agent")
-		if natsAddr != "" {
-			// Start metric collection in a goroutine
-			go gops.StartMetricCollection(ctx, nc, 5*time.Second) // Collect every 5 seconds
-		} else {
-			log.Warn("⚠️  Metric Agent requires NATS, but NATS is unavailable")
-		}
-	case "autoscaling-orchestrator":
-		log.Info("Starting as Autoscaling Orchestrator")
-		if natsAddr != "" {
-			// TODO: Implement autoscaling orchestration logic here
-		} else {
-			log.Warn("⚠️  Autoscaling Orchestrator requires NATS, but NATS is unavailable")
-		}
-	default:
-		log.Info("🚀 Step 4: Starting web server...")
-		// Check web server port availability
-		if !gops.IsPortAvailable(1337) {
-			log.Error("❌ Web server port 1337 is already in use. Please free the port and try again.")
-			os.Exit(1)
-		}
-
-		// Check MCP server port availability
-		if !gops.IsPortAvailable(8080) {
-			log.Error("❌ MCP server port 8080 is already in use. Please free the port and try again.")
-			os.Exit(1)
-		}
-
-		log.Info("🌐 Starting web server", "address", "http://localhost:1337", "embedded_docs", noDevDocs)
-		// Start the web server (blocking)
-		if err := web.StartServer(natsAddr, noDevDocs); err != nil {
-			log.Error("❌ Failed to start web server", "error", err)
-			os.Exit(1)
-		}
+	log.Info("🌐 Starting web server", "address", "http://localhost:1337", "embedded_docs", noDevDocs)
+	// Start the web server (blocking) - for now we use basic NATS connection
+	natsAddr := "nats://localhost:4222"
+	if err := web.StartServer(natsAddr, noDevDocs); err != nil {
+		log.Error("❌ Failed to start web server", "error", err)
+		os.Exit(1)
 	}
 }
 
@@ -279,81 +164,84 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 var shutdownCmd = &cobra.Command{
 	Use:   "shutdown",
 	Short: "Kill running service processes",
-	Long:  "Find and kill any running service processes (web server, NATS, PocketBase)",
+	Long:  "Find and kill all running service processes (goreman-supervised and standalone)",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info("🔍 Finding and killing running service processes...")
+		log.Info("🛑 Shutting down all infrastructure services...")
 		
-		// Kill by ports
-		ports := []int{1337, 4222, 8090, 4195, 80, 443}
+		// First attempt: Try to find and signal the main service process for graceful shutdown
+		log.Info("🔍 Looking for main service process...")
+		mainProcessKilled := false
+		
+		// Try to find the main infra process and send SIGTERM for graceful shutdown
+		if err := gops.KillProcessByName("infra"); err == nil {
+			log.Info("✅ Sent graceful shutdown signal to main service process")
+			mainProcessKilled = true
+			// Give it time to shutdown gracefully
+			time.Sleep(3 * time.Second)
+		}
+		
+		// Kill by ports (including deck API port)
+		log.Info("🔌 Shutting down services by port...")
+		ports := []int{
+			1337, // Web server
+			4222, // NATS server  
+			8090, // PocketBase
+			4195, // Bento
+			8888, // Deck API (NEW)
+			80,   // Caddy HTTP
+			443,  // Caddy HTTPS
+		}
+		
+		portsKilled := 0
 		for _, port := range ports {
-			if err := gops.KillProcessByPort(port); err != nil {
-				log.Warn("Failed to kill process on port", "port", port, "error", err)
+			if err := gops.KillProcessByPort(port); err == nil {
+				log.Info("✅ Stopped service on port", "port", port)
+				portsKilled++
 			}
 		}
 		
-		// Kill process by name
-		gops.KillProcessByName("go run")
-		gops.KillProcessByName("infra")
-		gops.KillProcessByName("caddy")
-		gops.KillProcessByName("bento")
+		// Kill by process name (goreman-supervised processes)
+		log.Info("📝 Shutting down goreman-supervised processes...")
+		processNames := []string{
+			"go run",      // Main service process
+			"infra",       // Compiled binary
+			"caddy",       // Caddy reverse proxy
+			"bento",       // Bento stream processor
+			"deck",        // Deck API server
+			"nats-server", // NATS server binary
+			"pocketbase",  // PocketBase server
+		}
 		
-		log.Info("✅ All service processes stopped")
+		processesKilled := 0
+		for _, name := range processNames {
+			if err := gops.KillProcessByName(name); err == nil {
+				log.Info("✅ Stopped process", "name", name)
+				processesKilled++
+			}
+		}
+		
+		// Summary
+		if mainProcessKilled {
+			log.Info("✅ Main service process shutdown gracefully")
+		}
+		if portsKilled > 0 {
+			log.Info("✅ Stopped services on ports", "count", portsKilled)
+		}
+		if processesKilled > 0 {
+			log.Info("✅ Stopped processes by name", "count", processesKilled)  
+		}
+		
+		if mainProcessKilled || portsKilled > 0 || processesKilled > 0 {
+			log.Info("🎉 All infrastructure services shutdown complete!")
+		} else {
+			log.Info("ℹ️  No running services found to shutdown")
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(shutdownCmd)
-	rootCmd.AddCommand(supervisedCmd)
 	
 	serviceCmd.Flags().String("env", "production", "Environment (production/development)")
-	supervisedCmd.Flags().String("env", "development", "Environment (production/development)")
 }
 
-// RunServiceSupervised demonstrates the new supervised approach
-// Each package registers itself with goreman automatically
-func RunServiceSupervised(mode string) error {
-	log.Info("🚀 Starting services with goreman supervision...")
-	
-	// Each package registers and starts itself idempotently
-	// No need to know what will be started - packages decide
-	
-	// Start infrastructure services
-	if err := nats.StartSupervised(4222); err != nil {
-		log.Warn("NATS failed to start", "error", err)
-	}
-	
-	if err := caddy.StartSupervised(nil); err != nil {
-		log.Warn("Caddy failed to start", "error", err)  
-	}
-	
-	// Start application services
-	if err := bento.StartSupervised(4195); err != nil {
-		log.Warn("Bento failed to start", "error", err)
-	}
-	
-	if err := litestream.StartSupervised("", "", "", false); err != nil {
-		log.Warn("Litestream failed to start", "error", err)
-	}
-	
-	// Setup graceful shutdown for all supervised processes
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-c
-		log.Info("🛑 Received shutdown signal, stopping all processes...")
-		goreman.StopAll()
-		os.Exit(0)
-	}()
-	
-	// Show process status
-	status := goreman.GetAllStatus()
-	for name, stat := range status {
-		log.Info("Process status", "name", name, "status", stat)
-	}
-	
-	log.Info("✅ All services started with supervision")
-	log.Info("🔍 Process status available via goreman.GetAllStatus()")
-	
-	// Keep running until shutdown
-	select {}
-}
