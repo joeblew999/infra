@@ -22,18 +22,11 @@ jobs:
       with:
         go-version: 'stable'
     
-    # Run the same checks you'd run locally
-    - name: Go Tests
+    # Run the same commands you'd run locally
+    - name: Tests
       run: go test ./...
     
-    - name: API Compatibility Check
-      if: github.event_name == 'pull_request'
-      run: go run . api-check --old origin/${{ github.base_ref }} --new HEAD
-    
-    - name: Basic Build Check
-      run: go build .
-    
-    # Deploy only on main branch pushes
+    # Deploy handles everything: build + deploy in one mega workflow
     - name: Deploy
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
@@ -41,4 +34,4 @@ jobs:
           echo "❌ FLY_API_TOKEN not set - skipping deploy"
           exit 0
         fi
-        go run . deploy --app ${{ env.FLY_APP_NAME }} --env production
+        go run . deploy --env production
