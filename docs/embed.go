@@ -5,6 +5,6 @@ import (
 )
 
 //go:embed *
-//go:embed roadmap/*
-//go:embed roadmap/ROADMAP.md
+//go:embed business/*
+//go:embed technical/*
 var EmbeddedFS embed.FS
