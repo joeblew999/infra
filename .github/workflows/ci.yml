@@ -22,16 +22,16 @@ jobs:
       with:
         go-version: 'stable'
     
-    # Run the same commands you use locally
-    - name: CI Checks
-      run: go run . ci
+    # Run the same checks you'd run locally
+    - name: Go Tests
+      run: go test ./...
     
     - name: API Compatibility Check
       if: github.event_name == 'pull_request'
       run: go run . api-check --old origin/${{ github.base_ref }} --new HEAD
     
-    - name: Build Test
-      run: go run . build --push=false
+    - name: Basic Build Check
+      run: go build .
     
     # Deploy only on main branch pushes
     - name: Deploy
