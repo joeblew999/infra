@@ -138,7 +138,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	}
 	
 	// Start deck file watcher service  
-	if err := deck.StartWatcherSupervised([]string{"test/deck", "docs/deck"}, []string{"svg", "png", "pdf"}); err != nil {
+	if err := deck.StartWatcherSupervised([]string{"test/deck"}, []string{"svg", "png", "pdf"}); err != nil {
 		log.Warn("Deck watcher failed to start", "error", err)
 	} else {
 		log.Info("✅ Deck watcher service started supervised")

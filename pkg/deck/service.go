@@ -368,7 +368,7 @@ Port: %d
 // This starts the background .dsh file processing service
 func StartWatcherSupervised(watchPaths []string, formats []string) error {
 	if len(watchPaths) == 0 {
-		watchPaths = []string{"test/deck", "docs/deck"} // Default watch paths
+		watchPaths = []string{"test/deck"} // Default watch paths
 	}
 	if len(formats) == 0 {
 		formats = []string{"svg", "png", "pdf"} // Default formats
