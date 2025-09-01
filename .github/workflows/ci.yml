@@ -1,4 +1,4 @@
-name: CI
+name: Simple CI/CD
 
 on:
   push:
@@ -6,31 +6,39 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+  FLY_APP_NAME: ${{ secrets.FLY_APP_NAME || 'infra-mgmt' }}
+
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    
+  ci-cd:
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # For api-check comparisons
     
-    - name: Set up Go
-      uses: actions/setup-go@v5
+    - uses: actions/setup-go@v5
       with:
         go-version: 'stable'
     
-    - name: Cache Go modules
-      uses: actions/cache@v4
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
-
-    - name: Run CI workflow (DRY - uses pkg/workflows)
+    # Run the same commands you use locally
+    - name: CI Checks
       run: go run . ci
-
-    - name: Build binary (DRY - uses pkg/workflows) 
-      run: go run . binary --local
+    
+    - name: API Compatibility Check
+      if: github.event_name == 'pull_request'
+      run: go run . api-check --old origin/${{ github.base_ref }} --new HEAD
+    
+    - name: Build Test
+      run: go run . build --push=false
+    
+    # Deploy only on main branch pushes
+    - name: Deploy
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        if [ -z "$FLY_API_TOKEN" ]; then
+          echo "❌ FLY_API_TOKEN not set - skipping deploy"
+          exit 0
+        fi
+        go run . deploy --app ${{ env.FLY_APP_NAME }} --env production

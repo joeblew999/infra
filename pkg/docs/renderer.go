@@ -54,8 +54,6 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 		.nav li { margin: 5px 0; }
 		.nav a { color: #007acc; text-decoration: none; }
 		.nav a:hover { text-decoration: underline; }
-		.nav .bento-link { color: #dc2626; font-weight: bold; }
-		.nav .bento-link:hover { color: #b91c1c; }
 		.content { flex: 1; }
 		.breadcrumbs { padding: 10px 0; border-bottom: 1px solid #eee; margin-bottom: 20px; color: #666; }
 		.breadcrumbs a { color: #007acc; text-decoration: none; }
@@ -83,11 +81,10 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 func (r *Renderer) renderNavigation(nav []NavItem) string {
 	var sb strings.Builder
 	
-	// Add bento playground link at the top
+	// Add main navigation
 	sb.WriteString("<h3>Main Navigation</h3>")
 	sb.WriteString("<ul>")
 	sb.WriteString("<li><a href=\"/\">🏠 Home</a></li>")
-	sb.WriteString("<li><a href=\"/bento-playground\" class=\"bento-link\">🎮 Bento Playground</a></li>")
 	sb.WriteString("</ul>")
 	
 	// Add documentation navigation
