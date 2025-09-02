@@ -1,6 +1,7 @@
 package ai
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,9 @@ import (
 	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/log"
 )
+
+//go:embed claude-mcp-default.json
+var defaultMCPConfig []byte
 
 // ClaudeConfig represents the Claude configuration structure
 
@@ -400,15 +404,10 @@ func (r *ClaudeRunner) MCPRemove(name string) error {
 
 // InstallDefaultMCP installs the default MCP servers from config
 func (r *ClaudeRunner) InstallDefaultMCP() error {
-	configFile := "pkg/ai/claude-mcp-default.json"
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		return fmt.Errorf("failed to read default config: %w", err)
-	}
-
+	// Use embedded default config
 	var config ClaudeMCPConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse config: %w", err)
+	if err := json.Unmarshal(defaultMCPConfig, &config); err != nil {
+		return fmt.Errorf("failed to parse embedded config: %w", err)
 	}
 
 	for _, server := range config.Servers {
@@ -426,15 +425,10 @@ func (r *ClaudeRunner) InstallDefaultMCP() error {
 
 // PresetList lists all available preset MCP servers from the default config
 func (r *ClaudeRunner) PresetList() error {
-	configFile := "pkg/ai/claude-mcp-default.json"
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		return fmt.Errorf("failed to read default config: %w", err)
-	}
-
+	// Use embedded default config
 	var config ClaudeMCPConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse config: %w", err)
+	if err := json.Unmarshal(defaultMCPConfig, &config); err != nil {
+		return fmt.Errorf("failed to parse embedded config: %w", err)
 	}
 
 	fmt.Println("📋 Available Preset MCP Servers")
@@ -464,15 +458,10 @@ func (r *ClaudeRunner) PresetList() error {
 
 // InstallMCPByName installs a specific MCP server by name from the default config
 func (r *ClaudeRunner) InstallMCPByName(serverName string) error {
-	configFile := "pkg/ai/claude-mcp-default.json"
-	data, err := os.ReadFile(configFile)
-	if err != nil {
-		return fmt.Errorf("failed to read default config: %w", err)
-	}
-
+	// Use embedded default config
 	var config ClaudeMCPConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse config: %w", err)
+	if err := json.Unmarshal(defaultMCPConfig, &config); err != nil {
+		return fmt.Errorf("failed to parse embedded config: %w", err)
 	}
 
 	// Find the requested server

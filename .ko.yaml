@@ -27,8 +27,8 @@ builds:
   - -buildvcs=false
   ldflags:
   - -s -w
-  - -X main.version={{.Version}}
-  - -X main.buildTime={{.Date}}
+  - -X github.com/joeblew999/infra/pkg/cmd.GitHash={{.Env.GIT_HASH}}
+  - -X github.com/joeblew999/infra/pkg/cmd.BuildTime={{.Date}}
   - -extldflags=-static
 
 # Security and optimization settings

@@ -174,8 +174,9 @@ func (b *BinaryBuildWorkflow) buildForPlatform(platform, arch string) (BinaryMet
 		CGOEnabled: "0",
 	}
 
-	// Try to get git info
-	commit, branch := getGitInfo()
+	// Try to get git info using centralized approach
+	commit := config.GetRuntimeGitHash()
+	branch := config.GetRuntimeGitBranch()
 	metadata.GitCommit = commit
 	metadata.GitBranch = branch
 
@@ -196,8 +197,15 @@ func (b *BinaryBuildWorkflow) getBinaryName(platform, arch string) string {
 func (b *BinaryBuildWorkflow) getLDFlags() string {
 	var flags []string
 	
-	// Add version information (could be enhanced with git info)
-	flags = append(flags, "-s", "-w") // Strip debug info and symbol table
+	// Strip debug info and symbol table
+	flags = append(flags, "-s", "-w")
+	
+	// Inject git info and build time using centralized config package
+	commit := config.GetRuntimeGitHash()
+	if commit != "" {
+		flags = append(flags, fmt.Sprintf("-X github.com/joeblew999/infra/pkg/cmd.GitHash=%s", commit))
+	}
+	flags = append(flags, fmt.Sprintf("-X github.com/joeblew999/infra/pkg/cmd.BuildTime=%s", time.Now().UTC().Format(time.RFC3339)))
 	
 	return strings.Join(flags, " ")
 }
@@ -254,24 +262,7 @@ func GetLocalBinaryName(name string) string {
 	return binaryName
 }
 
-// getGitInfo retrieves git commit and branch information
-func getGitInfo() (commit, branch string) {
-	// Try to get git commit
-	if cmd := exec.Command("git", "rev-parse", "HEAD"); cmd != nil {
-		if output, err := cmd.Output(); err == nil {
-			commit = strings.TrimSpace(string(output))
-		}
-	}
-	
-	// Try to get git branch
-	if cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD"); cmd != nil {
-		if output, err := cmd.Output(); err == nil {
-			branch = strings.TrimSpace(string(output))
-		}
-	}
-	
-	return commit, branch
-}
+// Removed: git functions now centralized in pkg/build.GetRuntimeGitHash/Branch()
 
 // calculateSHA256 calculates SHA256 hash of a file
 func calculateSHA256(filePath string) (string, error) {
@@ -286,7 +277,8 @@ func calculateSHA256(filePath string) (string, error) {
 
 // generateMetaJSON generates metadata for all built binaries
 func generateMetaJSON(opts BinaryBuildOptions, binaries []BinaryMetadata) error {
-	commit, branch := getGitInfo()
+	commit := config.GetRuntimeGitHash()
+	branch := config.GetRuntimeGitBranch()
 	
 	buildHost, _ := os.Hostname()
 	buildUser := os.Getenv("USER")

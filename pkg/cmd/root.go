@@ -3,10 +3,18 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/spf13/cobra"
+)
+
+// Build-time variables injected via ldflags
+var (
+	GitHash   = "dev"
+	BuildTime = "unknown"
 )
 
 var rootCmd = &cobra.Command{
@@ -35,16 +43,35 @@ ADVANCED COMMANDS:
   completion     Generate shell autocompletion
 
 Use "infra [command] --help" for detailed information about any command.`,
-	Version: "0.0.1",
+	Version: getVersionString(),
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
 		RunService(false, false, false, env) // Always start all services
 	},
 }
 
+// SetBuildInfo sets build information for display in web pages
+func SetBuildInfo(gitHash, buildTime string) {
+	GitHash = gitHash
+	BuildTime = buildTime
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
+	// For direct execution, inject git hash at runtime if not set via ldflags
+	if GitHash == "dev" {
+		if commit := config.GetRuntimeGitHash(); commit != "" {
+			GitHash = commit
+		}
+	}
+	if BuildTime == "unknown" {
+		BuildTime = time.Now().UTC().Format(time.RFC3339)
+	}
+	
+	// Set build info for display in web pages
+	config.SetBuildInfo(GitHash, BuildTime)
+
 	// Skip directory creation and dependency installation in production Fly.io environment
 	if os.Getenv("FLY_APP_NAME") == "" {
 		if err := EnsureInfraDirectories(); err != nil {
@@ -71,6 +98,22 @@ func Execute() {
 	}
 }
 
+
+// Removed: getRuntimeGitHash now centralized in pkg/build.GetRuntimeGitHash()
+
+// getVersionString returns version info using build info (DRY)
+func getVersionString() string {
+	// Ensure build info is set (handles runtime injection for direct execution)
+	if GitHash == "dev" {
+		if runtimeHash := config.GetRuntimeGitHash(); runtimeHash != "" {
+			GitHash = runtimeHash
+		}
+	}
+	
+	// Use centralized config package for version formatting
+	config.SetBuildInfo(GitHash, BuildTime)
+	return config.GetFullVersionString()
+}
 
 func init() {
 	rootCmd.PersistentFlags().String("env", "production", "Environment: production or development")

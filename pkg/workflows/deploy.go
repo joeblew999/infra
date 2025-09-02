@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
@@ -271,7 +272,10 @@ func (d *DeployWorkflow) deploy(image string) error {
 		return nil
 	}
 
-	args := []string{"deploy", "-a", d.opts.AppName, "--remote-only"}
+	// Add build arg with current timestamp to force cache invalidation
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	args := []string{"deploy", "-a", d.opts.AppName, "--remote-only", "--no-cache", 
+		"--build-arg", "CACHE_BUST=" + timestamp}
 	return runBinary(config.GetFlyctlBinPath(), args...)
 }
 

@@ -4,6 +4,7 @@ import (
 	"html"
 	"strings"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/yuin/goldmark"
 	goldmark_parser "github.com/yuin/goldmark/parser"
 	goldmark_renderer_html "github.com/yuin/goldmark/renderer/html"
@@ -73,6 +74,11 @@ func (r *Renderer) RenderToHTMLPage(title string, htmlContent string, nav []NavI
 		<div class="breadcrumbs">` + breadcrumbs + `</div>
 		` + htmlContent + `
 	</div>
+	<footer style="margin-top: 40px; padding: 20px 0; border-top: 1px solid #eee; text-align: center; color: #666; font-size: 12px;">
+		<a href="https://github.com/joeblew999/infra/commit/` + config.GitHash + `" target="_blank" style="color: #666; text-decoration: none;">
+			Build: ` + config.GetShortHash() + `
+		</a>
+	</footer>
 </body>
 </html>`
 }

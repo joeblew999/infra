@@ -116,6 +116,9 @@ func (app *App) setupRoutes() {
 		app.handlePublish(w, r)
 	})
 
+	// API routes
+	app.router.Get("/api/build", app.handleBuildInfo)
+	
 	// Navigation routes
 	app.router.Get(config.MetricsHTTPPath, app.handleMetrics)
 	app.router.Get(config.LogsHTTPPath, app.handleLogs)
@@ -316,6 +319,32 @@ func (app *App) handleLogs(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>`
 	w.Write([]byte(html))
+}
+
+func (app *App) handleBuildInfo(w http.ResponseWriter, r *http.Request) {
+	buildInfo := struct {
+		Version     string `json:"version"`
+		GitHash     string `json:"git_hash"`
+		ShortHash   string `json:"short_hash"`
+		BuildTime   string `json:"build_time"`
+		Timestamp   string `json:"timestamp"`
+		Environment string `json:"environment"`
+	}{
+		Version:     config.GetVersion(),
+		GitHash:     config.GitHash,
+		ShortHash:   config.GetShortHash(),
+		BuildTime:   config.BuildTime,
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Environment: func() string {
+			if config.IsProduction() {
+				return "production"
+			}
+			return "development"
+		}(),
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(buildInfo)
 }
 
 func (app *App) handleStatus(w http.ResponseWriter, r *http.Request) {

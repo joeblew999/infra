@@ -4,6 +4,9 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
+# Cache bust argument
+ARG CACHE_BUST
+
 # Install git for version info
 RUN apk add --no-cache git
 
@@ -19,9 +22,11 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build the binary with optimization flags
-RUN CGO_ENABLED=0 GOOS=linux go build \
-    -ldflags="-w -s -extldflags=-static" \
+# Build the binary with optimization flags and git hash injection
+RUN GIT_HASH=$(git rev-parse HEAD) && \
+    BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) && \
+    CGO_ENABLED=0 GOOS=linux go build \
+    -ldflags="-w -s -extldflags=-static -X github.com/joeblew999/infra/pkg/cmd.GitHash=${GIT_HASH} -X github.com/joeblew999/infra/pkg/cmd.BuildTime=${BUILD_TIME}" \
     -trimpath \
     -o infra .
 

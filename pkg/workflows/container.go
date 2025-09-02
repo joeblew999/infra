@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
@@ -102,12 +103,9 @@ func (b *ContainerBuildWorkflow) Execute() (string, error) {
 	
 	// Execute the command
 	cmd := exec.Command(koPath, args...)
-	// Create temporary empty config to avoid .ko.yaml conflicts
-	tmpConfig := "/tmp/.ko.yaml"
-	if _, err := os.Stat(tmpConfig); os.IsNotExist(err) {
-		os.WriteFile(tmpConfig, []byte(""), 0644)
-	}
-	cmd.Env = append(os.Environ(), "KO_CONFIG_PATH=/tmp")
+	// Use project .ko.yaml and set git hash environment variable
+	commit := getGitCommit()
+	cmd.Env = append(os.Environ(), "GIT_HASH="+commit)
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -123,6 +121,17 @@ func (b *ContainerBuildWorkflow) Execute() (string, error) {
 	log.Info("Built container image", "image", image)
 
 	return image, nil
+}
+
+// getGitCommit retrieves git commit information
+func getGitCommit() string {
+	// Try to get git commit
+	if cmd := exec.Command("git", "rev-parse", "HEAD"); cmd != nil {
+		if output, err := cmd.Output(); err == nil {
+			return strings.TrimSpace(string(output))
+		}
+	}
+	return ""
 }
 
 // pushImage is now handled by the build command directly

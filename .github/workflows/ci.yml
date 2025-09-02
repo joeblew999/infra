@@ -35,3 +35,36 @@ jobs:
           exit 0
         fi
         go run . deploy --env production
+    
+    # Verify deployment shows correct git hash
+    - name: Verify Deployment
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: |
+        if [ -z "$FLY_API_TOKEN" ]; then
+          echo "❌ FLY_API_TOKEN not set - skipping verification"
+          exit 0
+        fi
+        
+        echo "🔍 Verifying deployment shows correct git hash..."
+        EXPECTED_HASH=$(git rev-parse HEAD)
+        EXPECTED_SHORT=${EXPECTED_HASH:0:7}
+        
+        # Wait for deployment to be ready
+        sleep 30
+        
+        # Get build info from deployed app
+        RESPONSE=$(curl -s https://${FLY_APP_NAME}.fly.dev/api/build || echo '{}')
+        DEPLOYED_HASH=$(echo "$RESPONSE" | grep -o '"git_hash":"[^"]*"' | cut -d'"' -f4)
+        
+        echo "Expected: $EXPECTED_HASH"
+        echo "Deployed: $DEPLOYED_HASH"
+        
+        if [ "$DEPLOYED_HASH" = "$EXPECTED_HASH" ]; then
+          echo "✅ Deployment verification successful - git hash matches!"
+        elif [ "$DEPLOYED_HASH" = "dev" ]; then
+          echo "❌ Deployment shows 'dev' hash - git injection failed!"
+          exit 1
+        else
+          echo "⚠️  Deployment shows different hash - may be from previous deployment"
+          echo "This could happen if deployment was skipped due to no changes"
+        fi
