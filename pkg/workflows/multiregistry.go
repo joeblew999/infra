@@ -101,10 +101,24 @@ func (m *MultiRegistryBuildWorkflow) Execute() error {
 		}
 	}
 
-	// Report results
+	// Report results - succeed if at least one registry worked
 	if len(errors) > 0 {
-		log.Warn("Multi-registry build completed with errors", "errors", errors)
-		return fmt.Errorf("build errors: %s", strings.Join(errors, "; "))
+		totalRegistries := 0
+		if m.opts.PushToGHCR {
+			totalRegistries++
+		}
+		if m.opts.PushToFlyRegistry {
+			totalRegistries++
+		}
+		
+		if len(errors) == totalRegistries {
+			// All registries failed
+			log.Error("All registries failed", "errors", errors)
+			return fmt.Errorf("all registry builds failed: %s", strings.Join(errors, "; "))
+		} else {
+			// Some registries succeeded
+			log.Warn("Multi-registry build completed with partial failures", "errors", errors)
+		}
 	}
 
 	log.Info("🎉 Multi-registry build completed successfully",

@@ -249,15 +249,23 @@ func (d *DeployWorkflow) ensureVolume() error {
 func (d *DeployWorkflow) buildMultiRegistryImages() error {
 	log.Info("Building multi-registry container images")
 	
-	// Create multi-registry workflow
-	multiRegistry := NewMultiRegistryBuildWorkflow(MultiRegistryBuildOptions{
+	// Create multi-registry workflow with intelligent fallback
+	opts := MultiRegistryBuildOptions{
 		GitHash:           config.GetRuntimeGitHash(),
 		Environment:       d.opts.Environment,
-		PushToGHCR:        true,  // Always push to GHCR as primary
-		PushToFlyRegistry: false, // Skip Fly registry - use GHCR for deployment
+		PushToGHCR:        true,  // Try GHCR first
+		PushToFlyRegistry: true,  // Fallback to Fly registry
 		DryRun:            d.opts.DryRun,
 		AppName:           d.opts.AppName,
-	})
+	}
+	
+	// Check GHCR credentials and fallback if needed
+	if os.Getenv("GITHUB_TOKEN") == "" {
+		log.Info("GITHUB_TOKEN not available, using Fly registry only")
+		opts.PushToGHCR = false
+	}
+	
+	multiRegistry := NewMultiRegistryBuildWorkflow(opts)
 	
 	// Check credentials before attempting build
 	if err := multiRegistry.CheckCredentials(); err != nil {
@@ -268,18 +276,24 @@ func (d *DeployWorkflow) buildMultiRegistryImages() error {
 	return multiRegistry.Execute()
 }
 
-// deploy deploys the application to Fly.io using GHCR image
+// deploy deploys the application to Fly.io using best available image
 func (d *DeployWorkflow) deploy() error {
-	ghcrImage := "ghcr.io/joeblew999/infra:latest"
-	log.Info("Deploying to Fly.io using GHCR image", "image", ghcrImage)
+	// Choose image based on what's available - prefer GHCR if available
+	var image string
+	if os.Getenv("GITHUB_TOKEN") != "" {
+		image = "ghcr.io/joeblew999/infra:latest"
+		log.Info("Deploying using GHCR image", "image", image)
+	} else {
+		image = fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
+		log.Info("Deploying using Fly.io registry image", "image", image)
+	}
 	
 	if d.opts.DryRun {
-		log.Info("[DRY RUN] Would deploy with GHCR image", "image", ghcrImage)
+		log.Info("[DRY RUN] Would deploy with image", "image", image)
 		return nil
 	}
 
-	// Deploy using the GHCR image (already pushed by multi-registry workflow)
-	args := []string{"deploy", "-a", d.opts.AppName, "--image", ghcrImage}
+	args := []string{"deploy", "-a", d.opts.AppName, "--image", image}
 	return runBinary(config.GetFlyctlBinPath(), args...)
 }
 
