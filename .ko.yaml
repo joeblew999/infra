@@ -4,11 +4,11 @@
 # - ENVIRONMENT: production|development
 
 # Secure minimal base image for production
-defaultBaseImage: cgr.dev/chainguard/static:latest
+defaultBaseImage: alpine:latest
 
 # Base image overrides for debug builds in development
 baseImageOverrides:
-  github.com/joeblew99/infra: cgr.dev/chainguard/static:latest
+  github.com/joeblew99/infra: alpine:latest
 
 # Multi-platform builds (override with KO_DEFAULTPLATFORMS env var)
 defaultPlatforms:

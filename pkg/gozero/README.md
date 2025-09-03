@@ -6,6 +6,8 @@ Go-zero wrapper for the infra project, providing consistent patterns for go-zero
 
 This package wraps the `goctl` command-line tool to provide high-level functions for generating go-zero API services that follow infra patterns. It ensures generated code conforms to our standards and integrates seamlessly with the infra architecture.
 
+You can generate Go, iOS, Android, Kotlin, Dart, TypeScript, JavaScript from .api files with goctl.
+
 ## Features
 
 - **MCP API Generation**: Creates go-zero API services optimized for Model Context Protocol (MCP) integration

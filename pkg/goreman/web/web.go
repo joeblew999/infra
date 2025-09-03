@@ -1,15 +1,20 @@
 package web
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joeblew999/infra/pkg/goreman"
 )
+
+//go:embed templates/*.html
+var templateFS embed.FS
 
 // ProcessStatusWeb represents process status for web display
 type ProcessStatusWeb struct {
@@ -30,11 +35,18 @@ type WebHandler struct {
 
 // NewWebHandler creates a new web handler
 func NewWebHandler(webDir string) *WebHandler {
-	// Load templates from the web directory
+	// Load templates from embedded filesystem first, fallback to webDir
 	templates := template.New("")
-	if webDir != "" {
-		globPattern := webDir + "/templates/*.html"
-		template.Must(templates.ParseGlob(globPattern))
+	
+	// Try embedded templates first (for Ko builds)
+	if tmpl, err := template.ParseFS(templateFS, "templates/*.html"); err == nil {
+		templates = tmpl
+	} else if webDir != "" {
+		// Fallback to filesystem templates (for development)
+		globPattern := filepath.Join(webDir, "templates", "*.html")
+		if tmpl, err := template.ParseGlob(globPattern); err == nil {
+			templates = tmpl
+		}
 	}
 	
 	return &WebHandler{

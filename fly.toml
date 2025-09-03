@@ -12,7 +12,7 @@ kill_timeout = '5s'
   auto_rollback = true
 
 [build]
-  image = "registry.fly.io/infra-mgmt:latest"
+  image = "ghcr.io/joeblew999/infra:latest"
 
 [env]
   ENVIRONMENT = 'production'

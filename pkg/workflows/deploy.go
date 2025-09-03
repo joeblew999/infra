@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"time"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
@@ -73,14 +72,13 @@ func (d *DeployWorkflow) Execute() error {
 		return fmt.Errorf("volume setup failed: %w", err)
 	}
 
-	// Step 5: Build container image
-	image, err := d.buildImage()
-	if err != nil {
-		return fmt.Errorf("image build failed: %w", err)
+	// Step 5: Build and push container images to multiple registries
+	if err := d.buildMultiRegistryImages(); err != nil {
+		return fmt.Errorf("multi-registry build failed: %w", err)
 	}
 
-	// Step 6: Deploy
-	if err := d.deploy(image); err != nil {
+	// Step 6: Deploy using GHCR image
+	if err := d.deploy(); err != nil {
 		return fmt.Errorf("deployment failed: %w", err)
 	}
 
@@ -247,37 +245,45 @@ func (d *DeployWorkflow) ensureVolume() error {
 	return nil
 }
 
-// buildImage builds the container image using flyctl deploy
-func (d *DeployWorkflow) buildImage() (string, error) {
-	log.Info("Building container image with flyctl")
+// buildMultiRegistryImages builds and pushes images to multiple registries
+func (d *DeployWorkflow) buildMultiRegistryImages() error {
+	log.Info("Building multi-registry container images")
 	
-	if d.opts.DryRun {
-		log.Info("[DRY RUN] Would build container image")
-		return "registry.fly.io/" + d.opts.AppName + ":latest", nil
+	// Create multi-registry workflow
+	multiRegistry := NewMultiRegistryBuildWorkflow(MultiRegistryBuildOptions{
+		GitHash:           config.GetRuntimeGitHash(),
+		Environment:       d.opts.Environment,
+		PushToGHCR:        true,  // Always push to GHCR as primary
+		PushToFlyRegistry: false, // Skip Fly registry - use GHCR for deployment
+		DryRun:            d.opts.DryRun,
+		AppName:           d.opts.AppName,
+	})
+	
+	// Check credentials before attempting build
+	if err := multiRegistry.CheckCredentials(); err != nil {
+		log.Warn("Credential check failed, will attempt build anyway", "error", err)
 	}
-
-	// Use flyctl deploy with --build-only to build without deploying
-	image := fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
-	log.Info("Using flyctl deploy for image building", "image", image)
 	
-	return image, nil
+	// Execute multi-registry build
+	return multiRegistry.Execute()
 }
 
-// deploy deploys the application to Fly.io
-func (d *DeployWorkflow) deploy(image string) error {
-	log.Info("Deploying to Fly.io", "image", image)
+// deploy deploys the application to Fly.io using GHCR image
+func (d *DeployWorkflow) deploy() error {
+	ghcrImage := "ghcr.io/joeblew999/infra:latest"
+	log.Info("Deploying to Fly.io using GHCR image", "image", ghcrImage)
 	
 	if d.opts.DryRun {
-		log.Info("[DRY RUN] Would deploy image to Fly.io")
+		log.Info("[DRY RUN] Would deploy with GHCR image", "image", ghcrImage)
 		return nil
 	}
 
-	// Add build arg with current timestamp to force cache invalidation
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
-	args := []string{"deploy", "-a", d.opts.AppName, "--remote-only", "--no-cache", 
-		"--build-arg", "CACHE_BUST=" + timestamp}
+	// Deploy using the GHCR image (already pushed by multi-registry workflow)
+	args := []string{"deploy", "-a", d.opts.AppName, "--image", ghcrImage}
 	return runBinary(config.GetFlyctlBinPath(), args...)
 }
+
+// Note: buildAndPushWithKo removed - now handled by multi-registry script
 
 // verifyDeployment verifies the deployment was successful
 func (d *DeployWorkflow) verifyDeployment() error {

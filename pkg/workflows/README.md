@@ -66,6 +66,33 @@ go run . build --platform linux/arm64
 - **Automatic registry authentication**
 - **Production/development environment detection**
 
+### 2a. Multi-Registry Build (`multiregistry`)
+
+Build and push container images to multiple registries for redundancy and reliability.
+
+**Usage:**
+```bash
+# Build and push to GitHub Container Registry (recommended)
+go run . multiregistry --ghcr
+
+# Build and push to both GHCR and Fly.io registry
+go run . multiregistry --ghcr --fly
+
+# Dry run to see what would happen
+go run . multiregistry --ghcr --dry-run
+
+# Build with custom app name and environment
+go run . multiregistry --ghcr --app my-app --environment production
+```
+
+**Features:**
+- **Primary Registry:** GitHub Container Registry (GHCR) - better reliability
+- **Secondary Registry:** Fly.io registry - integrated with deployment
+- **Secure Credential Management** - uses environment variables
+- **Git Hash Injection** - automatic build metadata
+- **Robust Error Handling** - continues on partial failures
+- **Dry Run Support** - test without pushing
+
 ### 3. Container Deploy (`deploy`)
 
 Idempotent deployment to Fly.io using container images.
@@ -86,7 +113,8 @@ go run . deploy --dry-run
 - **Idempotent** - safe to run multiple times
 - **Automatic prerequisites check**
 - **App and volume creation** if needed
-- **Container image build** with `ko`
+- **Multi-registry container build** with GHCR primary
+- **GHCR-based deployment** for better reliability
 - **Deployment verification**
 
 ### 4. Status Check (`status`)
@@ -129,9 +157,10 @@ All workflows follow these principles:
 
 ```
 pkg/workflows/
-├── binary.go      # Cross-platform binary builds
-├── container.go   # Container image builds with ko
-├── deploy.go      # Fly.io deployment workflow
-├── status.go      # Deployment status and health checks
-└── init.go        # Project initialization
+├── binary.go        # Cross-platform binary builds
+├── container.go     # Container image builds with ko
+├── multiregistry.go # Multi-registry container builds
+├── deploy.go        # Fly.io deployment workflow
+├── status.go        # Deployment status and health checks
+└── init.go          # Project initialization
 ```

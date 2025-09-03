@@ -9,6 +9,7 @@ on:
 env:
   FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
   FLY_APP_NAME: ${{ secrets.FLY_APP_NAME || 'infra-mgmt' }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   ci-cd:
@@ -26,15 +27,25 @@ jobs:
     - name: Tests
       run: go test ./...
     
-    # Deploy handles everything: build + deploy in one mega workflow
+    # Deploy with Multi-Registry Ko builds
     - name: Deploy
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
-        if [ -z "$FLY_API_TOKEN" ]; then
-          echo "❌ FLY_API_TOKEN not set - skipping deploy"
+        if [ -z "$FLY_API_TOKEN" ] && [ -z "$GITHUB_TOKEN" ]; then
+          echo "❌ Neither FLY_API_TOKEN nor GITHUB_TOKEN set - skipping deploy"
           exit 0
         fi
-        go run . deploy --env production
+        echo "🚀 Deploying with Multi-Registry Ko build system..."
+        export GIT_HASH=$(git rev-parse HEAD)
+        export ENVIRONMENT=production
+        
+        # Multi-registry build and push (Go-based)
+        go run . multiregistry --ghcr --environment production
+        
+        # Deploy to Fly.io using GHCR image
+        if [ -n "$FLY_API_TOKEN" ]; then
+          go run . deploy --env production
+        fi
     
     # Verify deployment shows correct git hash
     - name: Verify Deployment
@@ -54,7 +65,7 @@ jobs:
         
         # Get build info from deployed app
         RESPONSE=$(curl -s https://${FLY_APP_NAME}.fly.dev/api/build || echo '{}')
-        DEPLOYED_HASH=$(echo "$RESPONSE" | grep -o '"git_hash":"[^"]*"' | cut -d'"' -f4)
+        DEPLOYED_HASH=$(echo "$RESPONSE" | jq -r '.git_hash // empty' 2>/dev/null || echo "$RESPONSE" | grep -o '"git_hash":"[^"]*"' | cut -d'"' -f4)
         
         echo "Expected: $EXPECTED_HASH"
         echo "Deployed: $DEPLOYED_HASH"
