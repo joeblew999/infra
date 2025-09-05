@@ -45,7 +45,11 @@ func NewDatastarHandlers(authService *WebAuthnService, webDir string) *DatastarH
 	if webDir != "" {
 		globPattern := webDir + "/fragments/*.html"
 		fmt.Printf("DEBUG: Loading templates from: %s\n", globPattern)
-		template.Must(templates.ParseGlob(globPattern))
+		
+		// Use ParseGlob but don't panic if no files found (for container deployments)
+		if _, err := templates.ParseGlob(globPattern); err != nil {
+			fmt.Printf("DEBUG: No fragment templates found at %s (continuing without auth fragments)\n", globPattern)
+		}
 		
 		// Debug: List loaded templates
 		for _, tmpl := range templates.Templates() {
