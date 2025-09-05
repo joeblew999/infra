@@ -3,42 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Process Monitor - Goreman</title>
+    <title>Process Monitor - Infrastructure Management</title>
+    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/@sudodevnull/datastar@latest/bundles/datastar.js"></script>
     <style>
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; 
-            padding: 20px; 
-            background: #f5f5f5;
-        }
-        .container { 
-            max-width: 1200px; 
-            margin: 0 auto; 
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        .header { 
-            background: #2563eb; 
-            color: white; 
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 { 
-            margin: 0; 
-            font-size: 24px;
-        }
-        .last-update {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .processes-container { 
-            padding: 20px; 
-        }
         .process-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -46,10 +14,11 @@
             margin-top: 20px;
         }
         .process-card {
-            border: 1px solid #e5e7eb;
+            border: 1px solid;
+            @apply border-gray-300 dark:border-gray-600;
             border-radius: 8px;
             padding: 16px;
-            background: #fff;
+            @apply bg-white dark:bg-gray-800;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .process-header {
@@ -61,7 +30,7 @@
         .process-name {
             font-weight: 600;
             font-size: 16px;
-            color: #1f2937;
+            @apply text-gray-900 dark:text-white;
         }
         .status-badge {
             padding: 4px 8px;
@@ -70,9 +39,9 @@
             font-weight: 500;
             text-transform: uppercase;
         }
-        .status-running { background: #dcfce7; color: #166534; }
-        .status-stopped { background: #fee2e2; color: #dc2626; }
-        .status-starting { background: #fef3c7; color: #d97706; }
+        .status-running { @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200; }
+        .status-stopped { @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200; }
+        .status-starting { @apply bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200; }
         .process-actions {
             display: flex;
             gap: 8px;
@@ -86,13 +55,13 @@
             cursor: pointer;
             font-weight: 500;
         }
-        .btn-start { background: #22c55e; color: white; }
-        .btn-stop { background: #ef4444; color: white; }
-        .btn-restart { background: #f59e0b; color: white; }
+        .btn-start { @apply bg-green-500 text-white hover:bg-green-600; }
+        .btn-stop { @apply bg-red-500 text-white hover:bg-red-600; }
+        .btn-restart { @apply bg-orange-500 text-white hover:bg-orange-600; }
         .btn:hover { opacity: 0.9; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .summary {
-            background: #f9fafb;
+            @apply bg-gray-50 dark:bg-gray-700;
             padding: 16px;
             border-radius: 8px;
             display: flex;
@@ -105,18 +74,18 @@
         .summary-number {
             font-size: 24px;
             font-weight: 700;
-            color: #1f2937;
+            @apply text-gray-900 dark:text-white;
         }
         .summary-label {
             font-size: 12px;
-            color: #6b7280;
+            @apply text-gray-600 dark:text-gray-400;
             text-transform: uppercase;
             font-weight: 500;
         }
         .empty-state {
             text-align: center;
             padding: 40px;
-            color: #6b7280;
+            @apply text-gray-600 dark:text-gray-400;
         }
         .indicator {
             font-size: 20px;
@@ -124,16 +93,18 @@
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔍 Process Monitor</h1>
-            <div class="last-update" data-text="'Last updated: ' + $lastUpdate">
+<body class="bg-white dark:bg-gray-900 text-lg max-w-4xl mx-auto my-8">
+    {{.Navigation}}
+    
+    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-6 py-8 ring shadow-xl ring-gray-900/5">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-semibold">🔍 Process Monitor</h1>
+            <div class="text-sm text-gray-600 dark:text-gray-400" data-text="'Last updated: ' + $lastUpdate">
                 Last updated: --:--:--
             </div>
         </div>
         
-        <div class="processes-container">
+        <div class="space-y-6">
             <div class="summary" id="summary">
                 <div class="summary-item">
                     <div class="summary-number" data-text="$summary.total">0</div>
@@ -190,6 +161,8 @@
             </div>
         </div>
     </div>
+    
+    {{.Footer}}
 
     <script>
         // Initialize datastar store

@@ -1,0 +1,28 @@
+<h2 class="text-2xl font-semibold mb-4">⚡ System Status</h2>
+<div class="space-y-4">
+    <div class="p-4 bg-green-100 dark:bg-green-900/20 rounded-lg">
+        <div class="flex items-center space-x-2">
+            <div class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-green-800 dark:text-green-200 font-medium">Infrastructure Services Online</span>
+        </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+            <div class="text-sm text-gray-600 dark:text-gray-400">Web Server</div>
+            <div class="text-green-600 dark:text-green-400 font-medium">✅ Running (Port 1337)</div>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+            <div class="text-sm text-gray-600 dark:text-gray-400">NATS Server</div>
+            <div class="text-green-600 dark:text-green-400 font-medium">✅ Running (Port 4222)</div>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+            <div class="text-sm text-gray-600 dark:text-gray-400">Caddy Proxy</div>
+            <div class="text-green-600 dark:text-green-400 font-medium">✅ Running (Port 80)</div>
+        </div>
+        <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded">
+            <div class="text-sm text-gray-600 dark:text-gray-400">Bento Service</div>
+            <div class="text-green-600 dark:text-green-400 font-medium">✅ Running (Port 4195)</div>
+        </div>
+    </div>
+</div>

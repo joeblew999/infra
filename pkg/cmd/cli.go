@@ -153,6 +153,7 @@ SCALING & DEPLOYMENT:
 DEVELOPMENT TOOLS:
   deck             Deck visualization tools  
   gozero           Go-zero microservices operations
+  toki             Translation and i18n workflow
   
 BINARY TOOLS:
   tofu             OpenTofu infrastructure as code

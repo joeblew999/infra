@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Configuration - Infrastructure Management</title>
+    {{.Header}}
+    {{.DataStar}}
+</head>
+<body class="bg-white dark:bg-gray-900 text-base sm:text-lg max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+    {{.Navigation}}
+    
+    {{.ConfigSubNav}}
+
+    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 sm:px-6 py-4 sm:py-8 ring shadow-xl ring-gray-900/5">
+        <h1 class="text-2xl font-semibold mb-6">🛠️ Configuration Management</h1>
+        
+        <!-- Environment Section -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h2 class="text-lg font-semibold mb-3 flex items-center">
+                📍 Environment
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Environment:</span>
+                    <span class="font-medium {{if .Config.Environment.IsProduction}}text-red-600 dark:text-red-400{{else}}text-blue-600 dark:text-blue-400{{end}}">
+                        {{if .Config.Environment.IsProduction}}production{{else}}development{{end}}
+                    </span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Platform:</span>
+                    <span class="font-medium">{{.Config.Platform.GOOS}}/{{.Config.Platform.GOARCH}}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">HTTPS:</span>
+                    <span class="font-medium">{{.Config.Environment.ShouldUseHTTPS}}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Dev Docs:</span>
+                    <span class="font-medium">{{.Config.Environment.DevDocs}}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Paths Section -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h2 class="text-lg font-semibold mb-3 flex items-center">
+                📂 Paths
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Data:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Paths.Data}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Dependencies:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Paths.Dep}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Binaries:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Paths.Bin}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Docs:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Paths.Docs}}</code>
+                </div>
+            </div>
+        </div>
+
+        <!-- Binaries Section -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h2 class="text-lg font-semibold mb-3 flex items-center">
+                🔧 Binaries
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">flyctl:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Binaries.Flyctl}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">ko:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Binaries.Ko}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">caddy:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Binaries.Caddy}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">bento:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Binaries.Bento}}</code>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Environment Variables Section -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h2 class="text-lg font-semibold mb-3 flex items-center">
+                🌐 Environment Variables
+            </h2>
+            <div class="space-y-2">
+                {{range $envVar, $status := .Config.EnvironmentStatus}}
+                <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg">
+                    <span class="font-medium">{{$envVar}}</span>
+                    {{if eq $status "set"}}
+                    <span class="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400 text-xs rounded-full font-medium">
+                        ✅ SET
+                    </span>
+                    {{else}}
+                    <span class="px-2 py-1 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400 text-xs rounded-full font-medium">
+                        ❌ NOT SET
+                    </span>
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+        </div>
+        
+        <!-- Registry Section -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <h2 class="text-lg font-semibold mb-3 flex items-center">
+                📊 Registry
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Ko Docker Repo:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Registry.KoDockerRepo}}</code>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 dark:text-gray-400">Ko Base Image:</span>
+                    <code class="text-xs bg-gray-200 dark:bg-gray-600 px-2 py-1 rounded">{{.Config.Registry.KoBaseImage}}</code>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="mt-6 flex flex-wrap gap-3">
+            <a href="/config/json" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors duration-200">
+                📄 View as JSON
+            </a>
+            <a href="/config/status" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors duration-200">
+                🔍 Check ENV Status
+            </a>
+            <a href="/config/secrets" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors duration-200">
+                🔐 Manage Secrets
+            </a>
+        </div>
+    </div>
+    
+    {{.Footer}}
+</body>
+</html>

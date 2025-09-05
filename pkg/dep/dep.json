@@ -390,11 +390,11 @@
   },
   {
     "name": "toki",
-    "description": "Fast, lightweight static site generator with markdown support",
+    "description": "Multi-language translation tool with pluralization support",
     "source": "github-release",
-    "repo": "joeblew999/toki",
-    "version": "v1.0.0",
-    "release_url": "https://github.com/joeblew999/toki/releases",
+    "repo": "romshark/toki",
+    "version": "v0.8.3",
+    "release_url": "https://github.com/romshark/toki/releases",
     "assets": [
       {
         "match": "toki_.*_darwin_arm64\\.tar\\.gz$",
@@ -417,9 +417,14 @@
         "arch": "arm64"
       },
       {
-        "match": "toki_.*_windows_amd64\\.zip$",
+        "match": "toki_.*_windows_amd64\\.tar\\.gz$",
         "os": "windows",
         "arch": "amd64"
+      },
+      {
+        "match": "toki_.*_windows_arm64\\.tar\\.gz$",
+        "os": "windows",
+        "arch": "arm64"
       }
     ]
   },

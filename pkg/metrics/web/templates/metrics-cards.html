@@ -1,0 +1,95 @@
+<div id="metrics-data" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Memory Usage Card -->
+    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/30 p-6 rounded-lg border border-blue-200 dark:border-blue-700">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-blue-900 dark:text-blue-100">💾 Memory Usage</h3>
+            <span class="text-2xl font-bold text-blue-600 dark:text-blue-400">{{.MemUsage}}</span>
+        </div>
+        <div class="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+            <div class="flex justify-between">
+                <span>Heap Alloc:</span>
+                <span class="font-mono">{{.HeapAlloc}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Heap System:</span>
+                <span class="font-mono">{{.HeapSys}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Stack In-Use:</span>
+                <span class="font-mono">{{.StackInuse}}</span>
+            </div>
+        </div>
+        <div class="mt-4 bg-blue-200 dark:bg-blue-700 rounded-full h-2">
+            <div class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: {{.MemUsage}}"></div>
+        </div>
+    </div>
+    
+    <!-- CPU & Goroutines Card -->
+    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/30 p-6 rounded-lg border border-green-200 dark:border-green-700">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-green-900 dark:text-green-100">⚡ CPU & Goroutines</h3>
+            <span class="text-2xl font-bold text-green-600 dark:text-green-400">{{.Goroutines}}</span>
+        </div>
+        <div class="space-y-2 text-sm text-green-800 dark:text-green-200">
+            <div class="flex justify-between">
+                <span>CPU Cores:</span>
+                <span class="font-mono">{{.NumCPU}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Goroutines:</span>
+                <span class="font-mono">{{.Goroutines}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Uptime:</span>
+                <span class="font-mono">{{.Uptime}}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Garbage Collection Card -->
+    <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/30 p-6 rounded-lg border border-purple-200 dark:border-purple-700">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-purple-900 dark:text-purple-100">🗑️ Garbage Collection</h3>
+            <span class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{.GCCount}}</span>
+        </div>
+        <div class="space-y-2 text-sm text-purple-800 dark:text-purple-200">
+            <div class="flex justify-between">
+                <span>Total GC Runs:</span>
+                <span class="font-mono">{{.GCCount}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Last Pause:</span>
+                <span class="font-mono">{{.LastPause}}</span>
+            </div>
+            <div class="flex justify-between">
+                <span>Next GC:</span>
+                <span class="font-mono">{{.NextGC}}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Chart Area -->
+<div class="mt-8">
+    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">📈 Real-time Performance Charts</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <canvas id="memoryChart" width="400" height="200" class="w-full"></canvas>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+            <canvas id="goroutineChart" width="400" height="200" class="w-full"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (window.updateMetricsCharts) {
+        window.updateMetricsCharts({
+            timestamp: {{.Timestamp}},
+            memoryUsage: {{.MemUsageFloat}},
+            goroutines: {{.Goroutines}},
+            heapAlloc: {{.HeapAllocBytes}},
+            gcCount: {{.GCCount}}
+        });
+    }
+</script>

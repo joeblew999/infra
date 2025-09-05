@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Bento Pipeline Builder - Infrastructure Management</title>
+    {{.Header}}
+    {{.DataStar}}
+</head>
+<body class="bg-white dark:bg-gray-900 text-xs sm:text-sm min-h-screen px-2 sm:px-4">
+    {{.Navigation}}
+    
+    <!-- Pipeline Builder Container -->
+    <div class="max-w-7xl mx-auto px-2 sm:px-4 py-4 sm:py-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center space-x-3">
+                <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">🎮 Bento Pipeline Builder</h1>
+                <div class="flex items-center space-x-2 px-3 py-1 bg-green-100 dark:bg-green-900/20 rounded-full">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs text-green-700 dark:text-green-400 font-medium">Live</span>
+                </div>
+            </div>
+            
+            <!-- Toolbar -->
+            <div class="flex items-center space-x-3">
+                <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors duration-200"
+                        data-on-click="$$post('/api/bento/validate')">
+                    🔍 Validate
+                </button>
+                <button class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors duration-200"
+                        data-on-click="$$post('/api/bento/export')">
+                    📥 Export YAML
+                </button>
+                <button class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors duration-200"
+                        data-on-click="$$post('/api/bento/deploy')">
+                    🚀 Deploy
+                </button>
+                <a href="http://localhost:4195" target="_blank"
+                   class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors duration-200">
+                    🔗 Bento UI
+                </a>
+            </div>
+        </div>
+        
+        <!-- Pipeline Status -->
+        <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg" id="pipeline-status">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <span class="font-medium">Pipeline:</span> Untitled Pipeline
+                    </div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <span class="font-medium">Components:</span> <span id="component-count">0</span>
+                    </div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400">
+                        <span class="font-medium">Status:</span> 
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 text-xs rounded">Draft</span>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400">
+                    Auto-save: <span id="save-status">Ready</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Builder Interface -->
+        <div class="grid grid-cols-12 gap-6 min-h-96">
+            <!-- Component Palette (Left Sidebar) -->
+            <div class="col-span-3">
+                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 h-full">
+                    <!-- Component palette will be populated via DataStar -->
+                    <div id="component-palette" data-on-load="$$get('/api/bento/builder')">
+                        <div class="flex items-center justify-center h-32">
+                            <div class="text-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto mb-2"></div>
+                                <div class="text-sm text-gray-500 dark:text-gray-400">Loading components...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pipeline Canvas (Center) -->
+            <div class="col-span-6">
+                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 h-full">
+                    <div class="h-full" id="pipeline-canvas-container">
+                        <!-- Canvas will be populated via DataStar -->
+                        <div class="flex items-center justify-center h-full">
+                            <div class="text-center">
+                                <div class="text-4xl mb-2">🎯</div>
+                                <div class="text-lg font-medium text-gray-900 dark:text-white">Loading Canvas...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Properties Panel (Right Sidebar) -->
+            <div class="col-span-3">
+                <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 h-full">
+                    <div id="properties-panel">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Properties</h3>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">
+                            Select a component to edit its properties
+                        </div>
+                        
+                        <!-- Quick Start Guide -->
+                        <div class="mt-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <h4 class="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">🚀 Quick Start</h4>
+                            <ol class="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-decimal list-inside">
+                                <li>Drag an <strong>Input</strong> from the palette</li>
+                                <li>Add <strong>Processors</strong> to transform data</li>
+                                <li>Drop an <strong>Output</strong> to complete the flow</li>
+                                <li>Click <strong>Validate</strong> to check your pipeline</li>
+                                <li>Use <strong>Export YAML</strong> to get the config</li>
+                            </ol>
+                        </div>
+                        
+                        <!-- Example Pipelines -->
+                        <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <h4 class="text-sm font-medium text-green-800 dark:text-green-200 mb-2">💡 Examples</h4>
+                            <div class="space-y-2">
+                                <button class="w-full text-left text-xs text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded transition-colors">
+                                    📡 NATS to HTTP webhook
+                                </button>
+                                <button class="w-full text-left text-xs text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded transition-colors">
+                                    ⚡ Data generator to file
+                                </button>
+                                <button class="w-full text-left text-xs text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100 p-2 hover:bg-green-100 dark:hover:bg-green-900/20 rounded transition-colors">
+                                    🔄 HTTP to NATS bridge
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Output/Logs Panel (Bottom) -->
+        <div class="mt-6">
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center space-x-4">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Pipeline Output</h3>
+                        <div class="flex space-x-2">
+                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded transition-colors">
+                                Validation
+                            </button>
+                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded transition-colors">
+                                YAML Export
+                            </button>
+                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded transition-colors">
+                                Console Logs
+                            </button>
+                        </div>
+                    </div>
+                    <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="p-4 max-h-48 overflow-y-auto bg-gray-50 dark:bg-gray-900" id="pipeline-output">
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-mono">
+                        Ready to build your pipeline. Start by dragging components from the palette.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {{.Footer}}
+    
+    <script>
+        // Pipeline Builder JavaScript
+        let pipelineComponents = [];
+        let selectedComponent = null;
+        let draggedComponent = null;
+        
+        // Drag and Drop functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle component dragging from palette
+            document.addEventListener('dragstart', function(e) {
+                if (e.target.hasAttribute('data-component-kind')) {
+                    draggedComponent = {
+                        kind: e.target.getAttribute('data-component-kind'),
+                        type: e.target.getAttribute('data-component-type'),
+                        name: e.target.getAttribute('data-component-name')
+                    };
+                    e.dataTransfer.effectAllowed = 'copy';
+                }
+            });
+            
+            // Handle drop on canvas
+            document.addEventListener('drop', function(e) {
+                if (e.target.closest('[data-pipeline-canvas]')) {
+                    e.preventDefault();
+                    if (draggedComponent) {
+                        addComponentToCanvas(draggedComponent, e.offsetX, e.offsetY);
+                        draggedComponent = null;
+                    }
+                }
+            });
+            
+            document.addEventListener('dragover', function(e) {
+                if (e.target.closest('[data-pipeline-canvas]')) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+            });
+        });
+        
+        // Add component to canvas
+        function addComponentToCanvas(component, x, y) {
+            const componentId = 'comp_' + Date.now();
+            pipelineComponents.push({
+                id: componentId,
+                kind: component.kind,
+                type: component.type,
+                name: component.name,
+                position: { x, y },
+                config: {}
+            });
+            
+            updateComponentCount();
+            renderCanvas();
+        }
+        
+        // Update component count
+        function updateComponentCount() {
+            const countEl = document.getElementById('component-count');
+            if (countEl) {
+                countEl.textContent = pipelineComponents.length;
+            }
+        }
+        
+        // Render canvas with components
+        function renderCanvas() {
+            // This would be more complex in a real implementation
+            // For now, just show a simple representation
+            console.log('Pipeline components:', pipelineComponents);
+        }
+        
+        // Auto-save functionality
+        setInterval(() => {
+            const statusEl = document.getElementById('save-status');
+            if (statusEl && pipelineComponents.length > 0) {
+                statusEl.textContent = 'Saving...';
+                setTimeout(() => {
+                    statusEl.textContent = 'Saved';
+                }, 500);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

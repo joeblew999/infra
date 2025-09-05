@@ -1,8 +1,78 @@
-# Fly.io Deployment Guide
+# Deployment Guide
 
-This guide walks you through deploying the infrastructure management system to Fly.io with goreman supervision and scaling capabilities.
+This document covers the repeatable deployment process for the infrastructure management system.
 
-## Prerequisites
+## ✅ What's Now Encoded in Code (Repeatable)
+
+All the manual steps from the successful deployment have been encoded into automated Go workflows:
+
+### 1. `go run . deploy-auto` - Fully Automated Deployment
+
+**Encodes these manual steps:**
+```bash
+# Manual steps that are now automated:
+FLY_API_TOKEN=$FLY_API_TOKEN ./.dep/flyctl auth docker
+export GIT_HASH=$(git rev-parse HEAD) 
+FLY_API_TOKEN=$FLY_API_TOKEN KO_DOCKER_REPO=registry.fly.io/infra-mgmt ./.dep/ko build --push=true --bare --tags=latest
+FLY_API_TOKEN=$FLY_API_TOKEN ./.dep/flyctl deploy --image registry.fly.io/infra-mgmt:latest -a infra-mgmt
+```
+
+**Usage:**
+```bash
+# Deploy to production (requires FLY_API_TOKEN)
+FLY_API_TOKEN=your_token go run . deploy-auto --env production
+
+# Deploy to development  
+FLY_API_TOKEN=your_token go run . deploy-auto --env development
+
+# Dry run to see what would happen
+go run . deploy-auto --dry-run
+```
+
+### 2. `go run . multiregistry` - Multi-Registry Container Builds
+
+**Features:**
+- Builds container images with Ko
+- Pushes to multiple registries (GHCR + Fly.io)
+- Handles credential failures gracefully
+- Git hash injection for version tracking
+- Cross-platform builds (linux/amd64, linux/arm64)
+
+**Usage:**
+```bash
+# Build and push to GHCR (requires GITHUB_TOKEN)
+GITHUB_TOKEN=your_token go run . multiregistry --ghcr
+
+# Build and push to Fly.io registry (requires FLY_API_TOKEN)  
+FLY_API_TOKEN=your_token go run . multiregistry --fly
+
+# Build and push to both registries
+GITHUB_TOKEN=your_token FLY_API_TOKEN=your_token go run . multiregistry --ghcr --fly
+```
+
+### 3. `go run . deploy` - Enhanced Deployment Workflow
+
+**Features:**
+- Idempotent deployment (safe to run multiple times)
+- Automatic app and volume setup
+- Multi-registry build integration
+- Intelligent registry fallback (GHCR → Fly.io)
+- Deployment verification
+
+## 🛠️ Architecture Components
+
+### Core Workflow Files
+- `pkg/workflows/multiregistry.go` - Multi-registry container builds
+- `pkg/workflows/deploy.go` - Enhanced deployment workflow  
+- `pkg/cmd/deployauto.go` - Fully automated deployment command
+- `pkg/cmd/multiregistry.go` - Multi-registry CLI interface
+
+### Configuration
+- `.ko.yaml` - Ko build configuration with git hash injection
+- `fly.toml` - Fly.io deployment configuration  
+- `pkg/goreman/web/web.go` - Embedded templates for container compatibility
+
+## 📋 Prerequisites
 
 1. **Fly.io Account**: Sign up at [fly.io](https://fly.io)
 2. **Dependencies**: Automatically managed via `go run . dep`

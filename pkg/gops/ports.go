@@ -68,8 +68,11 @@ func GetProcessByPort(port int) string {
 		return ""
 	}
 
-	// Unix-like systems: use lsof
-	cmd := exec.Command("sh", "-c", fmt.Sprintf(`lsof -ti :%s 2>/dev/null | head -1`, portStr))
+	// Unix-like systems: use lsof to find LISTENING processes only
+	// -i :PORT finds processes using the port
+	// -sTCP:LISTEN filters for listening processes only
+	// -t returns PIDs only
+	cmd := exec.Command("sh", "-c", fmt.Sprintf(`lsof -ti :%s -sTCP:LISTEN 2>/dev/null | head -1`, portStr))
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -104,8 +107,43 @@ func KillProcessByName(name string) error {
 		return nil
 	}
 
-	// Unix-like systems: use pkill
-	cmd := exec.Command("pkill", "-9", "-f", name)
+	// Unix-like systems: use pkill with exact binary name match
+	// Use -x flag to match exact process name, not command line
+	cmd := exec.Command("pkill", "-9", "-x", name)
 	cmd.Run() // Ignore errors
+	return nil
+}
+
+// KillInfraGoRunProcess specifically kills "go run ." processes in the infra directory
+// This is more targeted than the generic KillProcessByName to avoid killing other go processes
+func KillInfraGoRunProcess() error {
+	if runtime.GOOS == "windows" {
+		// Windows: find go.exe processes running from this directory
+		// This is complex on Windows, so we'll skip for now
+		return nil
+	}
+
+	// Get current working directory to match against
+	pwd := exec.Command("pwd")
+	pwdOutput, err := pwd.Output()
+	if err != nil {
+		return err
+	}
+	currentDir := strings.TrimSpace(string(pwdOutput))
+	
+	// Unix-like: Find go processes with "go run ." command line AND matching working directory
+	// Use pgrep -a to get full command line, then filter for exact matches in this directory
+	cmd := exec.Command("sh", "-c", fmt.Sprintf(`
+		pgrep -af "go.*run" | while read pid cmdline; do
+			if echo "$cmdline" | grep -q "go.*run.*\\."; then
+				# Get process working directory
+				pwdx_output=$(pwdx $pid 2>/dev/null | cut -d: -f2 | tr -d ' ' 2>/dev/null)
+				if [ "$pwdx_output" = "%s" ]; then
+					kill -9 $pid 2>/dev/null
+				fi
+			fi
+		done
+	`, currentDir))
+	cmd.Run() // Ignore errors - process might not exist
 	return nil
 }

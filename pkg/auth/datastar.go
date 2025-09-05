@@ -11,11 +11,19 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nats-io/nkeys"
 	"github.com/starfederation/datastar-go/datastar"
+	pkgweb "github.com/joeblew999/infra/pkg/web"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // Store holds Datastar signals for auth flows
 type Store struct {
 	Username string `json:"username"`
+}
+
+// PageData holds the template data for rendering pages
+type PageData struct {
+	Navigation template.HTML
+	Footer     template.HTML
 }
 
 // DatastarHandlers provides Datastar SSE fragment handlers for WebAuthn
@@ -77,7 +85,45 @@ func (h *DatastarHandlers) RegisterRoutes(r chi.Router) {
 
 // ServeIndex serves the main index.html page
 func (h *DatastarHandlers) ServeIndex(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, h.webDir+"/index.html")
+	h.renderTemplate(w, "/auth", "index")
+}
+
+// renderTemplate is a helper for rendering templates with nav/footer
+func (h *DatastarHandlers) renderTemplate(w http.ResponseWriter, currentPath, templateName string) {
+	// Get centralized navigation and footer
+	navHTML, err := pkgweb.RenderNav(currentPath)
+	if err != nil {
+		log.Error("Error rendering navigation", "error", err)
+		http.Error(w, "Failed to render navigation", http.StatusInternalServerError)
+		return
+	}
+	
+	footerHTML, err := pkgweb.RenderFooter()
+	if err != nil {
+		log.Error("Error rendering footer", "error", err)
+		footerHTML = ""
+	}
+	
+	// Load template from filesystem
+	templatePath := h.webDir + "/" + templateName + ".html"
+	tmpl, err := template.ParseFiles(templatePath)
+	if err != nil {
+		log.Error("Error loading template", "template", templateName, "error", err)
+		http.Error(w, "Template not found", http.StatusInternalServerError)
+		return
+	}
+	
+	data := PageData{
+		Navigation: template.HTML(navHTML),
+		Footer:     template.HTML(footerHTML),
+	}
+	
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		log.Error("Error executing template", "template", templateName, "error", err)
+		http.Error(w, "Failed to render template", http.StatusInternalServerError)
+	}
 }
 
 // ServeCSS serves the auth.css file

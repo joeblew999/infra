@@ -182,12 +182,20 @@ var shutdownCmd = &cobra.Command{
 		log.Info("🔍 Looking for main service process...")
 		mainProcessKilled := false
 		
-		// Try to find the main infra process and send SIGTERM for graceful shutdown
-		if err := gops.KillProcessByName("infra"); err == nil {
-			log.Info("✅ Sent graceful shutdown signal to main service process")
+		// Try to kill the specific infra "go run ." process from this directory
+		if err := gops.KillInfraGoRunProcess(); err == nil {
+			log.Info("✅ Sent shutdown signal to infra go run process")
 			mainProcessKilled = true
 			// Give it time to shutdown gracefully
-			time.Sleep(3 * time.Second)
+			time.Sleep(2 * time.Second)
+		}
+		
+		// Also try to find compiled infra binary and send SIGTERM for graceful shutdown
+		if err := gops.KillProcessByName("infra"); err == nil {
+			log.Info("✅ Sent graceful shutdown signal to infra binary process")
+			mainProcessKilled = true
+			// Give it time to shutdown gracefully
+			time.Sleep(1 * time.Second)
 		}
 		
 		// Kill by ports (including deck API port)
@@ -213,8 +221,7 @@ var shutdownCmd = &cobra.Command{
 		// Kill by process name (goreman-supervised processes)
 		log.Info("📝 Shutting down goreman-supervised processes...")
 		processNames := []string{
-			"go run",      // Main service process
-			"infra",       // Compiled binary
+			"infra",       // Compiled binary (exact match only)
 			"caddy",       // Caddy reverse proxy
 			"bento",       // Bento stream processor
 			"deck",        // Deck API server

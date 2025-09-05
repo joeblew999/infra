@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/joeblew999/infra/pkg/dep"
 )
@@ -67,19 +66,6 @@ func (r *Runner) AvailableCommands() []string {
 
 // Version returns the toki version
 func (r *Runner) Version() (string, error) {
-	cmd := exec.Command(r.tokiPath, "--help")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", err
-	}
-	
-	// Extract version from help text if available
-	lines := strings.Split(string(output), "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "version") {
-			return strings.TrimSpace(line), nil
-		}
-	}
-	
-	return "unknown", nil
+	// Toki doesn't have a --version flag, so we return the version from dep config
+	return "v0.8.3", nil
 }

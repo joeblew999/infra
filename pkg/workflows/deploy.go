@@ -52,6 +52,11 @@ func (d *DeployWorkflow) Execute() error {
 		"environment", d.opts.Environment,
 		"dry_run", d.opts.DryRun)
 
+	// Step 0: Bootstrap required environment variables
+	if err := config.BootstrapRequiredEnvs(); err != nil {
+		return fmt.Errorf("ENV bootstrap failed: %w", err)
+	}
+
 	// Step 1: Ensure flyctl is available
 	if err := d.ensureFlyctl(); err != nil {
 		return fmt.Errorf("flyctl setup failed: %w", err)

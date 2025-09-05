@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Environment Status - Infrastructure Management</title>
+    {{.Header}}
+    {{.DataStar}}
+</head>
+<body class="bg-white dark:bg-gray-900 text-base sm:text-lg max-w-4xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+    {{.Navigation}}
+    
+    {{.ConfigSubNav}}
+
+    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-4 sm:px-6 py-4 sm:py-8 ring shadow-xl ring-gray-900/5">
+        <h1 class="text-2xl font-semibold mb-6">🔍 Environment Variables Status</h1>
+        
+        <!-- Overall Status -->
+        {{if .MissingVars}}
+        <div class="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border-l-4 border-red-500">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="text-red-600 dark:text-red-400 text-xl">⚠️</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800 dark:text-red-200">
+                        Missing Required Variables
+                    </h3>
+                    <div class="mt-2 text-sm text-red-700 dark:text-red-300">
+                        <p>{{len .MissingVars}} environment variable(s) are not set and may be required for proper operation.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <div class="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-l-4 border-green-500">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <span class="text-green-600 dark:text-green-400 text-xl">✅</span>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-green-800 dark:text-green-200">
+                        All Environment Variables Set
+                    </h3>
+                    <div class="mt-2 text-sm text-green-700 dark:text-green-300">
+                        <p>All required environment variables are properly configured.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{end}}
+        
+        <!-- Variables List -->
+        <div class="space-y-3">
+            {{range $envVar, $status := .EnvStatus}}
+            <div class="flex items-center justify-between p-4 rounded-lg {{if eq $status "set"}}bg-green-50 dark:bg-green-900/20 border-l-4 border-green-500{{else}}bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500{{end}}">
+                <div class="flex items-center">
+                    <div class="mr-3">
+                        {{if eq $status "set"}}
+                        <span class="text-green-600 dark:text-green-400">✅</span>
+                        {{else}}
+                        <span class="text-red-600 dark:text-red-400">❌</span>
+                        {{end}}
+                    </div>
+                    <div>
+                        <div class="font-medium {{if eq $status "set"}}text-green-900 dark:text-green-100{{else}}text-red-900 dark:text-red-100{{end}}">
+                            {{$envVar}}
+                        </div>
+                        <div class="text-xs {{if eq $status "set"}}text-green-600 dark:text-green-400{{else}}text-red-600 dark:text-red-400{{end}}">
+                            {{if eq $status "set"}}Environment variable is configured{{else}}Environment variable is not set{{end}}
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <span class="px-3 py-1 text-xs font-medium rounded-full {{if eq $status "set"}}bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300{{else}}bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300{{end}}">
+                        {{if eq $status "set"}}SET{{else}}NOT SET{{end}}
+                    </span>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        
+        <!-- Actions -->
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a href="/config/secrets" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors duration-200">
+                🔐 Manage Secrets
+            </a>
+            <a href="/config/" class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors duration-200">
+                ← Back to Config
+            </a>
+            <button class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors duration-200"
+                    onclick="location.reload()">
+                🔄 Refresh Status
+            </button>
+        </div>
+    </div>
+    
+    {{.Footer}}
+</body>
+</html>

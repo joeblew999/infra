@@ -1,0 +1,193 @@
+<h2 class="text-xl sm:text-2xl font-semibold mb-6">📊 System Metrics Dashboard</h2>
+
+<!-- Real-time Metrics Container -->
+<div id="metrics-container" 
+     data-on-load="@get('/api/metrics/stream')" 
+     class="space-y-6">
+    <!-- Metrics data container that will be updated by SSE -->
+    <div id="metrics-data">
+        <!-- Initial loading state - will be replaced by SSE -->
+        <div class="text-center py-8">
+            <div class="inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-lg">
+                <svg class="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading metrics data...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+
+<script>
+// Global variables for charts
+let memoryChart = null;
+let goroutineChart = null;
+let chartData = {
+    memory: { labels: [], data: [] },
+    goroutines: { labels: [], data: [] }
+};
+
+// Initialize charts when metrics data is loaded
+function initializeCharts() {
+    // Memory Usage Chart
+    const memoryCtx = document.getElementById('memoryChart');
+    if (memoryCtx && !memoryChart) {
+        memoryChart = new Chart(memoryCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.memory.labels,
+                datasets: [{
+                    label: 'Memory Usage (%)',
+                    data: chartData.memory.data,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.2)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.2)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Memory Usage Over Time',
+                        color: 'rgb(75, 85, 99)'
+                    }
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+    
+    // Goroutine Count Chart
+    const goroutineCtx = document.getElementById('goroutineChart');
+    if (goroutineCtx && !goroutineChart) {
+        goroutineChart = new Chart(goroutineCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.goroutines.labels,
+                datasets: [{
+                    label: 'Goroutines',
+                    data: chartData.goroutines.data,
+                    borderColor: 'rgb(34, 197, 94)',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.2)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            color: 'rgba(156, 163, 175, 0.2)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Goroutine Count Over Time',
+                        color: 'rgb(75, 85, 99)'
+                    }
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
+                }
+            }
+        });
+    }
+}
+
+// Update charts with new data
+window.updateMetricsCharts = function(data) {
+    const timestamp = new Date(data.timestamp * 1000);
+    const timeLabel = timestamp.toLocaleTimeString();
+    
+    // Update memory chart
+    chartData.memory.labels.push(timeLabel);
+    chartData.memory.data.push(data.memoryUsage);
+    
+    // Update goroutine chart
+    chartData.goroutines.labels.push(timeLabel);
+    chartData.goroutines.data.push(data.goroutines);
+    
+    // Keep only last 20 data points
+    const maxPoints = 20;
+    if (chartData.memory.labels.length > maxPoints) {
+        chartData.memory.labels.shift();
+        chartData.memory.data.shift();
+        chartData.goroutines.labels.shift();
+        chartData.goroutines.data.shift();
+    }
+    
+    // Initialize charts if not already done
+    if (!memoryChart || !goroutineChart) {
+        // Wait a bit for DOM to be ready
+        setTimeout(initializeCharts, 100);
+        return;
+    }
+    
+    // Update chart data
+    memoryChart.data.labels = chartData.memory.labels;
+    memoryChart.data.datasets[0].data = chartData.memory.data;
+    memoryChart.update('none'); // No animation for real-time updates
+    
+    goroutineChart.data.labels = chartData.goroutines.labels;
+    goroutineChart.data.datasets[0].data = chartData.goroutines.data;
+    goroutineChart.update('none'); // No animation for real-time updates
+};
+
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to ensure DOM is fully ready
+    setTimeout(initializeCharts, 500);
+});
+</script>

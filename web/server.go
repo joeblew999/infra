@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -17,11 +18,31 @@ import (
 	"github.com/joeblew999/infra/pkg/docs"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
-	"github.com/joeblew999/infra/pkg/goreman/web"
+	configweb "github.com/joeblew999/infra/pkg/config/web"
+	"github.com/joeblew999/infra/pkg/auth"
+	bentoweb "github.com/joeblew999/infra/pkg/bento/web"
+	goremanweb "github.com/joeblew999/infra/pkg/goreman/web"
+	gopsweb "github.com/joeblew999/infra/pkg/gops/web"
+	logsweb "github.com/joeblew999/infra/pkg/logs/web"
+	"github.com/joeblew999/infra/pkg/metrics"
+	metricsweb "github.com/joeblew999/infra/pkg/metrics/web"
+	pkgweb "github.com/joeblew999/infra/pkg/web"
 )
 
 //go:embed index.html
 var helloWorldHTML []byte
+
+//go:embed templates/logs.html
+var logsHTML []byte
+
+//go:embed templates/status.html
+var statusHTML []byte
+
+//go:embed templates/bento-playground.html
+var bentoPlaygroundHTML []byte
+
+//go:embed templates/404.html
+var notFoundHTML []byte
 
 const port = 1337
 
@@ -43,6 +64,10 @@ type Message struct {
 
 func StartServer(natsAddr string, devDocs bool) error {
 	ctx := context.Background()
+
+	// Start metrics collection
+	collector := metrics.GetCollector()
+	go collector.Start(ctx, 2*time.Second) // Collect metrics every 2 seconds
 
 	// Connect to NATS server (optional for debugging)
 	nc, err := nats.Connect(natsAddr)
@@ -80,9 +105,52 @@ func StartServer(natsAddr string, devDocs bool) error {
 	return nil
 }
 
+// PageData holds the template data for rendering pages
+type PageData struct {
+	Navigation template.HTML
+	Footer     template.HTML
+	DataStar   template.HTML
+	Header     template.HTML
+}
+
+// renderPageContent renders just the inner content and wraps it with the base template
+func (app *App) renderPageContent(w http.ResponseWriter, contentHTML []byte, currentPath, title string) {
+	// Parse and execute the content template
+	tmpl, err := template.New("content").Parse(string(contentHTML))
+	if err != nil {
+		log.Error("Error parsing content template", "title", title, "error", err)
+		w.Write(contentHTML) // Fallback to static HTML
+		return
+	}
+	
+	// Execute content template to get the inner HTML
+	var contentBuf strings.Builder
+	err = tmpl.Execute(&contentBuf, nil) // No data needed for simple content
+	if err != nil {
+		log.Error("Error executing content template", "title", title, "error", err)
+		w.Write(contentHTML) // Fallback to static HTML
+		return
+	}
+	
+	// Use the centralized base template
+	fullHTML, err := pkgweb.RenderBasePage(title, contentBuf.String(), currentPath)
+	if err != nil {
+		log.Error("Error rendering base page", "title", title, "error", err)
+		w.Write(contentHTML) // Fallback to static HTML
+		return
+	}
+	
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(fullHTML))
+}
+
+func (app *App) renderHomePage(w http.ResponseWriter, _ *http.Request) {
+	app.renderPageContent(w, helloWorldHTML, "/", "Infrastructure Management System")
+}
+
 func (app *App) setupRoutes() {
 	app.router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write(helloWorldHTML)
+		app.renderHomePage(w, r)
 	})
 
 	// Original hello-world endpoint
@@ -118,9 +186,25 @@ func (app *App) setupRoutes() {
 
 	// API routes
 	app.router.Get("/api/build", app.handleBuildInfo)
+	app.router.Get("/api/system-status", app.handleSystemStatus)
+	app.router.Get("/api/logs/stream", logsweb.StreamLogs)
+	app.router.Get("/api/logs/config", logsweb.HandleLogConfig)
+	app.router.Post("/api/logs/config", logsweb.HandleLogConfig)
+	
+	// Metrics API routes
+	app.router.Get("/api/metrics", metricsweb.HandleMetricsAPI)
+	app.router.Get("/api/metrics/history", metricsweb.HandleMetricsHistory)
+	app.router.Get("/api/metrics/stream", metricsweb.HandleMetricsStream)
+	
+	// Bento pipeline builder API routes
+	app.router.Get("/api/bento/builder", bentoweb.HandlePipelineBuilder)
+	app.router.Get("/api/bento/templates", bentoweb.HandleGetTemplates)
+	app.router.Post("/api/bento/validate", bentoweb.HandlePipelineValidate)
+	app.router.Post("/api/bento/export", bentoweb.HandlePipelineExport)
 	
 	// Navigation routes
-	app.router.Get(config.MetricsHTTPPath, app.handleMetrics)
+	app.router.Get("/bento-playground", app.handleBentoPlayground)
+	app.router.Get(config.MetricsHTTPPath, metricsweb.HandleMetricsPage)
 	app.router.Get(config.LogsHTTPPath, app.handleLogs)
 	app.router.Get(config.StatusHTTPPath, app.handleStatus)
 
@@ -128,8 +212,31 @@ func (app *App) setupRoutes() {
 	app.router.Get(config.DocsHTTPPath+"*", app.handleDocs)
 
 	// Process monitoring routes (goreman web GUI) - using sub-router pattern
-	webHandler := web.NewWebHandler("pkg/goreman/web")
+	webHandler := goremanweb.NewWebHandler("pkg/goreman/web")
 	app.router.Route("/processes", webHandler.SetupRoutes)
+	
+	// Configuration management routes - using sub-router pattern
+	configWebService := configweb.NewConfigWebService()
+	app.router.Route("/config", func(r chi.Router) {
+		configWebService.RegisterRoutes(r)
+	})
+	
+	// Authentication routes - using sub-router pattern
+	// Simple auth setup with in-memory stores for demo
+	authConfig := auth.WebAuthnConfig{
+		RPDisplayName: "Infrastructure Management",
+		RPID:          "localhost",
+		RPOrigins:     []string{"http://localhost:1337"},
+	}
+	userStore := auth.NewInMemoryUserStore()
+	sessionStore := auth.NewInMemorySessionStore()
+	authService, _ := auth.NewAuthService(authConfig, userStore, sessionStore, "pkg/auth/web")
+	app.router.Route("/auth", func(r chi.Router) {
+		authService.RegisterRoutes(r)
+	})
+	
+	// 404 handler (must be last)
+	app.router.NotFound(app.handle404)
 }
 
 func (app *App) handleDocs(w http.ResponseWriter, r *http.Request) {
@@ -257,68 +364,8 @@ func (app *App) handlePublish(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "published"})
 }
 
-func (app *App) handleMetrics(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Metrics - Infrastructure Management</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-</head>
-<body class="bg-white dark:bg-gray-900 text-lg max-w-4xl mx-auto my-8">
-    <nav class="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
-        <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">🏗️ Infrastructure Management</h1>
-            <div class="flex space-x-4">
-                <a href="/" class="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">🏠 Home</a>
-                <a href="/docs/" class="px-3 py-1 text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 rounded hover:bg-green-50 dark:hover:bg-green-900/20">📚 Docs</a>
-                <a href="/bento-playground" class="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 rounded hover:bg-red-50 dark:hover:bg-red-900/20">🎮 Bento Playground</a>
-                <a href="/metrics" class="px-3 py-1 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20 bg-purple-100 dark:bg-purple-900/30">📊 Metrics</a>
-                <a href="/logs" class="px-3 py-1 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20">📝 Logs</a>
-                <a href="/processes" class="px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20">🔍 Processes</a>
-                <a href="/status" class="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-900/20">⚡ Status</a>
-            </div>
-        </div>
-    </nav>
-    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-6 py-8 ring shadow-xl ring-gray-900/5">
-        <h2 class="text-2xl font-semibold mb-4">📊 System Metrics</h2>
-        <p class="text-gray-600 dark:text-gray-400">Metrics monitoring will be implemented here.</p>
-    </div>
-</body>
-</html>`
-	w.Write([]byte(html))
-}
-
-func (app *App) handleLogs(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Logs - Infrastructure Management</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-</head>
-<body class="bg-white dark:bg-gray-900 text-lg max-w-4xl mx-auto my-8">
-    <nav class="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
-        <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">🏗️ Infrastructure Management</h1>
-            <div class="flex space-x-4">
-                <a href="/" class="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">🏠 Home</a>
-                <a href="/docs/" class="px-3 py-1 text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 rounded hover:bg-green-50 dark:hover:bg-green-900/20">📚 Docs</a>
-                <a href="/bento-playground" class="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 rounded hover:bg-red-50 dark:hover:bg-red-900/20">🎮 Bento Playground</a>
-                <a href="/metrics" class="px-3 py-1 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20">📊 Metrics</a>
-                <a href="/logs" class="px-3 py-1 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 bg-orange-100 dark:bg-orange-900/30">📝 Logs</a>
-                <a href="/processes" class="px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20">🔍 Processes</a>
-                <a href="/status" class="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-900/20">⚡ Status</a>
-            </div>
-        </div>
-    </nav>
-    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-6 py-8 ring shadow-xl ring-gray-900/5">
-        <h2 class="text-2xl font-semibold mb-4">📝 System Logs</h2>
-        <p class="text-gray-600 dark:text-gray-400">Log monitoring will be implemented here.</p>
-    </div>
-</body>
-</html>`
-	w.Write([]byte(html))
+func (app *App) handleLogs(w http.ResponseWriter, _ *http.Request) {
+	app.renderPageContent(w, logsHTML, "/logs", "Logs")
 }
 
 func (app *App) handleBuildInfo(w http.ResponseWriter, r *http.Request) {
@@ -347,43 +394,19 @@ func (app *App) handleBuildInfo(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(buildInfo)
 }
 
-func (app *App) handleStatus(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <title>Status - Infrastructure Management</title>
-    <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
-</head>
-<body class="bg-white dark:bg-gray-900 text-lg max-w-4xl mx-auto my-8">
-    <nav class="mb-8 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md">
-        <div class="flex justify-between items-center">
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">🏗️ Infrastructure Management</h1>
-            <div class="flex space-x-4">
-                <a href="/" class="px-3 py-1 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20">🏠 Home</a>
-                <a href="/docs/" class="px-3 py-1 text-sm font-medium text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 rounded hover:bg-green-50 dark:hover:bg-green-900/20">📚 Docs</a>
-                <a href="/bento-playground" class="px-3 py-1 text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 rounded hover:bg-red-50 dark:hover:bg-red-900/20">🎮 Bento Playground</a>
-                <a href="/metrics" class="px-3 py-1 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:hover:text-purple-200 rounded hover:bg-purple-50 dark:hover:bg-purple-900/20">📊 Metrics</a>
-                <a href="/logs" class="px-3 py-1 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20">📝 Logs</a>
-                <a href="/processes" class="px-3 py-1 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20">🔍 Processes</a>
-                <a href="/status" class="px-3 py-1 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 rounded hover:bg-gray-50 dark:hover:bg-gray-900/20 bg-gray-100 dark:bg-gray-900/30">⚡ Status</a>
-            </div>
-        </div>
-    </nav>
-    <div class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg px-6 py-8 ring shadow-xl ring-gray-900/5">
-        <h2 class="text-2xl font-semibold mb-4">⚡ System Status</h2>
-        <div class="space-y-4">
-            <div class="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span class="text-green-800 dark:text-green-200">🟢 Web Server</span>
-                <span class="text-green-600 dark:text-green-400 font-semibold">Running</span>
-            </div>
-            <div class="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                <span class="text-green-800 dark:text-green-200">🟢 NATS Server</span>
-                <span class="text-green-600 dark:text-green-400 font-semibold">Running</span>
-            </div>
-        </div>
-    </div>
-</body>
-</html>`
-	w.Write([]byte(html))
+func (app *App) handleStatus(w http.ResponseWriter, _ *http.Request) {
+	app.renderPageContent(w, statusHTML, "/status", "Status")
+}
+
+func (app *App) handleBentoPlayground(w http.ResponseWriter, _ *http.Request) {
+	app.renderPageContent(w, bentoPlaygroundHTML, "/bento-playground", "Bento Pipeline Builder")
+}
+
+func (app *App) handle404(w http.ResponseWriter, _ *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	app.renderPageContent(w, notFoundHTML, "/404", "Page Not Found")
+}
+
+func (app *App) handleSystemStatus(w http.ResponseWriter, r *http.Request) {
+	gopsweb.HandleSystemStatus(w, r)
 }

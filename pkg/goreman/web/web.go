@@ -11,6 +11,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joeblew999/infra/pkg/goreman"
+	pkgweb "github.com/joeblew999/infra/pkg/web"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 //go:embed templates/*.html
@@ -24,6 +26,12 @@ type ProcessStatusWeb struct {
 	Uptime    string `json:"uptime"`
 	CanStart  bool   `json:"can_start"`
 	CanStop   bool   `json:"can_stop"`
+}
+
+// PageData holds the template data for rendering pages
+type PageData struct {
+	Navigation template.HTML
+	Footer     template.HTML
 }
 
 // WebHandler provides HTTP handlers for process monitoring
@@ -66,25 +74,61 @@ func (w *WebHandler) SetupRoutes(r chi.Router) {
 
 // ProcessesPageHandler serves the main processes page
 func (w *WebHandler) ProcessesPageHandler(rw http.ResponseWriter, r *http.Request) {
-	// Try to use template if available, otherwise fallback to direct file serving
+	w.renderTemplate(rw, "/processes", "processes")
+}
+
+// renderTemplate is a helper for rendering templates with nav/footer
+func (w *WebHandler) renderTemplate(rw http.ResponseWriter, currentPath, templateName string) {
+	// Get centralized navigation and footer
+	navHTML, err := pkgweb.RenderNav(currentPath)
+	if err != nil {
+		log.Error("Error rendering navigation", "error", err)
+		http.Error(rw, "Failed to render navigation", http.StatusInternalServerError)
+		return
+	}
+	
+	footerHTML, err := pkgweb.RenderFooter()
+	if err != nil {
+		log.Error("Error rendering footer", "error", err)
+		footerHTML = ""
+	}
+	
+	// Try to load template from embedded filesystem first
+	var tmpl *template.Template
 	if w.templates != nil {
-		if tmpl := w.templates.Lookup("processes.html"); tmpl != nil {
-			rw.Header().Set("Content-Type", "text/html")
-			if err := tmpl.Execute(rw, nil); err != nil {
-				http.Error(rw, fmt.Sprintf("Template execution failed: %v", err), http.StatusInternalServerError)
-			}
+		if t := w.templates.Lookup(templateName + ".html"); t != nil {
+			tmpl = t
+		}
+	}
+	
+	// Fallback to filesystem if embedded template not found
+	if tmpl == nil && w.webDir != "" {
+		templatePath := filepath.Join(w.webDir, "templates", templateName+".html")
+		var err error
+		tmpl, err = template.New(templateName + ".html").ParseFiles(templatePath)
+		if err != nil {
+			log.Error("Error loading template", "template", templateName, "error", err)
+			http.Error(rw, "Template not found", http.StatusInternalServerError)
 			return
 		}
 	}
 	
-	// Fallback: serve file directly if template not loaded
-	if w.webDir != "" {
-		http.ServeFile(rw, r, w.webDir+"/templates/processes.html")
+	if tmpl == nil {
+		http.Error(rw, "Template not found", http.StatusInternalServerError)
 		return
 	}
 	
-	// Final fallback error
-	http.Error(rw, "Template not found and webDir not configured", http.StatusInternalServerError)
+	data := PageData{
+		Navigation: template.HTML(navHTML),
+		Footer:     template.HTML(footerHTML),
+	}
+	
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	err = tmpl.Execute(rw, data)
+	if err != nil {
+		log.Error("Error executing template", "template", templateName, "error", err)
+		http.Error(rw, "Failed to render template", http.StatusInternalServerError)
+	}
 }
 
 // ProcessesAPIHandler provides JSON API for process status
