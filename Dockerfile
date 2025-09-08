@@ -23,7 +23,7 @@ RUN go mod download
 COPY . .
 
 # Build the binary with optimization flags and git hash injection
-RUN GIT_HASH=$(git rev-parse HEAD) && \
+RUN GIT_HASH=$(git rev-parse HEAD 2>/dev/null || echo "docker-build") && \
     BUILD_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ) && \
     CGO_ENABLED=0 GOOS=linux go build \
     -ldflags="-w -s -extldflags=-static -X github.com/joeblew999/infra/pkg/cmd.GitHash=${GIT_HASH} -X github.com/joeblew999/infra/pkg/cmd.BuildTime=${BUILD_TIME}" \
