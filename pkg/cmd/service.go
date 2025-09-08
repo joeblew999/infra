@@ -2,13 +2,19 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/joeblew999/infra/pkg/bento"
 	"github.com/joeblew999/infra/pkg/caddy"
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/deck"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/gops"
@@ -18,6 +24,15 @@ import (
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
 )
+
+// portToInt converts a port string to int, returns 0 on error
+func portToInt(portStr string) int {
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0
+	}
+	return port
+}
 
 var serviceCmd = &cobra.Command{
 	Use:   "service",
@@ -82,15 +97,17 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	// Start web server FIRST for fast startup and health checks
 	log.Info("🚀 Step 1: Starting web server (priority for health checks)...")
 	// Check web server port availability
-	if !gops.IsPortAvailable(1337) {
-		log.Error("❌ Web server port 1337 is already in use. Please free the port and try again.")
+	webPort := config.GetWebServerPort()
+	if !gops.IsPortAvailable(portToInt(webPort)) {
+		log.Error("❌ Web server port "+webPort+" is already in use. Please free the port and try again.")
 		os.Exit(1)
 	}
 
-	log.Info("🌐 Starting web server", "address", "http://0.0.0.0:1337", "embedded_docs", noDevDocs)
+	log.Info("🌐 Starting web server", "address", "http://0.0.0.0:"+webPort, "embedded_docs", noDevDocs)
 	// Start web server in background so other services can start
 	go func() {
-		if err := web.StartServer("nats://localhost:4222", noDevDocs); err != nil {
+		natsURL := "nats://localhost:" + config.GetNATSPort()
+		if err := web.StartServer(natsURL, noDevDocs); err != nil {
 			log.Error("❌ Failed to start web server", "error", err)
 			os.Exit(1)
 		}
@@ -98,7 +115,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	
 	// Give web server a moment to start listening
 	time.Sleep(500 * time.Millisecond)
-	log.Info("✅ Web server started on port 1337")
+	log.Info("✅ Web server started on port "+webPort)
 
 	// Start embedded NATS server  
 	var natsAddr string
@@ -129,7 +146,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 				log.Warn("PocketBase failed to start", "error", err)
 			}
 		}()
-		log.Info("✅ Embedded PocketBase server started", "port", 8090)
+		log.Info("✅ Embedded PocketBase server started", "port", config.GetPocketBasePort())
 	}
 
 	// Start Caddy reverse proxy
@@ -142,20 +159,22 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 
 	// Start Bento service
 	log.Info("🚀 Step 5: Starting Bento stream processing service...")
-	if err := bento.StartSupervised(4195); err != nil {
+	bentoPort := portToInt(config.GetBentoPort())
+	if err := bento.StartSupervised(bentoPort); err != nil {
 		log.Warn("Bento failed to start", "error", err)
 	} else {
-		log.Info("✅ Bento service started supervised", "port", 4195)
+		log.Info("✅ Bento service started supervised", "port", config.GetBentoPort())
 	}
 
 	// Start deck services
 	log.Info("🚀 Step 6: Starting deck services...")
 	
 	// Start deck API service
-	if err := deck.StartAPISupervised(8888); err != nil {
+	deckAPIPort := portToInt(config.GetDeckAPIPort())
+	if err := deck.StartAPISupervised(deckAPIPort); err != nil {
 		log.Warn("Deck API failed to start", "error", err)
 	} else {
-		log.Info("✅ Deck API service started supervised", "port", 8888)
+		log.Info("✅ Deck API service started supervised", "port", config.GetDeckAPIPort())
 	}
 	
 	// Start deck file watcher service  
@@ -174,10 +193,197 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	
 	// All services started - keep main process running
 	log.Info("🎉 All infrastructure services started successfully!")
-	log.Info("💡 Web server accessible at http://0.0.0.0:1337")
+	log.Info("💡 Web server accessible at http://0.0.0.0:"+webPort)
 	
 	// Block forever to keep all background services running
 	select {}
+}
+
+
+// runContainerizedService builds and runs containerized service using ko and Docker
+func runContainerizedService(environment string) error {
+	log.Info("🐳 Building and running containerized service...")
+	
+	// Use config for image naming
+	imageName := config.GetDockerImageFullName()
+	
+	// Build image directly into Docker using ko
+	log.Info("📦 Building container image with ko...")
+	
+	// Use ko to build directly into Docker daemon
+	koPath := config.GetKoBinPath()
+	if _, err := os.Stat(koPath); err != nil {
+		return fmt.Errorf("ko binary not found at %s. Run 'go run . dep install ko' first", koPath)
+	}
+	
+	// Set environment variables for ko build
+	os.Setenv("KO_DOCKER_REPO", "ko.local")
+	if environment == "production" || config.IsProduction() {
+		os.Setenv("ENVIRONMENT", "production") 
+	} else {
+		os.Setenv("ENVIRONMENT", "development")
+	}
+	
+	// Get git commit for build metadata
+	commit := getGitCommit()
+	if commit == "" {
+		commit = "dev" // fallback for dirty git state
+	}
+	
+	// Build directly into Docker daemon (no tarball needed)
+	buildCmd := exec.Command(koPath, "build", "--push=false", "--platform=linux/amd64", "github.com/joeblew999/infra")
+	buildCmd.Env = append(os.Environ(), "GIT_HASH="+commit)
+	
+	output, err := buildCmd.CombinedOutput()
+	if err != nil {
+		log.Error("ko build failed", "error", err, "output", string(output))
+		return fmt.Errorf("failed to build container image: %w", err)
+	}
+	
+	log.Info("✅ Built container image with ko")
+	
+	// Since ko builds into Docker daemon, find the latest image with ko.local prefix
+	listCmd := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference=ko.local/*", "--no-trunc")
+	listOutput, err := listCmd.Output()
+	if err != nil {
+		log.Warn("Failed to list Docker images", "error", err)
+		// Fallback to a reasonable default
+		imageName = "ko.local/infra-bc4829dfbf7b0b49d219aad7c8cfa3f9:latest"
+	} else {
+		lines := strings.Split(strings.TrimSpace(string(listOutput)), "\n")
+		// Find the most recent image with the right name pattern
+		for _, line := range lines {
+			if strings.Contains(line, "ko.local/infra") && (strings.HasSuffix(line, ":latest") || strings.Contains(line, ":")) {
+				// Tag it with our desired name
+				tagCmd := exec.Command("docker", "tag", line, imageName)
+				if err := tagCmd.Run(); err != nil {
+					log.Warn("Failed to tag image", "from", line, "to", imageName, "error", err)
+					// Use the original image name if tagging fails
+					imageName = line
+				} else {
+					log.Info("✅ Tagged image", "from", line, "to", imageName)
+				}
+				break
+			}
+		}
+	}
+	
+	log.Info("✅ Container image ready", "image", imageName)
+	
+	// Step 3: Stop any existing containers using the same ports or name (idempotent behavior)
+	log.Info("🧹 Stopping any existing containers on conflicting ports or with same name...")
+	
+	// First, stop any container with our specific name
+	stopNameCmd := exec.Command("docker", "stop", "infra-service")
+	if stopNameCmd.Run() == nil {
+		log.Info("✅ Stopped existing container by name", "name", "infra-service")
+	}
+	
+	// Also stop by ports for any other containers
+	ports := []string{
+		config.GetWebServerPort(),
+		config.GetNATSPort(), 
+		config.GetPocketBasePort(),
+		config.GetBentoPort(),
+		config.GetDeckAPIPort(),
+		config.GetCaddyPort(),
+		"443", // HTTPS
+	}
+	
+	stoppedContainers := 0
+	for _, port := range ports {
+		// Find containers using this port
+		psCmd := exec.Command("docker", "ps", "--filter", fmt.Sprintf("publish=%s", port), "--format", "{{.ID}}")
+		if output, err := psCmd.Output(); err == nil {
+			containerIDs := strings.Fields(strings.TrimSpace(string(output)))
+			for _, containerID := range containerIDs {
+				if containerID != "" {
+					stopCmd := exec.Command("docker", "stop", containerID)
+					if stopCmd.Run() == nil {
+						stoppedContainers++
+						log.Info("✅ Stopped existing container", "container_id", containerID, "port", port)
+					}
+				}
+			}
+		}
+	}
+	
+	if stoppedContainers > 0 {
+		log.Info("🧹 Cleanup complete", "containers_stopped", stoppedContainers)
+		// Give containers time to fully stop
+		time.Sleep(1 * time.Second)
+	}
+	
+	// Step 4: Prepare Docker run command
+	cwd, _ := os.Getwd()
+	dataDir := filepath.Join(cwd, ".data")
+	
+	// Ensure .data directory exists
+	os.MkdirAll(dataDir, 0755)
+	
+	// Build port mappings using config
+	portMappings := []string{
+		"-p", fmt.Sprintf("%s:%s", config.GetWebServerPort(), config.GetWebServerPort()),     // Web server
+		"-p", fmt.Sprintf("%s:%s", config.GetNATSPort(), config.GetNATSPort()),             // NATS
+		"-p", fmt.Sprintf("%s:%s", config.GetPocketBasePort(), config.GetPocketBasePort()), // PocketBase
+		"-p", fmt.Sprintf("%s:%s", config.GetBentoPort(), config.GetBentoPort()),           // Bento
+		"-p", fmt.Sprintf("%s:%s", config.GetDeckAPIPort(), config.GetDeckAPIPort()),       // Deck API
+		"-p", fmt.Sprintf("%s:%s", config.GetCaddyPort(), config.GetCaddyPort()),           // Caddy HTTP
+		"-p", "443:443", // Caddy HTTPS
+	}
+	
+	// Build Docker command (no -it for non-interactive mode)
+	args := []string{"run", "--rm", "--name", "infra-service"}
+	args = append(args, portMappings...)
+	args = append(args, 
+		"-v", fmt.Sprintf("%s:/app/.data", dataDir), // Mount data directory
+		"-e", fmt.Sprintf("ENVIRONMENT=%s", environment),
+		imageName,
+		"service", // Run the service command inside container
+	)
+	
+	log.Info("🚀 Starting container...", "image", imageName, "data_dir", dataDir)
+	log.Info("📝 Container ports mapped using config functions")
+	
+	// Step 5: Setup signal handling for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		log.Info("🛑 Received shutdown signal, stopping container...")
+		cancel()
+	}()
+	
+	// Step 6: Run Docker container
+	dockerCmd := exec.CommandContext(ctx, "docker", args...)
+	dockerCmd.Stdout = os.Stdout
+	dockerCmd.Stderr = os.Stderr
+	dockerCmd.Stdin = os.Stdin
+	
+	log.Info("💡 Container accessible at the same URLs as direct mode")
+	if err := dockerCmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			log.Info("✅ Container stopped gracefully")
+			return nil
+		}
+		return fmt.Errorf("docker run failed: %w", err)
+	}
+	
+	return nil
+}
+
+// getGitCommit retrieves git commit information
+func getGitCommit() string {
+	// Try to get git commit
+	if cmd := exec.Command("git", "rev-parse", "HEAD"); cmd != nil {
+		if output, err := cmd.Output(); err == nil {
+			return strings.TrimSpace(string(output))
+		}
+	}
+	return ""
 }
 
 // shutdownCmd provides a way to find and kill running services
@@ -208,16 +414,16 @@ var shutdownCmd = &cobra.Command{
 			time.Sleep(1 * time.Second)
 		}
 		
-		// Kill by ports (including deck API port)
+		// Kill by ports using config functions
 		log.Info("🔌 Shutting down services by port...")
 		ports := []int{
-			1337, // Web server
-			4222, // NATS server  
-			8090, // PocketBase
-			4195, // Bento
-			8888, // Deck API (NEW)
-			80,   // Caddy HTTP
-			443,  // Caddy HTTPS
+			portToInt(config.GetWebServerPort()), // Web server
+			portToInt(config.GetNATSPort()),      // NATS server
+			portToInt(config.GetPocketBasePort()), // PocketBase
+			portToInt(config.GetBentoPort()),      // Bento
+			portToInt(config.GetDeckAPIPort()),    // Deck API
+			portToInt(config.GetCaddyPort()),      // Caddy HTTP
+			443,  // Caddy HTTPS (fixed)
 		}
 		
 		portsKilled := 0
@@ -266,9 +472,31 @@ var shutdownCmd = &cobra.Command{
 	},
 }
 
+// containerCmd builds and runs containerized service using ko and Docker
+var containerCmd = &cobra.Command{
+	Use:   "container",
+	Short: "Build and run containerized service with ko and Docker",
+	Long: `Build the application with ko and run it in a Docker container.
+
+This command:
+- Builds the container image using ko
+- Stops any conflicting containers (idempotent)
+- Runs the container with proper port mappings
+- Mounts data directory for persistence
+
+This provides a containerized alternative to 'go run . service'.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		environment, _ := cmd.Flags().GetString("env")
+		return runContainerizedService(environment)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(shutdownCmd)
+	rootCmd.AddCommand(containerCmd)
 	
 	serviceCmd.Flags().String("env", "production", "Environment (production/development)")
+	
+	containerCmd.Flags().String("env", "production", "Environment (production/development)")
 }
 

@@ -72,8 +72,9 @@ func Execute() {
 	// Set build info for display in web pages
 	config.SetBuildInfo(GitHash, BuildTime)
 
-	// Skip directory creation and dependency installation in production Fly.io environment
-	if os.Getenv("FLY_APP_NAME") == "" {
+	// Skip directory creation and dependency installation in production environments (Fly.io or Docker container)
+	isContainer := isRunningInContainer()
+	if os.Getenv("FLY_APP_NAME") == "" && !isContainer {
 		if err := EnsureInfraDirectories(); err != nil {
 			log.Error("Failed to ensure infra directories", "error", err)
 			os.Exit(1)
@@ -98,6 +99,15 @@ func Execute() {
 	}
 }
 
+
+// isRunningInContainer checks if we're running inside a Docker container
+// by looking for the .dockerenv file that Docker creates
+func isRunningInContainer() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	return false
+}
 
 // Removed: getRuntimeGitHash now centralized in pkg/build.GetRuntimeGitHash()
 

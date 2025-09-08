@@ -77,6 +77,10 @@ type PortsConfig struct {
 	PocketBase string `json:"pocketbase"`
 	NATS       string `json:"nats"`
 	MCP        string `json:"mcp"`
+	Bento      string `json:"bento"`
+	Caddy      string `json:"caddy"`
+	DeckAPI    string `json:"deck_api"`
+	Metrics    string `json:"metrics"`
 }
 
 type BinariesConfig struct {
@@ -127,6 +131,10 @@ func GetConfig() Config {
 			PocketBase: "8090",
 			NATS:       "4222",
 			MCP:        "8080",
+			Bento:      "4195",
+			Caddy:      "80",
+			DeckAPI:    "8888",
+			Metrics:    "9091",
 		},
 		Binaries: BinariesConfig{
 			Flyctl: GetFlyctlBinPath(),

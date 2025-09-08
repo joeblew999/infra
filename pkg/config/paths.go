@@ -312,3 +312,43 @@ func GetCaddyPort() string {
 func GetTransPath() string {
 	return filepath.Join(GetDataPath(), "trans")
 }
+
+// GetWebServerPort returns the default port for the web server.
+func GetWebServerPort() string {
+	return "1337"
+}
+
+// GetNATSPort returns the default port for NATS server.
+func GetNATSPort() string {
+	return "4222"
+}
+
+// GetMCPPort returns the default port for MCP server.
+func GetMCPPort() string {
+	return "8080"
+}
+
+// GetDeckAPIPort returns the default port for Deck API server.
+func GetDeckAPIPort() string {
+	return "8888"
+}
+
+// GetMetricsPort returns the default port for metrics server.
+func GetMetricsPort() string {
+	return "9091"
+}
+
+// GetDockerImageName returns the default Docker image name for local builds
+func GetDockerImageName() string {
+	return "infra-local"
+}
+
+// GetDockerImageTag returns the default Docker image tag 
+func GetDockerImageTag() string {
+	return "latest"
+}
+
+// GetDockerImageFullName returns the full Docker image name with tag
+func GetDockerImageFullName() string {
+	return GetDockerImageName() + ":" + GetDockerImageTag()
+}
