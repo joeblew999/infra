@@ -2,7 +2,7 @@
 # This uses a multi-stage build for optimal image size
 
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Cache bust argument
 ARG CACHE_BUST
