@@ -79,10 +79,31 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	// Start all services using goreman supervision
 	log.Info("🚀 Starting all infrastructure services...")
 	
+	// Start web server FIRST for fast startup and health checks
+	log.Info("🚀 Step 1: Starting web server (priority for health checks)...")
+	// Check web server port availability
+	if !gops.IsPortAvailable(1337) {
+		log.Error("❌ Web server port 1337 is already in use. Please free the port and try again.")
+		os.Exit(1)
+	}
+
+	log.Info("🌐 Starting web server", "address", "http://0.0.0.0:1337", "embedded_docs", noDevDocs)
+	// Start web server in background so other services can start
+	go func() {
+		if err := web.StartServer("nats://localhost:4222", noDevDocs); err != nil {
+			log.Error("❌ Failed to start web server", "error", err)
+			os.Exit(1)
+		}
+	}()
+	
+	// Give web server a moment to start listening
+	time.Sleep(500 * time.Millisecond)
+	log.Info("✅ Web server started on port 1337")
+
 	// Start embedded NATS server  
 	var natsAddr string
 	if !noNATS {
-		log.Info("🚀 Step 1: Starting embedded NATS server...")
+		log.Info("🚀 Step 2: Starting embedded NATS server...")
 		var err error
 		natsAddr, err = nats.StartEmbeddedNATS(context.Background())
 		if err != nil {
@@ -95,7 +116,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 
 	// Start embedded PocketBase server
 	if !noPocketbase {
-		log.Info("🚀 Step 2: Starting embedded PocketBase server...")
+		log.Info("🚀 Step 3: Starting embedded PocketBase server...")
 		pbEnv := "production"
 		if mode == "development" {
 			pbEnv = "development"
@@ -112,7 +133,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	}
 
 	// Start Caddy reverse proxy
-	log.Info("🚀 Step 3: Starting Caddy reverse proxy...")
+	log.Info("🚀 Step 4: Starting Caddy reverse proxy...")
 	if err := caddy.StartSupervised(nil); err != nil {
 		log.Warn("Caddy failed to start", "error", err)  
 	} else {
@@ -120,7 +141,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	}
 
 	// Start Bento service
-	log.Info("🚀 Step 4: Starting Bento stream processing service...")
+	log.Info("🚀 Step 5: Starting Bento stream processing service...")
 	if err := bento.StartSupervised(4195); err != nil {
 		log.Warn("Bento failed to start", "error", err)
 	} else {
@@ -128,7 +149,7 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	}
 
 	// Start deck services
-	log.Info("🚀 Step 5: Starting deck services...")
+	log.Info("🚀 Step 6: Starting deck services...")
 	
 	// Start deck API service
 	if err := deck.StartAPISupervised(8888); err != nil {
@@ -151,23 +172,12 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		log.Info("External process status", "name", name, "status", stat)
 	}
 	
-	// Start web server (this runs in current process for now)
-	log.Info("🚀 Step 6: Starting web server...")
-	// Check web server port availability
-	if !gops.IsPortAvailable(1337) {
-		log.Error("❌ Web server port 1337 is already in use. Please free the port and try again.")
-		os.Exit(1)
-	}
-
-	log.Info("🌐 Starting web server", "address", "http://localhost:1337", "embedded_docs", noDevDocs)
-	// Use the embedded NATS address if available, otherwise use default
-	if natsAddr == "" {
-		natsAddr = "nats://localhost:4222" // Default fallback
-	}
-	if err := web.StartServer(natsAddr, noDevDocs); err != nil {
-		log.Error("❌ Failed to start web server", "error", err)
-		os.Exit(1)
-	}
+	// All services started - keep main process running
+	log.Info("🎉 All infrastructure services started successfully!")
+	log.Info("💡 Web server accessible at http://0.0.0.0:1337")
+	
+	// Block forever to keep all background services running
+	select {}
 }
 
 // shutdownCmd provides a way to find and kill running services
