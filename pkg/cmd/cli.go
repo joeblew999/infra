@@ -154,6 +154,7 @@ DEVELOPMENT TOOLS:
   deck             Deck visualization tools  
   gozero           Go-zero microservices operations
   toki             Translation and i18n workflow
+  xtemplate        HTML/template web development server
   
 BINARY TOOLS:
   tofu             OpenTofu infrastructure as code
@@ -193,6 +194,9 @@ func RunCLI() {
 	
 	// Add go-zero microservices tools
 	AddGoZeroToCLI(cliCmd)
+	
+	// Add xtemplate web development tools
+	AddXTemplateToCLI(cliCmd)
 	
 	// Add CLI parent command to root
 	rootCmd.AddCommand(cliCmd)

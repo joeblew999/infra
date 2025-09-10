@@ -614,6 +614,46 @@
     ]
   },
   {
+    "name": "xtemplate",
+    "description": "HTML/template-based hypertext preprocessor and rapid web development server",
+    "source": "github-release",
+    "repo": "infogulch/xtemplate",
+    "version": "v0.8.4",
+    "release_url": "https://github.com/infogulch/xtemplate/releases",
+    "assets": [
+      {
+        "match": "xtemplate-arm64-darwin_v.*\\.zip$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "xtemplate-amd64-darwin_v.*\\.zip$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "xtemplate-amd64-linux_v.*\\.zip$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "xtemplate-arm64-linux_v.*\\.zip$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "xtemplate-amd64-windows_v.*\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      },
+      {
+        "match": "xtemplate-arm64-windows_v.*\\.zip$",
+        "os": "windows",
+        "arch": "arm64"
+      }
+    ]
+  },
+  {
     "name": "goctl",
     "description": "Code generation tool for go-zero microservices framework",
     "source": "go-build",

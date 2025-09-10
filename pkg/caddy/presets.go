@@ -60,6 +60,7 @@ func DevelopmentConfig(port int) CaddyConfig {
 		Target: "localhost:1337", // Main web server
 		Routes: []ProxyRoute{
 			{Path: "/bento-playground/*", Target: "localhost:4195"}, // Bento playground
+			{Path: "/xtemplate/*", Target: "localhost:" + config.GetXTemplatePort()}, // XTemplate development server
 		},
 	}
 }

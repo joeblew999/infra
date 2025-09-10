@@ -174,6 +174,7 @@ func DefaultConfig() CaddyConfig {
 		Target: "localhost:1337",
 		Routes: []ProxyRoute{
 			{Path: "/bento-playground/*", Target: "localhost:4195"},
+			{Path: "/xtemplate/*", Target: "localhost:" + config.GetXTemplatePort()},
 		},
 	}
 }

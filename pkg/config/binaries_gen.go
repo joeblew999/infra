@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-08-29 17:26:29.027107 +0700 +07 m=+0.001474209
+// Generated at 2025-09-09 18:05:48.531435 +0700 +07 m=+0.000908334
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -21,12 +21,13 @@ const (
 	BinaryLitestream = "litestream" // SQLite replication and disaster recovery tool (CGO-free fork)
 	BinaryDeckTools = "deck-tools" // Deck.sh presentation tools and utilities
 	BinaryZig = "zig" // General-purpose programming language and toolchain for optimal software
-	BinaryToki = "toki" // Fast, lightweight static site generator with markdown support
+	BinaryToki = "toki" // Multi-language translation tool with pluralization support
 	BinaryGoose = "goose" // AI-powered software development agent for complex tasks
 	BinaryGs = "gs" // Manage stacked Git branches for systematic development workflows
 	BinaryCrush = "crush" // SSH client with advanced features and modern interface
 	BinaryGh = "gh" // GitHub CLI for managing repositories, releases, and GitHub operations
 	BinaryTinygo = "tinygo" // Go compiler for microcontrollers and WebAssembly
+	BinaryXtemplate = "xtemplate" // HTML/template-based hypertext preprocessor and rapid web development server
 	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
 )
 
@@ -52,6 +53,7 @@ func AllBinaryNames() []string {
 		BinaryCrush,
 		BinaryGh,
 		BinaryTinygo,
+		BinaryXtemplate,
 		BinaryGoctl,
 	}
 }

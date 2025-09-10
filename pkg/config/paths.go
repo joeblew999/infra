@@ -54,6 +54,19 @@ const (
 	// NATS stream constants
 	NATSLogStreamName   = "LOGS"
 	NATSLogStreamSubject = "logs.app"
+	
+	// NATS cluster configuration
+	NATSClusterNameLocal      = "infra-local"
+	NATSClusterNameProduction = "infra-cluster"
+	NATSDockerImage           = "nats:alpine"
+	
+	// NATS cluster ports for local development (separate from embedded NATS on 4222)
+	NATSClusterBasePort = 4322  // Starting port for client connections (4322, 4323, 4324...)
+	NATSClusterBaseCPort = 6222 // Cluster port - SAME for all nodes (standard NATS clustering)
+	NATSClusterBaseHTTP = 8322  // Starting port for HTTP monitoring (8322, 8323, 8324...)
+	NATSClusterNodeCount = 6    // Number of nodes in cluster
+	
+	// Fly.io regions for NATS cluster deployment are defined in GetFlyRegions() function
 
 	// DocsDir is the directory containing Markdown documentation files.
 	DocsDir = "docs"
@@ -351,4 +364,54 @@ func GetDockerImageTag() string {
 // GetDockerImageFullName returns the full Docker image name with tag
 func GetDockerImageFullName() string {
 	return GetDockerImageName() + ":" + GetDockerImageTag()
+}
+
+// GetNATSClusterDataPath returns the absolute path to the NATS cluster data directory
+func GetNATSClusterDataPath() string {
+	return filepath.Join(GetDataPath(), "nats-cluster")
+}
+
+// GetNATSClusterName returns the cluster name for the current environment
+func GetNATSClusterName() string {
+	if IsProduction() {
+		return NATSClusterNameProduction
+	}
+	return NATSClusterNameLocal
+}
+
+// GetNATSDockerImage returns the NATS Docker image to use
+func GetNATSDockerImage() string {
+	return NATSDockerImage
+}
+
+// GetFlyRegions returns the Fly.io regions for NATS cluster deployment
+func GetFlyRegions() []string {
+	return []string{"iad", "lhr", "nrt", "syd", "fra", "sjc"}
+}
+
+// GetNATSClusterNodeCount returns the number of nodes in NATS cluster
+func GetNATSClusterNodeCount() int {
+	return NATSClusterNodeCount
+}
+
+// GetNATSClusterPortsForNode returns the client, cluster, and HTTP ports for a specific node
+func GetNATSClusterPortsForNode(nodeIndex int) (client, cluster, http int) {
+	return NATSClusterBasePort + nodeIndex,
+		   NATSClusterBaseCPort, // Same cluster port for all nodes
+		   NATSClusterBaseHTTP + nodeIndex
+}
+
+// GetXTemplatePath returns the absolute path to the xtemplate templates directory
+func GetXTemplatePath() string {
+	return filepath.Join(GetDataPath(), "xtemplate")
+}
+
+// GetXTemplatePort returns the default port for xtemplate server
+func GetXTemplatePort() string {
+	return "8080"
+}
+
+// GetXTemplateBinPath returns the absolute path to the xtemplate binary
+func GetXTemplateBinPath() string {
+	return Get(BinaryXtemplate)
 }

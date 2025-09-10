@@ -21,6 +21,7 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
+	"github.com/joeblew999/infra/pkg/xtemplate"
 	"github.com/joeblew999/infra/web"
 	"github.com/spf13/cobra"
 )
@@ -184,6 +185,14 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		log.Info("✅ Deck watcher service started supervised")
 	}
 
+	// Start XTemplate development server
+	log.Info("🚀 Step 7: Starting XTemplate development server...")
+	if err := xtemplate.StartSupervised(); err != nil {
+		log.Warn("XTemplate failed to start", "error", err)
+	} else {
+		log.Info("✅ XTemplate development server started supervised", "port", config.GetXTemplatePort())
+	}
+
 	// Show process status from goreman (external services only)
 	log.Info("📊 External services started with goreman supervision")
 	status := goreman.GetAllStatus()
@@ -203,6 +212,15 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 // runContainerizedService builds and runs containerized service using ko and Docker
 func runContainerizedService(environment string) error {
 	log.Info("🐳 Building and running containerized service...")
+	
+	// First, bootstrap NATS cluster (idempotent)
+	log.Info("🚀 Ensuring NATS cluster is running...")
+	ctx := context.Background()
+	
+	if err := nats.StartLocalCluster(ctx); err != nil {
+		log.Warn("Failed to start NATS cluster, continuing anyway", "error", err)
+		// Don't fail completely - the containerized service might still work
+	}
 	
 	// Use config for image naming
 	imageName := config.GetDockerImageFullName()
@@ -328,6 +346,7 @@ func runContainerizedService(environment string) error {
 		"-p", fmt.Sprintf("%s:%s", config.GetPocketBasePort(), config.GetPocketBasePort()), // PocketBase
 		"-p", fmt.Sprintf("%s:%s", config.GetBentoPort(), config.GetBentoPort()),           // Bento
 		"-p", fmt.Sprintf("%s:%s", config.GetDeckAPIPort(), config.GetDeckAPIPort()),       // Deck API
+		"-p", fmt.Sprintf("%s:%s", config.GetXTemplatePort(), config.GetXTemplatePort()),   // XTemplate
 		"-p", fmt.Sprintf("%s:%s", config.GetCaddyPort(), config.GetCaddyPort()),           // Caddy HTTP
 		"-p", "443:443", // Caddy HTTPS
 	}
@@ -422,6 +441,7 @@ var shutdownCmd = &cobra.Command{
 			portToInt(config.GetPocketBasePort()), // PocketBase
 			portToInt(config.GetBentoPort()),      // Bento
 			portToInt(config.GetDeckAPIPort()),    // Deck API
+			portToInt(config.GetXTemplatePort()),  // XTemplate
 			portToInt(config.GetCaddyPort()),      // Caddy HTTP
 			443,  // Caddy HTTPS (fixed)
 		}
@@ -443,6 +463,7 @@ var shutdownCmd = &cobra.Command{
 			"deck",        // Deck API server
 			"nats-server", // NATS server binary
 			"pocketbase",  // PocketBase server
+			"xtemplate",   // XTemplate development server
 		}
 		
 		processesKilled := 0

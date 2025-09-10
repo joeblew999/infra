@@ -311,6 +311,10 @@ func RunWorkflows() {
 	// Keep infrastructure status at root
 	rootCmd.AddCommand(statusCmd)
 	rootCmd.AddCommand(initCmd)
+	
+	// Add NATS cluster management commands
+	addClusterCommands(rootCmd)
+	
 	// MCP commands now integrated into AI package
 }
 

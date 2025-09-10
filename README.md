@@ -4,6 +4,15 @@
 
 A comprehensive infrastructure management system with goreman supervision, supporting everything from local development to production deployment.
 
+## Demo
+
+Running on Fly.io 
+
+https://fly.io/apps/infra-mgmt
+
+https://infra-mgmt.fly.dev
+
+
 ## 🚀 Quick Start
 
 ```bash
@@ -11,6 +20,18 @@ git clone https://github.com/joeblew999/infra.git
 cd infra
 go run .                    # Start all services with goreman supervision
 ```
+
+### Local Docker Build image and run locally
+
+```sh
+go run . container 
+```
+
+builds with ko into .oci folder and runs locally.
+
+### Local Docker and deploy to fly
+
+
 
 Access the web interface at **http://localhost:1337**
 
