@@ -3,6 +3,8 @@ package deck
 import (
 	"path/filepath"
 	"runtime"
+	
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // Build and release constants
@@ -28,11 +30,10 @@ const (
 	// Package directory structure
 	PkgDir     = "pkg/deck"
 	
-	// Build directory structure
-	BuildRoot  = "pkg/deck/.build"
-	SourceDir  = "pkg/deck/.source"
-	ReleaseDir = "pkg/deck/.release"
-	GoWorkFile = "pkg/deck/.build/go.work"
+	// Build directory structure (legacy constants - use config functions instead)
+	RepoTestsDir = "pkg/deck/repo-tests"  // Upstream repo examples (525+ DSH files)
+	UnitTestsDir = "pkg/deck/unit-tests"  // Our focused unit tests
+	ReleaseDir   = "pkg/deck/.release"
 
 	// Binary names with deck prefix
 	DeckshBinary   = "decksh"
@@ -57,7 +58,6 @@ const (
 	// Health check constants
 	HealthCheckTimeout     = 30 // seconds timeout for health operations
 	TempDirPrefix         = "deck-health-"
-	CacheDirPath          = "deck/cache"
 	
 	// System dependencies
 	GitCommand = "git"
@@ -85,10 +85,25 @@ func GetReleaseFilename(version, platform, arch string) string {
 
 // GetBinaryPath returns the path to a binary in the build directory
 func GetBinaryPath(name string) string {
-	return filepath.Join(BuildRoot, "bin", name)
+	return filepath.Join(config.GetDeckBinPath(), name)
 }
 
 // GetWASMPath returns the path to a WASM module in the build directory
 func GetWASMPath(name string) string {
-	return filepath.Join(BuildRoot, "wasm", name)
+	return filepath.Join(config.GetDeckWASMPath(), name)
+}
+
+// GetBuildRoot returns the environment-aware build root directory
+func GetBuildRoot() string {
+	return config.GetDeckPath()
+}
+
+// GetCachePath returns the environment-aware cache directory
+func GetCachePath() string {
+	return config.GetDeckCachePath()
+}
+
+// GetGoWorkFile returns the environment-aware go.work file path
+func GetGoWorkFile() string {
+	return filepath.Join(GetBuildRoot(), "go.work")
 }

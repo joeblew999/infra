@@ -1,8 +1,12 @@
 package deck
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/joeblew999/infra/pkg/log"
 )
@@ -119,4 +123,83 @@ func (m *Manager) Update() error {
 	}
 	
 	return m.Install()
+}
+
+// ConvertToPDF converts an XML file to PDF using decksvg then external tools
+func (m *Manager) ConvertToPDF(xmlFile, outputPDF string) error {
+	// Get the decksvg binary path first  
+	decksvgPath, err := m.GetBinary("decksvg")
+	if err != nil {
+		return fmt.Errorf("decksvg binary not available: %w", err)
+	}
+
+	// Check if input file exists
+	if _, err := os.Stat(xmlFile); os.IsNotExist(err) {
+		return fmt.Errorf("input XML file not found: %s", xmlFile)
+	}
+
+	// First convert to SVG - decksvg creates files with pattern: filename-00001.svg
+	outputDir := filepath.Dir(xmlFile)
+	xmlBaseName := strings.TrimSuffix(filepath.Base(xmlFile), filepath.Ext(xmlFile))
+	expectedSVG := filepath.Join(outputDir, xmlBaseName+"-00001.svg")
+	
+	cmd := exec.Command(decksvgPath, "-outdir", outputDir, xmlFile)
+	
+	// Set DECKFONTS environment for font access
+	env := os.Environ()
+	env = append(env, "DECKFONTS=.data/font")
+	cmd.Env = env
+
+	log.Info("Converting XML to SVG", "input", xmlFile, "output", expectedSVG)
+	
+	// Capture both stdout and stderr for debugging
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to convert XML to SVG: %w, stderr: %s", err, stderr.String())
+	}
+	
+	// Log stderr if there are warnings
+	if stderr.Len() > 0 {
+		log.Info("decksvg warnings/errors", "stderr", stderr.String())
+	}
+	
+	// Check if the expected SVG file was created
+	if _, err := os.Stat(expectedSVG); os.IsNotExist(err) {
+		return fmt.Errorf("expected SVG file not created: %s", expectedSVG)
+	}
+	
+	svgFile := expectedSVG
+
+	// Keep the SVG file next to the original markdown
+	finalSVG := strings.TrimSuffix(outputPDF, filepath.Ext(outputPDF)) + ".svg"
+	
+	log.Info("Attempting to rename SVG file", "from", svgFile, "to", finalSVG)
+	
+	// Check if the source SVG file exists
+	if _, err := os.Stat(svgFile); err != nil {
+		return fmt.Errorf("source SVG file does not exist: %s - %w", svgFile, err)
+	}
+	
+	if err := os.Rename(svgFile, finalSVG); err != nil {
+		log.Info("Rename failed, attempting copy instead", "error", err.Error())
+		
+		// If rename fails, try copy instead
+		sourceData, readErr := os.ReadFile(svgFile)
+		if readErr != nil {
+			return fmt.Errorf("failed to read source SVG file: %w", readErr)
+		}
+		
+		if writeErr := os.WriteFile(finalSVG, sourceData, 0644); writeErr != nil {
+			return fmt.Errorf("failed to write final SVG file: %w", writeErr)
+		}
+		
+		// Clean up temp file after successful copy
+		os.Remove(svgFile)
+	}
+	
+	log.Info("Successfully created SVG output", "path", finalSVG)
+	return nil
 }

@@ -1,0 +1,6 @@
+deck
+slide
+	text "Markdown Integration" 50 95 4 "sans" "black"
+	content "markdown://docs/business/README.md" 50 50 1.2
+eslide
+edeck

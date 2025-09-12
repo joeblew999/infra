@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -68,9 +69,9 @@ type Builder struct {
 // NewBuilder creates a new deck builder
 func NewBuilder() *Builder {
 	return &Builder{
-		SourceDir: SourceDir,
-		BuildDir:  filepath.Join(BuildRoot, "bin"),
-		WASMDir:   filepath.Join(BuildRoot, "wasm"),
+		SourceDir: RepoTestsDir,  // Now points to repo-tests directory
+		BuildDir:  config.GetDeckBinPath(),
+		WASMDir:   config.GetDeckWASMPath(),
 	}
 }
 

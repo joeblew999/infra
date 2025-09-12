@@ -32,10 +32,35 @@ type Manager struct {
 	registry *Registry
 }
 
-// NewManager creates a new font manager
+// GetLocalFontPath returns the font cache path (environment-aware via config)
+func GetLocalFontPath() string {
+	return config.GetFontPath()
+}
+
+// GetLocalFontPathForFamily returns the path for a specific font family
+func GetLocalFontPathForFamily(family string) string {
+	return config.GetFontPathForFamily(family)
+}
+
+// newFont creates a Font struct with defaults
+func newFont(family string, weight int, format string) Font {
+	return Font{
+		Family: family,
+		Weight: weight,
+		Style:  DefaultFontStyle,
+		Format: format,
+	}
+}
+
+// newDefaultFont creates a Font struct with default format
+func newDefaultFont(family string, weight int) Font {
+	return newFont(family, weight, DefaultFontFormat)
+}
+
+// NewManager creates a new font manager (environment-aware via config)
 func NewManager() *Manager {
 	return &Manager{
-		cacheDir: config.GetFontPath(),
+		cacheDir: GetLocalFontPath(),
 		registry: NewRegistry(),
 	}
 }
@@ -47,12 +72,7 @@ func (m *Manager) Get(family string, weight int) (string, error) {
 
 // GetFormat returns the path to a cached font in a specific format
 func (m *Manager) GetFormat(family string, weight int, format string) (string, error) {
-	font := Font{
-		Family: family,
-		Weight: weight,
-		Style:  DefaultFontStyle,
-		Format: format,
-	}
+	font := newFont(family, weight, format)
 
 	// Check if font is already cached
 	if path, exists := m.registry.GetPath(font); exists {
@@ -70,39 +90,19 @@ func (m *Manager) List() []FontInfo {
 
 // Cache downloads and caches a font
 func (m *Manager) Cache(family string, weight int) error {
-	font := Font{
-		Family: family,
-		Weight: weight,
-		Style:  DefaultFontStyle,
-		Format: DefaultFontFormat,
-	}
-
-	_, err := m.cacheFont(font)
+	_, err := m.cacheFont(newDefaultFont(family, weight))
 	return err
 }
 
 // Available checks if a font is cached
 func (m *Manager) Available(family string, weight int) bool {
-	font := Font{
-		Family: family,
-		Weight: weight,
-		Style:  DefaultFontStyle,
-		Format: DefaultFontFormat,
-	}
-	_, exists := m.registry.GetPath(font)
+	_, exists := m.registry.GetPath(newDefaultFont(family, weight))
 	return exists
 }
 
 // CacheTTF downloads and caches a font in TTF format (for deck tools)
 func (m *Manager) CacheTTF(family string, weight int) error {
-	font := Font{
-		Family: family,
-		Weight: weight,
-		Style:  DefaultFontStyle,
-		Format: "ttf",
-	}
-
-	_, err := m.cacheFont(font)
+	_, err := m.cacheFont(newFont(family, weight, "ttf"))
 	return err
 }
 
@@ -113,15 +113,11 @@ func (m *Manager) GetTTF(family string, weight int) (string, error) {
 
 // cacheFont downloads and caches a font
 func (m *Manager) cacheFont(font Font) (string, error) {
-	// Ensure cache directory exists
-	familyDir := config.GetFontPathForFamily(font.Family)
-	if err := ensureDir(familyDir); err != nil {
-		return "", fmt.Errorf("failed to create font directory: %w", err)
+	// Ensure cache directory exists and get file path
+	path, err := m.prepareFontPath(font)
+	if err != nil {
+		return "", err
 	}
-
-	// Generate filename
-	filename := fmt.Sprintf("%d.%s", font.Weight, DefaultFontFormat)
-	path := filepath.Join(familyDir, filename)
 
 	// Download from Google Fonts
 	if err := m.downloadGoogleFont(font, path); err != nil {
@@ -129,18 +125,33 @@ func (m *Manager) cacheFont(font Font) (string, error) {
 	}
 
 	// Register in registry
+	if err := m.registerFont(font, path); err != nil {
+		log.Warn("Failed to register font", "error", err)
+	}
+
+	return path, nil
+}
+
+// prepareFontPath ensures directory exists and returns the full file path
+func (m *Manager) prepareFontPath(font Font) (string, error) {
+	familyDir := GetLocalFontPathForFamily(font.Family)
+	if err := ensureDir(familyDir); err != nil {
+		return "", fmt.Errorf("failed to create font directory: %w", err)
+	}
+
+	filename := fmt.Sprintf("%d.%s", font.Weight, font.Format)
+	return filepath.Join(familyDir, filename), nil
+}
+
+// registerFont adds font info to the registry
+func (m *Manager) registerFont(font Font, path string) error {
 	info := FontInfo{
 		Font:    font,
 		Path:    path,
 		Source:  "google",
 		Version: "latest",
 	}
-
-	if err := m.registry.Add(info); err != nil {
-		log.Warn("Failed to register font", "error", err)
-	}
-
-	return path, nil
+	return m.registry.Add(info)
 }
 
 // downloadGoogleFont downloads a font from Google Fonts

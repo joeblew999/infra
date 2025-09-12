@@ -31,7 +31,7 @@ type GenerationResult struct {
 }
 
 func NewServer() (*Server, error) {
-	testRunner, err := deck.NewGoldenTestRunner(deck.BuildRoot)
+	testRunner, err := deck.NewGoldenTestRunner(deck.GetBuildRoot())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test runner: %w", err)
 	}
@@ -116,25 +116,25 @@ func (s *Server) generateOutputsForExample(exampleName string) error {
 	xmlFile := filepath.Join(outputDir, exampleName+".xml")
 	
 	// Step 1: Generate XML from DSH using decksh
-	deckshPath := filepath.Join(deck.BuildRoot, "bin", deck.DeckshBinary)
+	deckshPath := filepath.Join(deck.GetBuildRoot(), "bin", deck.DeckshBinary)
 	if err := s.runCommand(deckshPath, "-o", xmlFile, dshFile); err != nil {
 		return fmt.Errorf("decksh failed: %w", err)
 	}
 	
 	// Step 2: Generate SVG from XML using decksvg
-	decksvgPath := filepath.Join(deck.BuildRoot, "bin", deck.DecksvgBinary)
+	decksvgPath := filepath.Join(deck.GetBuildRoot(), "bin", deck.DecksvgBinary)
 	if err := s.runCommandInDir(outputDir, decksvgPath, xmlFile); err != nil {
 		return fmt.Errorf("decksvg failed: %w", err)
 	}
 	
 	// Step 3: Generate PNG from XML using deckpng  
-	deckpngPath := filepath.Join(deck.BuildRoot, "bin", deck.DeckpngBinary)
+	deckpngPath := filepath.Join(deck.GetBuildRoot(), "bin", deck.DeckpngBinary)
 	if err := s.runCommandInDir(outputDir, deckpngPath, xmlFile); err != nil {
 		return fmt.Errorf("deckpng failed: %w", err)
 	}
 	
 	// Step 4: Generate PDF from XML using deckpdf
-	deckpdfPath := filepath.Join(deck.BuildRoot, "bin", deck.DeckpdfBinary)
+	deckpdfPath := filepath.Join(deck.GetBuildRoot(), "bin", deck.DeckpdfBinary)
 	if err := s.runCommandInDir(outputDir, deckpdfPath, xmlFile); err != nil {
 		return fmt.Errorf("deckpdf failed: %w", err)
 	}

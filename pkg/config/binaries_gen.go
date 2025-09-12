@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-09-09 18:05:48.531435 +0700 +07 m=+0.000908334
+// Generated at 2025-09-11 15:34:44.302857 +0700 +07 m=+0.002666335
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -29,6 +29,8 @@ const (
 	BinaryTinygo = "tinygo" // Go compiler for microcontrollers and WebAssembly
 	BinaryXtemplate = "xtemplate" // HTML/template-based hypertext preprocessor and rapid web development server
 	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
+	BinaryProcessCompose = "process-compose" // Process orchestration and management tool with YAML configuration
+	BinaryNatsS3 = "nats-s3" // S3 gateway for NATS JetStream Object Store
 )
 
 // AllBinaryNames returns all available binary names from dep.json
@@ -55,6 +57,8 @@ func AllBinaryNames() []string {
 		BinaryTinygo,
 		BinaryXtemplate,
 		BinaryGoctl,
+		BinaryProcessCompose,
+		BinaryNatsS3,
 	}
 }
 

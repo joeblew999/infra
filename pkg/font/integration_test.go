@@ -4,6 +4,7 @@
 package font
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,14 +19,13 @@ func TestFontCachePopulation(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	// Use temp directory for testing
-	tempDir := t.TempDir()
-	fontDir := filepath.Join(tempDir, "font")
+	// Use local .data directory for development visibility
+	fontDir := GetLocalFontPath()
 
-	// Create manager with temp directory
+	// Create manager with local directory
 	manager := &Manager{
 		cacheDir: fontDir,
-		registry: NewRegistryWithPath(filepath.Join(fontDir, RegistryFilename)),
+		registry: NewRegistry(),
 	}
 
 	t.Run("CacheFontIntegration", func(t *testing.T) {
@@ -48,8 +48,8 @@ func TestFontCachePopulation(t *testing.T) {
 		require.NoError(t, err)
 		assert.FileExists(t, path)
 
-		// Verify it's the expected file format
-		assert.Equal(t, "woff2", filepath.Ext(path)[1:])
+		// Verify it's the expected file format (TTF is now default)
+		assert.Equal(t, "ttf", filepath.Ext(path)[1:])
 	})
 
 	t.Run("CacheMultipleFontsIntegration", func(t *testing.T) {
@@ -68,9 +68,10 @@ func TestFontCachePopulation(t *testing.T) {
 			assert.True(t, manager.Available(font.family, font.weight))
 		}
 
-		// Verify all fonts are listed (may include duplicates from previous tests)
+		// Verify all fonts are listed (may include fonts from previous runs)
 		available := manager.List()
 		assert.GreaterOrEqual(t, len(available), len(fonts))
+		t.Logf("Total cached fonts: %d", len(available))
 	})
 
 	t.Run("CacheDirectoryStructureIntegration", func(t *testing.T) {
@@ -83,15 +84,9 @@ func TestFontCachePopulation(t *testing.T) {
 
 		// Verify the file exists in the expected location
 		assert.Contains(t, path, family)
-		assert.Contains(t, path, "400.woff2")
-		
-		// Check if file exists using absolute path
-		if _, err := os.Stat(path); err == nil {
-			assert.FileExists(t, path)
-		} else {
-			// File might be in the actual font directory, which is expected
-			t.Logf("Font file exists at: %s", path)
-		}
+		assert.Contains(t, path, "400.ttf")
+		assert.FileExists(t, path)
+		t.Logf("Font cached at: %s", path)
 	})
 
 	t.Run("RegistryPersistenceIntegration", func(t *testing.T) {
@@ -105,7 +100,7 @@ func TestFontCachePopulation(t *testing.T) {
 		// Create a new manager with same directory
 		newManager := &Manager{
 			cacheDir: fontDir,
-			registry: NewRegistryWithPath(filepath.Join(fontDir, RegistryFilename)),
+			registry: NewRegistry(),
 		}
 
 		// Cache the font in new manager to ensure it's registered
@@ -139,5 +134,104 @@ func TestFontCachePopulation(t *testing.T) {
 		info, err := os.Stat(path1)
 		require.NoError(t, err)
 		assert.Greater(t, info.Size(), int64(0), "Font file should have content")
+	})
+
+	t.Run("TTFFontCachingForDeck", func(t *testing.T) {
+		// Test TTF font caching specifically for deck tools compatibility
+		family := "Roboto"
+		weight := 400
+
+		// Cache font in TTF format
+		err := manager.CacheTTF(family, weight)
+		require.NoError(t, err)
+
+		// Get TTF font path
+		path, err := manager.GetFormat(family, weight, "ttf")
+		require.NoError(t, err)
+		assert.FileExists(t, path)
+
+		// Verify it's actually a TTF file
+		assert.Equal(t, "ttf", filepath.Ext(path)[1:])
+
+		// Check file content has TTF signature
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Greater(t, len(content), 4, "TTF file should have content")
+
+		// TTF files start with specific signatures
+		// 0x00, 0x01, 0x00, 0x00 for TrueType or 'OTTO' for OpenType
+		if len(content) >= 4 {
+			isValidTTF := (content[0] == 0x00 && content[1] == 0x01 && content[2] == 0x00 && content[3] == 0x00) ||
+				(string(content[0:4]) == "OTTO")
+			assert.True(t, isValidTTF, "File should have valid TTF/OTF signature, got: % x", content[0:4])
+		}
+
+		// Verify font is available via standard methods
+		assert.True(t, manager.Available(family, weight))
+	})
+
+	t.Run("DeckToolsFontCompatibility", func(t *testing.T) {
+		// Test fonts that deck tools specifically look for
+		requiredFonts := []struct {
+			name   string
+			family string
+			weight int
+		}{
+			{"FiraSans-Regular", "Roboto", 400}, // Most common deck font
+			{"arial", "Open Sans", 400},
+			{"helvetica", "Roboto", 400},
+		}
+
+		for _, font := range requiredFonts {
+			t.Run(font.name, func(t *testing.T) {
+				// Cache as TTF
+				err := manager.CacheTTF(font.family, font.weight)
+				require.NoError(t, err)
+
+				// Verify we can get TTF format
+				path, err := manager.GetFormat(font.family, font.weight, "ttf")
+				require.NoError(t, err)
+				assert.FileExists(t, path)
+
+				// Verify file is non-empty TTF
+				info, err := os.Stat(path)
+				require.NoError(t, err)
+				assert.Greater(t, info.Size(), int64(1000), "TTF should be at least 1KB")
+			})
+		}
+	})
+	
+	t.Run("ValidateAllCachedFontSignatures", func(t *testing.T) {
+		// Get all cached fonts
+		fonts := manager.List()
+		
+		for _, fontInfo := range fonts {
+			if fontInfo.Format == "ttf" {
+				t.Run(fmt.Sprintf("%s_%d", fontInfo.Family, fontInfo.Weight), func(t *testing.T) {
+					// Read the actual cached file
+					content, err := os.ReadFile(fontInfo.Path)
+					require.NoError(t, err, "Should be able to read cached font file")
+					require.Greater(t, len(content), 4, "Font file should have at least 4 bytes")
+					
+					// Validate TTF signature
+					signature := content[0:4]
+					isValidTTF := (signature[0] == 0x00 && signature[1] == 0x01 && signature[2] == 0x00 && signature[3] == 0x00) ||
+						(string(signature) == "OTTO")
+					
+					assert.True(t, isValidTTF, 
+						"Font %s %d should have valid TTF signature, got: % x", 
+						fontInfo.Family, fontInfo.Weight, signature)
+				})
+			}
+		}
+		
+		// Ensure we tested at least one TTF font
+		ttfCount := 0
+		for _, fontInfo := range fonts {
+			if fontInfo.Format == "ttf" {
+				ttfCount++
+			}
+		}
+		assert.Greater(t, ttfCount, 0, "Should have at least one TTF font to validate")
 	})
 }

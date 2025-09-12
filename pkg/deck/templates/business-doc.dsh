@@ -1,0 +1,8 @@
+deck
+slide
+	text "{{TITLE}}" 50 90 4 "sans" "black"
+	text "Infrastructure Management System" 50 85 2 "sans" "gray"
+	
+	text "Generated with Deck • Build: {{BUILD_HASH}}" 50 5 1 "sans" "gray"
+eslide
+edeck

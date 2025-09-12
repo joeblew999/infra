@@ -36,10 +36,10 @@ func NewWatcher() *Watcher {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Watcher{
 		Builder:    NewBuilder(),
-		OutputDir:  filepath.Join(config.GetDataPath(), CacheDirPath),
-		CacheDir:   filepath.Join(config.GetDataPath(), CacheDirPath),
+		OutputDir:  "pkg/deck/cache",
+		CacheDir:   "pkg/deck/cache",
 		Processing: make(map[string]bool),
-		Formats:    []string{"svg"}, // Default to SVG only
+		Formats:    []string{"svg", "png", "pdf"}, // Default to all formats
 		ctx:        ctx,
 		cancel:     cancel,
 	}
@@ -161,20 +161,32 @@ func (w *Watcher) processFile(path string, info os.FileInfo, err error) error {
 	w.mu.Unlock()
 	
 	// Start processing in goroutine with proper cleanup
-	w.wg.Add(1)
-	go w.processDSHFile(path)
+	w.ProcessDSHFileAsync(path)
 	
 	return nil
 }
 
-// processDSHFile processes a single .dsh file through the pipeline
-func (w *Watcher) processDSHFile(dshPath string) {
+// ProcessDSHFile processes a single .dsh file through the pipeline (public method)
+func (w *Watcher) ProcessDSHFile(dshPath string) {
+	w.processDSHFileInternal(dshPath, false)
+}
+
+// ProcessDSHFileAsync processes a single .dsh file through the pipeline asynchronously
+func (w *Watcher) ProcessDSHFileAsync(dshPath string) {
+	w.wg.Add(1)
+	go w.processDSHFileInternal(dshPath, true)
+}
+
+// processDSHFileInternal handles the actual processing with optional WaitGroup management
+func (w *Watcher) processDSHFileInternal(dshPath string, useWaitGroup bool) {
 	defer func() {
 		// Clean up processing state (thread-safe)
 		w.mu.Lock()
 		delete(w.Processing, dshPath)
 		w.mu.Unlock()
-		w.wg.Done()
+		if useWaitGroup {
+			w.wg.Done()
+		}
 	}()
 	
 	// Check if context is cancelled before starting
@@ -227,7 +239,7 @@ func (w *Watcher) processDSHFile(dshPath string) {
 
 // runDecksh runs decksh to compile .dsh to XML
 func (w *Watcher) runDecksh(inputPath, outputPath string) error {
-	deckshPath := filepath.Join(BuildRoot, "bin", DeckshBinary)
+	deckshPath := filepath.Join(GetBuildRoot(), "bin", DeckshBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(deckshPath); os.IsNotExist(err) {
@@ -250,85 +262,115 @@ func (w *Watcher) runDecksh(inputPath, outputPath string) error {
 	return os.WriteFile(outputPath, []byte(fixedXML), 0644)
 }
 
-// runSvgdeck runs svgdeck to convert XML to SVG
+// runSvgdeck runs decksvg to convert XML to SVG
 func (w *Watcher) runSvgdeck(inputPath, outputPath string) error {
-	svgdeckPath := filepath.Join(BuildRoot, "bin", DecksvgBinary)
+	// Use absolute path to decksvg binary
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	svgdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DecksvgBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(svgdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("decksvg not built: %s", svgdeckPath)
 	}
 	
-	cmd := exec.Command(svgdeckPath, inputPath)
+	// Use decksvg with -outdir flag
+	outputDir := filepath.Dir(outputPath)
+	cmd := exec.Command(svgdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("decksvg failed: %w, output: %s", err, string(output))
 	}
 	
-	// Rename the output file to match our expected name
-	expectedSVG := strings.TrimSuffix(inputPath, ".xml") + ".svg"
-	if _, err := os.Stat(expectedSVG); err == nil {
-		return os.Rename(expectedSVG, outputPath)
+	// decksvg creates files with pattern: basename-00001.svg
+	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	expectedSVG := filepath.Join(outputDir, xmlBaseName+"-00001.svg")
+	
+	// Check if the expected SVG file was created
+	if _, err := os.Stat(expectedSVG); os.IsNotExist(err) {
+		return fmt.Errorf("expected SVG file not created: %s", expectedSVG)
 	}
 	
-	return nil
+	// Rename to the desired output path
+	return os.Rename(expectedSVG, outputPath)
 }
 
-// runPngdeck runs pngdeck to convert XML to PNG
+// runPngdeck runs deckpng to convert XML to PNG
 func (w *Watcher) runPngdeck(inputPath, outputPath string) error {
-	pngdeckPath := filepath.Join(BuildRoot, "bin", DeckpngBinary)
+	// Use absolute path to deckpng binary
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	pngdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DeckpngBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(pngdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("deckpng not built: %s", pngdeckPath)
 	}
 	
-	cmd := exec.Command(pngdeckPath, inputPath)
+	// Use deckpng with -outdir flag
+	outputDir := filepath.Dir(outputPath)
+	cmd := exec.Command(pngdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("deckpng failed: %w, output: %s", err, string(output))
 	}
 	
-	// Rename the output file to match our expected name
-	expectedPNG := strings.TrimSuffix(inputPath, ".xml") + ".png"
-	if _, err := os.Stat(expectedPNG); err == nil {
-		return os.Rename(expectedPNG, outputPath)
+	// deckpng creates files with pattern: basename-00001.png
+	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	expectedPNG := filepath.Join(outputDir, xmlBaseName+"-00001.png")
+	
+	// Check if the expected PNG file was created
+	if _, err := os.Stat(expectedPNG); os.IsNotExist(err) {
+		return fmt.Errorf("expected PNG file not created: %s", expectedPNG)
 	}
 	
-	return nil
+	// Rename to the desired output path
+	return os.Rename(expectedPNG, outputPath)
 }
 
-// runPdfdeck runs pdfdeck to convert XML to PDF
+// runPdfdeck runs deckpdf to convert XML to PDF
 func (w *Watcher) runPdfdeck(inputPath, outputPath string) error {
-	pdfdeckPath := filepath.Join(BuildRoot, "bin", DeckpdfBinary)
+	// Use absolute path to deckpdf binary
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get working directory: %w", err)
+	}
+	pdfdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DeckpdfBinary)
 	
 	// Check if tool exists
 	if _, err := os.Stat(pdfdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("deckpdf not built: %s", pdfdeckPath)
 	}
 	
-	cmd := exec.Command(pdfdeckPath, inputPath)
+	// Use deckpdf with -outdir flag
+	outputDir := filepath.Dir(outputPath)
+	cmd := exec.Command(pdfdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	cmd.Dir = filepath.Dir(outputPath) // Output to same directory
 	
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("deckpdf failed: %w, output: %s", err, string(output))
 	}
 	
-	// Rename the output file to match our expected name
-	expectedPDF := strings.TrimSuffix(inputPath, ".xml") + ".pdf"
-	if _, err := os.Stat(expectedPDF); err == nil {
-		return os.Rename(expectedPDF, outputPath)
+	// deckpdf creates files with pattern: basename-00001.pdf
+	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
+	expectedPDF := filepath.Join(outputDir, xmlBaseName+"-00001.pdf")
+	
+	// Check if the expected PDF file was created
+	if _, err := os.Stat(expectedPDF); os.IsNotExist(err) {
+		return fmt.Errorf("expected PDF file not created: %s", expectedPDF)
 	}
 	
-	return nil
+	// Rename to the desired output path
+	return os.Rename(expectedPDF, outputPath)
 }
 
 // StartAPISupervised starts the deck API service under goreman supervision (idempotent)
@@ -368,10 +410,10 @@ Port: %d
 // This starts the background .dsh file processing service
 func StartWatcherSupervised(watchPaths []string, formats []string) error {
 	if len(watchPaths) == 0 {
-		watchPaths = []string{"test/deck"} // Default watch paths
+		watchPaths = []string{"pkg/deck/unit-tests"} // Default watch paths
 	}
 	if len(formats) == 0 {
-		formats = []string{"svg", "png", "pdf"} // Default formats
+		formats = []string{"svg", "png", "pdf"} // Default to all formats
 	}
 	
 	// Create a simple config file for the watcher

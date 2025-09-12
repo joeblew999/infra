@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/joeblew999/infra/pkg/config"
 )
 
 // Registry manages font metadata and lookups
@@ -16,9 +15,9 @@ type Registry struct {
 	data map[string]FontInfo
 }
 
-// NewRegistry creates a new font registry
+// NewRegistry creates a new font registry (environment-aware via config)
 func NewRegistry() *Registry {
-	registryPath := filepath.Join(config.GetFontPath(), RegistryFilename)
+	registryPath := filepath.Join(GetLocalFontPath(), RegistryFilename)
 	r := &Registry{
 		path: registryPath,
 		data: make(map[string]FontInfo),
@@ -36,13 +35,24 @@ func (r *Registry) GetPath(font Font) (string, bool) {
 	}
 	
 	// Verify file still exists
-	if _, err := os.Stat(info.Path); os.IsNotExist(err) {
-		delete(r.data, key)
-		r.save()
+	if !r.fileExists(info.Path) {
+		r.removeStaleEntry(key)
 		return "", false
 	}
 	
 	return info.Path, true
+}
+
+// fileExists checks if a file exists
+func (r *Registry) fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
+}
+
+// removeStaleEntry removes a registry entry for a non-existent file
+func (r *Registry) removeStaleEntry(key string) {
+	delete(r.data, key)
+	r.save() // Note: ignoring error here as it's cleanup
 }
 
 // Add registers a font in the registry
@@ -79,35 +89,59 @@ func (r *Registry) key(font Font) string {
 
 // load reads the registry from disk
 func (r *Registry) load() {
-	if _, err := os.Stat(r.path); os.IsNotExist(err) {
+	if !r.fileExists(r.path) {
 		return // Registry doesn't exist yet
 	}
 	
+	registryData := r.readRegistryFile()
+	if registryData != nil {
+		r.data = registryData
+	}
+}
+
+// readRegistryFile reads and parses the registry file
+func (r *Registry) readRegistryFile() map[string]FontInfo {
 	data, err := os.ReadFile(r.path)
 	if err != nil {
-		return // Failed to read, start fresh
+		return nil // Failed to read, start fresh
 	}
 	
 	var registryData map[string]FontInfo
 	if err := json.Unmarshal(data, &registryData); err != nil {
-		return // Failed to parse, start fresh
+		return nil // Failed to parse, start fresh
 	}
 	
-	r.data = registryData
+	return registryData
 }
 
 // save writes the registry to disk
 func (r *Registry) save() error {
-	// Ensure directory exists
+	if err := r.ensureRegistryDir(); err != nil {
+		return err
+	}
+	
+	data, err := r.marshalRegistry()
+	if err != nil {
+		return err
+	}
+	
+	return os.WriteFile(r.path, data, 0644)
+}
+
+// ensureRegistryDir creates the registry directory if it doesn't exist
+func (r *Registry) ensureRegistryDir() error {
 	dir := filepath.Dir(r.path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create font directory: %w", err)
 	}
-	
+	return nil
+}
+
+// marshalRegistry converts the registry data to JSON
+func (r *Registry) marshalRegistry() ([]byte, error) {
 	data, err := json.MarshalIndent(r.data, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal registry: %w", err)
+		return nil, fmt.Errorf("failed to marshal registry: %w", err)
 	}
-	
-	return os.WriteFile(r.path, data, 0644)
+	return data, nil
 }

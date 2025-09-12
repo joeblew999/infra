@@ -20,7 +20,7 @@ var testAllCmd = &cobra.Command{
 	Use:   "all",
 	Short: "Run all golden tests",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		buildDir := deck.BuildRoot
+		buildDir := deck.GetBuildRoot()
 
 		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {
@@ -37,7 +37,7 @@ var testCategoryCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		category := args[0]
-		buildDir := deck.BuildRoot
+		buildDir := deck.GetBuildRoot()
 
 		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {
@@ -52,7 +52,7 @@ var testCleanupCmd = &cobra.Command{
 	Use:   "cleanup",
 	Short: "Clean up golden test output files",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		buildDir := deck.BuildRoot
+		buildDir := deck.GetBuildRoot()
 
 		runner, err := deck.NewGoldenTestRunner(buildDir)
 		if err != nil {

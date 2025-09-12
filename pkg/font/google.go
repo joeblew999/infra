@@ -16,17 +16,36 @@ import (
 
 // downloadGoogleFont downloads a font from Google Fonts using CSS parsing
 func downloadGoogleFont(font Font, path string) error {
-	// Build Google Fonts CSS URL
-	cssURL := buildGoogleFontsURL(font)
+	// For TTF format, try direct API first
+	if font.Format == "ttf" {
+		if err := tryDirectTTFDownload(font, path); err == nil {
+			return nil
+		}
+		log.Warn("Direct TTF API failed, trying CSS method", "family", font.Family)
+	}
 	
-	// Get CSS with font URLs (using proper User-Agent for format)
+	// Fallback to CSS method
+	return tryCSSSDownload(font, path)
+}
+
+// tryDirectTTFDownload attempts to download TTF using direct API
+func tryDirectTTFDownload(font Font, path string) error {
+	fontURL, err := getGoogleFontDirectURL(font)
+	if err != nil {
+		return err
+	}
+	log.Info("Using direct TTF URL", "family", font.Family, "url", fontURL)
+	return downloadFontFile(fontURL, path)
+}
+
+// tryCSSSDownload attempts to download using CSS parsing method
+func tryCSSSDownload(font Font, path string) error {
+	cssURL := buildGoogleFontsURL(font)
 	fontURL, err := getFontURL(cssURL, font.Format)
 	if err != nil {
 		log.Warn("Failed to get font from CSS, using mock", "family", font.Family, "error", err)
 		return createMockFontFile(path, font)
 	}
-	
-	// Download the actual font file
 	return downloadFontFile(fontURL, path)
 }
 
@@ -99,20 +118,23 @@ func buildGoogleFontsURL(font Font) string {
 	return url
 }
 
+// getUserAgentForFormat returns appropriate user agent for the desired font format
+func getUserAgentForFormat(format string) string {
+	if format == "ttf" {
+		// Use extremely old user agent to force TTF format from Google Fonts
+		return "Mozilla/3.0 (X11; U; SunOS 5.4 sun4c)"
+	}
+	// Default to modern user agent for WOFF2
+	return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+}
+
 // getFontURL parses CSS to extract the actual font file URL
 func getFontURL(cssURL, format string) (string, error) {
-	// Set user agent based on desired format
-	userAgent := "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" // WOFF2
-	if format == "ttf" {
-		// Use very old user agent to force TTF format from Google Fonts
-		userAgent = "Mozilla/4.0 (compatible; MSIE 5.0; Windows 98)"
-	}
-	
 	req, err := http.NewRequest("GET", cssURL, nil)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", getUserAgentForFormat(format))
 	
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -125,10 +147,14 @@ func getFontURL(cssURL, format string) (string, error) {
 		return "", err
 	}
 	
+	return extractFontURLFromCSS(string(css), format)
+}
+
+// extractFontURLFromCSS extracts font URL from CSS using regex
+func extractFontURLFromCSS(css, format string) (string, error) {
 	// Extract font URL from CSS - Google Fonts uses different URL patterns
-	// Look for: url(https://fonts.gstatic.com/l/font?kit=...) or url(https://fonts.gstatic.com/s/roboto/...)
 	re := regexp.MustCompile(`url\((https://fonts\.gstatic\.com/[^)]+)\)`)
-	matches := re.FindStringSubmatch(string(css))
+	matches := re.FindStringSubmatch(css)
 	
 	if len(matches) < 2 {
 		return "", fmt.Errorf("no %s font URL found in CSS", format)
@@ -161,9 +187,14 @@ func downloadFontFile(url, path string) error {
 
 // createMockFontFile creates a mock font file for testing/fallback
 func createMockFontFile(path string, font Font) error {
-	// Create mock font data (WOFF2 header + minimal content)
-	mockData := []byte("mock font data for " + font.Family + " " + fmt.Sprintf("%d", font.Weight))
+	mockData := generateMockFontData(font)
 	return os.WriteFile(path, mockData, 0644)
+}
+
+// generateMockFontData creates mock font data
+func generateMockFontData(font Font) []byte {
+	content := fmt.Sprintf("mock font data for %s %d", font.Family, font.Weight)
+	return []byte(content)
 }
 
 // ListGoogleFonts returns available Google Fonts

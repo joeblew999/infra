@@ -1,0 +1,10 @@
+<deck>
+<slide>
+<text xp="50" yp="90" sp="4" font="sans" color="black">Format Test</text>
+<text xp="50" yp="80" sp="2" font="sans" color="gray">Testing SVG, PNG, PDF generation</text>
+<ellipse xp="25" yp="50" wp="10" hr="100" color="blue"/>
+<rect xp="75" yp="40" wp="20" hp="20" color="red" opacity="0.7"/>
+<text xp="25" yp="65" sp="1.5" font="sans" color="blue">Circle</text>
+<text xp="75" yp="65" sp="1.5" font="sans" color="red">Rectangle</text>
+</slide>
+</deck>

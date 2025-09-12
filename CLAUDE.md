@@ -20,6 +20,14 @@ Use the ./agents/AGENT.md, following everything it says and its links.
 - **Environment-aware defaults** → pkg/config
 - **Future XDG/Docker paths** → pkg/config
 
+### Test vs Production Data Separation
+- **Tests use**: `.data-test/` directory (isolated, can be deleted safely)
+- **Production uses**: `.data/` directory (persistent, backed up)
+- **Environment detection**: `config.IsTestEnvironment()` automatically detects test runs
+- **Path functions**: `config.GetFontPath()`, `config.GetCaddyPath()`, etc. are environment-aware
+- **Pattern**: All data-heavy packages should use `config.Get*Path()` functions
+- **Benefits**: Clean test artifacts, no production data pollution, easy debugging
+
 ### Web GUI Debugging
 - **Always use Playwright MCP tools** for web GUI debugging
 - **No manual browser interaction** - use:

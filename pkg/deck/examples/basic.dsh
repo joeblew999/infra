@@ -1,0 +1,11 @@
+deck
+slide
+	text "Basic Example" 50 90 4 "sans" "black"
+	text "Simple shapes and text" 50 80 2 "sans" "gray"
+	
+	circle 25 50 10 "blue"
+	rect 75 40 20 20 "red" 0.7
+	text "Circle" 25 65 1.5 "sans" "blue"
+	text "Rectangle" 75 65 1.5 "sans" "red"
+eslide
+edeck

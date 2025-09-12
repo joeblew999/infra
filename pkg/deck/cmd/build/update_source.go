@@ -15,8 +15,8 @@ import (
 // updateSourceCmd represents the update-source command  
 var updateSourceCmd = &cobra.Command{
 		Use:   "update-source",
-		Short: "Update the .source directory with latest upstream deck repositories",
-		Long: `Updates the .source directory by cloning or pulling the latest versions
+		Short: "Update the repo-tests directory with latest upstream deck repositories",
+		Long: `Updates the repo-tests directory by cloning or pulling the latest versions
 of the upstream deck repositories that our binary pipeline is based on:
 
 - github.com/ajstarks/deck (main deck library)
@@ -47,7 +47,7 @@ func runUpdateSource(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("could not find pkg/deck directory from %s", wd)
 	}
 
-	sourceDir := filepath.Join(deckDir, ".source")
+	sourceDir := filepath.Join(deckDir, "repo-tests")
 	
 	log.Info("Updating deck source repositories", 
 		"deckDir", deckDir, 
@@ -61,19 +61,19 @@ func runUpdateSource(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Remove existing .source if force flag is set
+	// Remove existing repo-tests if force flag is set
 	if force {
 		if _, err := os.Stat(sourceDir); err == nil {
-			log.Info("Removing existing .source directory")
+			log.Info("Removing existing repo-tests directory")
 			if err := os.RemoveAll(sourceDir); err != nil {
-				return fmt.Errorf("failed to remove existing .source directory: %w", err)
+				return fmt.Errorf("failed to remove existing repo-tests directory: %w", err)
 			}
 		}
 	}
 
-	// Create .source directory if it doesn't exist
+	// Create repo-tests directory if it doesn't exist
 	if err := os.MkdirAll(sourceDir, 0755); err != nil {
-		return fmt.Errorf("failed to create .source directory: %w", err)
+		return fmt.Errorf("failed to create repo-tests directory: %w", err)
 	}
 
 	// Update each repository
@@ -125,7 +125,7 @@ func runUpdateSource(cmd *cobra.Command, args []string) error {
 	}
 
 	log.Info("Successfully updated all source repositories")
-	fmt.Printf("✅ Updated .source directory: %s\n", sourceDir)
+	fmt.Printf("✅ Updated repo-tests directory: %s\n", sourceDir)
 	fmt.Printf("📁 Updated repositories: %s\n", strings.Join(repoNames, ", "))
 	fmt.Printf("📝 Updated go.work file with all modules\n")
 	
@@ -229,7 +229,7 @@ func pullRepository(repoPath string) error {
 	return nil
 }
 
-// updateGoWorkFile creates or updates the go.work file in .source directory
+// updateGoWorkFile creates or updates the go.work file in repo-tests directory
 func updateGoWorkFile(sourceDir string) error {
 	goWorkPath := filepath.Join(sourceDir, "go.work")
 	

@@ -2,7 +2,7 @@
   "version": "1.0",
   "description": "Complete golden test cases for deck binary pipeline testing",
   "generated": "2025-08-23T17:15:00Z",
-  "source_base": "pkg/deck/.source/",
+  "source_base": "pkg/deck/repo-tests/",
   "total_tests": 90,
   "test_cases": [
     {

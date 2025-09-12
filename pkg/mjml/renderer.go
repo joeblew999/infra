@@ -18,6 +18,7 @@ import (
 	"sync"
 
 	"github.com/preslavrachev/gomjml/mjml"
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/font"
 )
 
@@ -83,7 +84,7 @@ func NewRenderer(opts ...RendererOption) *Renderer {
 		EnableCache:      false,
 		EnableDebug:      false,
 		EnableValidation: true,
-		TemplateDir:      "templates",
+		TemplateDir:      config.GetMjmlTemplatePath(),
 		EnableFonts:      true,
 	}
 	

@@ -13,12 +13,13 @@ import (
 	"github.com/delaneyj/toolbelt/embeddednats"
 
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// StartEmbeddedNATS starts an embedded NATS server and returns its client URL.
-func StartEmbeddedNATS(ctx context.Context) (string, error) {
+// StartEmbeddedNATS starts an embedded NATS server and returns its client URL and a cleanup function.
+func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
 	// Initialize embedded NATS server
 	log.Info("Starting embedded NATS server...")
 
@@ -31,7 +32,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	)
 	if err != nil {
 		log.Error("Failed to create embedded NATS server", "error", err)
-		return "", fmt.Errorf("Failed to create embedded NATS server: %w", err)
+		return "", nil, fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 
 	// Wait for the server to be ready with longer timeout
@@ -49,7 +50,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	case <-time.After(maxWait):
 		// Log more detailed error
 		log.Error("NATS server timeout", "data_path", natsDataPath)
-		return "", fmt.Errorf("timeout waiting for NATS server after %v", maxWait)
+		return "", nil, fmt.Errorf("timeout waiting for NATS server after %v", maxWait)
 	}
 	
 	// Get server info for debugging
@@ -58,17 +59,36 @@ func StartEmbeddedNATS(ctx context.Context) (string, error) {
 	// Get client connection from the embedded server
 	nc, err := natsServer.Client()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get NATS client: %w", err)
+		return "", nil, fmt.Errorf("Failed to get NATS client: %w", err)
 	}
 
-	// Close the client connection when the context is done
-	go func() {
-		<-ctx.Done()
+	cleanup := func() {
 		nc.Close()
 		natsServer.Close()
-	}()
+	}
 
-	return nc.ConnectedUrl(), nil
+	return nc.ConnectedUrl(), cleanup, nil
+}
+
+// StartS3GatewaySupervised starts the nats-s3 gateway as a supervised process.
+func StartS3GatewaySupervised(natsURL string) {
+	// Ensure the nats-s3 binary is installed.
+	if err := dep.InstallBinary("nats-s3", false); err != nil {
+		log.Error("Failed to install nats-s3 binary, cannot start gateway", "error", err)
+		return
+	}
+
+	log.Info("Starting nats-s3 gateway with goreman...")
+	listenAddr := fmt.Sprintf("0.0.0.0:%s", config.GetNatsS3Port())
+	err := goreman.RegisterAndStart("nats-s3", &goreman.ProcessConfig{
+		Command:    config.Get("nats-s3"),
+		Args:       []string{"--listen", listenAddr, "--natsServers", natsURL},
+		WorkingDir: ".",
+		Env:        os.Environ(),
+	})
+	if err != nil {
+		log.Error("Failed to start nats-s3 gateway with goreman", "error", err)
+	}
 }
 
 // EnsureLoggingStream creates the logging stream if it doesn't exist

@@ -8,32 +8,32 @@
     "release_url": "https://github.com/superfly/flyctl/releases",
     "assets": [
       {
-        "match": "flyctl_.*_macOS_arm64\\.tar\\.gz$",
+        "match": "flyctl_.*_macOS_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "flyctl_.*_macOS_x86_64\\.tar\\.gz$",
+        "match": "flyctl_.*_macOS_x86_64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "flyctl_.*_Linux_x86_64\\.tar\\.gz$",
+        "match": "flyctl_.*_Linux_x86_64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "flyctl_.*_Linux_arm64\\.tar\\.gz$",
+        "match": "flyctl_.*_Linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "flyctl_.*_Windows_x86_64\\.zip$",
+        "match": "flyctl_.*_Windows_x86_64.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "flyctl_.*_Windows_arm64\\.zip$",
+        "match": "flyctl_.*_Windows_arm64.zip$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -48,32 +48,32 @@
     "release_url": "https://github.com/ko-build/ko/releases",
     "assets": [
       {
-        "match": "ko_.*_Darwin_arm64\\.tar\\.gz$",
+        "match": "ko_.*_Darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "ko_.*_Darwin_amd64\\.tar\\.gz$",
+        "match": "ko_.*_Darwin_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "ko_.*_Linux_amd64\\.tar\\.gz$",
+        "match": "ko_.*_Linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "ko_.*_Linux_arm64\\.tar\\.gz$",
+        "match": "ko_.*_Linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "ko_.*_Windows_amd64\\.zip$",
+        "match": "ko_.*_Windows_amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "ko_.*_Windows_arm64\\.tar\\.gz$",
+        "match": "ko_.*_Windows_arm64.tar.gz$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -88,12 +88,12 @@
     "release_url": "https://github.com/caddyserver/caddy/releases",
     "assets": [
       {
-        "match": "caddy_.*_mac_arm64\\.tar\\.gz$",
+        "match": "caddy_.*_mac_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "caddy_.*_mac_amd64\\.tar\\.gz$",
+        "match": "caddy_.*_mac_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
@@ -123,32 +123,32 @@
     "release_url": "https://github.com/go-task/task/releases",
     "assets": [
       {
-        "match": "task_darwin_arm64\\.tar\\.gz$",
+        "match": "task_darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "task_darwin_amd64\\.tar\\.gz$",
+        "match": "task_darwin_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "task_linux_amd64\\.tar\\.gz$",
+        "match": "task_linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "task_linux_arm64\\.tar\\.gz$",
+        "match": "task_linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "task_windows_amd64\\.zip$",
+        "match": "task_windows_amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "task_windows_arm64\\.zip$",
+        "match": "task_windows_arm64.zip$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -163,27 +163,27 @@
     "release_url": "https://github.com/opentofu/opentofu/releases",
     "assets": [
       {
-        "match": "tofu_.*_darwin_arm64\\.tar\\.gz$",
+        "match": "tofu_.*_darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "tofu_.*_darwin_amd64\\.tar\\.gz$",
+        "match": "tofu_.*_darwin_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "tofu_.*_linux_amd64\\.tar\\.gz$",
+        "match": "tofu_.*_linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "tofu_.*_linux_arm64\\.tar\\.gz$",
+        "match": "tofu_.*_linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "tofu_.*_windows_amd64\\.zip$",
+        "match": "tofu_.*_windows_amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -198,27 +198,27 @@
     "release_url": "https://github.com/warpstreamlabs/bento/releases",
     "assets": [
       {
-        "match": "bento_.*_darwin_arm64\\.tar\\.gz$",
+        "match": "bento_.*_darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "bento_.*_darwin_amd64\\.tar\\.gz$",
+        "match": "bento_.*_darwin_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "bento_.*_linux_amd64\\.tar\\.gz$",
+        "match": "bento_.*_linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "bento_.*_linux_arm64\\.tar\\.gz$",
+        "match": "bento_.*_linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "bento_.*_windows_amd64\\.tar\\.gz$",
+        "match": "bento_.*_windows_amd64.tar.gz$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -241,27 +241,27 @@
     "release_url": "https://github.com/oven-sh/bun/releases",
     "assets": [
       {
-        "match": "bun-darwin-aarch64\\.zip$",
+        "match": "bun-darwin-aarch64.zip$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "bun-darwin-x64\\.zip$",
+        "match": "bun-darwin-x64.zip$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "bun-linux-x64\\.zip$",
+        "match": "bun-linux-x64.zip$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "bun-linux-aarch64\\.zip$",
+        "match": "bun-linux-aarch64.zip$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "bun-windows-x64\\.zip$",
+        "match": "bun-windows-x64.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -283,27 +283,27 @@
     "release_url": "https://github.com/nats-io/natscli/releases",
     "assets": [
       {
-        "match": "nats-.*-darwin-arm64\\.zip$",
+        "match": "nats-.*-darwin-arm64.zip$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "nats-.*-darwin-amd64\\.zip$",
+        "match": "nats-.*-darwin-amd64.zip$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "nats-.*-linux-amd64\\.tar\\.gz$",
+        "match": "nats-.*-linux-amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "nats-.*-linux-arm64\\.tar\\.gz$",
+        "match": "nats-.*-linux-arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "nats-.*-windows-amd64\\.zip$",
+        "match": "nats-.*-windows-amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -327,27 +327,27 @@
     "release_url": "https://github.com/joeblew999/infra/releases",
     "assets": [
       {
-        "match": "deck-tools-deck-v1\\.0\\.0-darwin-arm64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1.0.0-darwin-arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "deck-tools-deck-v1\\.0\\.0-darwin-amd64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1.0.0-darwin-amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "deck-tools-deck-v1\\.0\\.0-linux-amd64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1.0.0-linux-amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "deck-tools-deck-v1\\.0\\.0-linux-arm64\\.tar\\.gz$",
+        "match": "deck-tools-deck-v1.0.0-linux-arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "deck-tools-deck-v1\\.0\\.0-windows-amd64\\.zip$",
+        "match": "deck-tools-deck-v1.0.0-windows-amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -362,27 +362,27 @@
     "release_url": "https://ziglang.org/download/",
     "assets": [
       {
-        "match": "zig-aarch64-macos-0\\.14\\.1\\.tar\\.xz$",
+        "match": "zig-aarch64-macos-0.14.1.tar.xz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "zig-x86_64-macos-0\\.14\\.1\\.tar\\.xz$",
+        "match": "zig-x86_64-macos-0.14.1.tar.xz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "zig-x86_64-linux-0\\.14\\.1\\.tar\\.xz$",
+        "match": "zig-x86_64-linux-0.14.1.tar.xz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "zig-aarch64-linux-0\\.14\\.1\\.tar\\.xz$",
+        "match": "zig-aarch64-linux-0.14.1.tar.xz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "zig-x86_64-windows-0\\.14\\.1\\.zip$",
+        "match": "zig-x86_64-windows-0.14.1.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -397,32 +397,32 @@
     "release_url": "https://github.com/romshark/toki/releases",
     "assets": [
       {
-        "match": "toki_.*_darwin_arm64\\.tar\\.gz$",
+        "match": "toki_.*_darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "toki_.*_darwin_amd64\\.tar\\.gz$",
+        "match": "toki_.*_darwin_amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "toki_.*_linux_amd64\\.tar\\.gz$",
+        "match": "toki_.*_linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "toki_.*_linux_arm64\\.tar\\.gz$",
+        "match": "toki_.*_linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "toki_.*_windows_amd64\\.tar\\.gz$",
+        "match": "toki_.*_windows_amd64.tar.gz$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "toki_.*_windows_arm64\\.tar\\.gz$",
+        "match": "toki_.*_windows_arm64.tar.gz$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -437,27 +437,27 @@
     "release_url": "https://github.com/block/goose/releases",
     "assets": [
       {
-        "match": "goose-aarch64-apple-darwin\\.tar\\.bz2$",
+        "match": "goose-aarch64-apple-darwin.tar.bz2$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "goose-x86_64-apple-darwin\\.tar\\.bz2$",
+        "match": "goose-x86_64-apple-darwin.tar.bz2$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "goose-x86_64-unknown-linux-gnu\\.tar\\.bz2$",
+        "match": "goose-x86_64-unknown-linux-gnu.tar.bz2$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "goose-aarch64-unknown-linux-gnu\\.tar\\.bz2$",
+        "match": "goose-aarch64-unknown-linux-gnu.tar.bz2$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "goose-x86_64-pc-windows-gnu\\.zip$",
+        "match": "goose-x86_64-pc-windows-gnu.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -472,27 +472,27 @@
     "release_url": "https://github.com/abhinav/git-spice/releases",
     "assets": [
       {
-        "match": "git-spice\\.Darwin-x86_64\\.tar\\.gz$",
+        "match": "git-spice.Darwin-x86_64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "git-spice\\.Darwin-arm64\\.tar\\.gz$",
+        "match": "git-spice.Darwin-arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "git-spice\\.Linux-x86_64\\.tar\\.gz$",
+        "match": "git-spice.Linux-x86_64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "git-spice\\.Linux-aarch64\\.tar\\.gz$",
+        "match": "git-spice.Linux-aarch64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "git-spice\\.Windows-x86_64\\.tar\\.gz$",
+        "match": "git-spice.Windows-x86_64.tar.gz$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -507,32 +507,32 @@
     "release_url": "https://github.com/charmbracelet/crush/releases",
     "assets": [
       {
-        "match": "crush_.*_Darwin_arm64\\.tar\\.gz$",
+        "match": "crush_.*_Darwin_arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "crush_.*_Darwin_x86_64\\.tar\\.gz$",
+        "match": "crush_.*_Darwin_x86_64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "crush_.*_Linux_x86_64\\.tar\\.gz$",
+        "match": "crush_.*_Linux_x86_64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "crush_.*_Linux_arm64\\.tar\\.gz$",
+        "match": "crush_.*_Linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "crush_.*_Windows_x86_64\\.zip$",
+        "match": "crush_.*_Windows_x86_64.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "crush_.*_Windows_arm64\\.zip$",
+        "match": "crush_.*_Windows_arm64.zip$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -547,32 +547,32 @@
     "release_url": "https://github.com/cli/cli/releases",
     "assets": [
       {
-        "match": "gh_.*_macOS_arm64\\.zip$",
+        "match": "gh_.*_macOS_arm64.zip$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "gh_.*_macOS_amd64\\.zip$",
+        "match": "gh_.*_macOS_amd64.zip$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "gh_.*_linux_amd64\\.tar\\.gz$",
+        "match": "gh_.*_linux_amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "gh_.*_linux_arm64\\.tar\\.gz$",
+        "match": "gh_.*_linux_arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "gh_.*_windows_amd64\\.zip$",
+        "match": "gh_.*_windows_amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "gh_.*_windows_arm64\\.zip$",
+        "match": "gh_.*_windows_arm64.zip$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -587,27 +587,27 @@
     "release_url": "https://github.com/tinygo-org/tinygo/releases",
     "assets": [
       {
-        "match": "tinygo.*\\.darwin-arm64\\.tar\\.gz$",
+        "match": "tinygo.*.darwin-arm64.tar.gz$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "tinygo.*\\.darwin-amd64\\.tar\\.gz$",
+        "match": "tinygo.*.darwin-amd64.tar.gz$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "tinygo.*\\.linux-amd64\\.tar\\.gz$",
+        "match": "tinygo.*.linux-amd64.tar.gz$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "tinygo.*\\.linux-arm64\\.tar\\.gz$",
+        "match": "tinygo.*.linux-arm64.tar.gz$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "tinygo.*\\.windows-amd64\\.zip$",
+        "match": "tinygo.*.windows-amd64.zip$",
         "os": "windows",
         "arch": "amd64"
       }
@@ -622,32 +622,32 @@
     "release_url": "https://github.com/infogulch/xtemplate/releases",
     "assets": [
       {
-        "match": "xtemplate-arm64-darwin_v.*\\.zip$",
+        "match": "xtemplate-arm64-darwin_v.*.zip$",
         "os": "darwin",
         "arch": "arm64"
       },
       {
-        "match": "xtemplate-amd64-darwin_v.*\\.zip$",
+        "match": "xtemplate-amd64-darwin_v.*.zip$",
         "os": "darwin",
         "arch": "amd64"
       },
       {
-        "match": "xtemplate-amd64-linux_v.*\\.zip$",
+        "match": "xtemplate-amd64-linux_v.*.zip$",
         "os": "linux",
         "arch": "amd64"
       },
       {
-        "match": "xtemplate-arm64-linux_v.*\\.zip$",
+        "match": "xtemplate-arm64-linux_v.*.zip$",
         "os": "linux",
         "arch": "arm64"
       },
       {
-        "match": "xtemplate-amd64-windows_v.*\\.zip$",
+        "match": "xtemplate-amd64-windows_v.*.zip$",
         "os": "windows",
         "arch": "amd64"
       },
       {
-        "match": "xtemplate-arm64-windows_v.*\\.zip$",
+        "match": "xtemplate-arm64-windows_v.*.zip$",
         "os": "windows",
         "arch": "arm64"
       }
@@ -660,5 +660,53 @@
     "repo": "zeromicro/go-zero",
     "package": "tools/goctl", 
     "version": "v1.9.0"
-  }
+  },
+  {
+    "name": "process-compose",
+    "description": "Process orchestration and management tool with YAML configuration",
+    "source": "github-release",
+    "repo": "F1bonacc1/process-compose",
+    "version": "v1.73.0",
+    "release_url": "https://github.com/F1bonacc1/process-compose/releases",
+    "assets": [
+      {
+        "match": "process-compose_darwin_amd64.tar.gz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "process-compose_darwin_arm64.tar.gz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "process-compose_linux_amd64.tar.gz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "process-compose_linux_arm64.tar.gz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "process-compose_windows_amd64.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      },
+      {
+        "match": "process-compose_windows_arm64.zip$",
+        "os": "windows",
+        "arch": "arm64"
+      }
+    ]
+  },
+  {
+   "name": "nats-s3",
+   "description": "S3 gateway for NATS JetStream Object Store",
+   "source": "go-build",
+   "repo": "wpnpeiris/nats-s3",
+   "package": "cmd/nats-s3",
+   "version": "main"
+   }
 ]

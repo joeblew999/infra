@@ -46,9 +46,9 @@ func NewGoldenTestRunner(buildDir string) (*GoldenTestRunner, error) {
 		return nil, fmt.Errorf("failed to resolve deck package dir: %w", err)
 	}
 	
-	sourceDir := filepath.Join(deckPkgDir, "testdata", "input")
-	outputDir := filepath.Join(deckPkgDir, "testdata", "output")
-	expectedDir := filepath.Join(deckPkgDir, "testdata", "expected")
+	sourceDir := filepath.Join(deckPkgDir, "unit-tests", "input")
+	outputDir := filepath.Join(deckPkgDir, "unit-tests", "output")
+	expectedDir := filepath.Join(deckPkgDir, "unit-tests", "expected")
 	
 	absBuildDir, err := filepath.Abs(buildDir)
 	if err != nil {

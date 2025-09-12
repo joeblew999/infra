@@ -78,6 +78,7 @@ func init() {
 func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	log.Info("Running in Service mode with goreman supervision...")
 
+	var natsCleanup func()
 	_, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -87,6 +88,9 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	go func() {
 		<-c
 		log.Info("🛑 Received shutdown signal, stopping all supervised processes...")
+		if natsCleanup != nil {
+			natsCleanup()
+		}
 		goreman.StopAll()
 		cancel()
 		os.Exit(0)
@@ -123,12 +127,13 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 	if !noNATS {
 		log.Info("🚀 Step 2: Starting embedded NATS server...")
 		var err error
-		natsAddr, err = nats.StartEmbeddedNATS(context.Background())
+		natsAddr, natsCleanup, err = nats.StartEmbeddedNATS(context.Background())
 		if err != nil {
 			log.Warn("⚠️  Failed to start embedded NATS server, continuing without NATS", "error", err)
 			natsAddr = "" // Mark as disabled
 		} else {
 			log.Info("✅ Embedded NATS server started", "address", natsAddr)
+			nats.StartS3GatewaySupervised(natsAddr)
 		}
 	}
 
@@ -444,6 +449,7 @@ var shutdownCmd = &cobra.Command{
 			portToInt(config.GetXTemplatePort()),  // XTemplate
 			portToInt(config.GetCaddyPort()),      // Caddy HTTP
 			443,  // Caddy HTTPS (fixed)
+			portToInt(config.GetNatsS3Port()), // NATS S3 Gateway
 		}
 		
 		portsKilled := 0
@@ -464,6 +470,7 @@ var shutdownCmd = &cobra.Command{
 			"nats-server", // NATS server binary
 			"pocketbase",  // PocketBase server
 			"xtemplate",   // XTemplate development server
+			"nats-s3",     // NATS S3 Gateway
 		}
 		
 		processesKilled := 0

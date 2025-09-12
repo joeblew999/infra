@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/config"
 )
 
 // TestLitestreamFilesystemIntegration tests Litestream replication with local SQLite and filesystem
@@ -19,34 +19,9 @@ func TestLitestreamFilesystemIntegration(t *testing.T) {
 
 	// Check if litestream is available via dep system
 	t.Log("🔧 Checking litestream binary via dep system...")
-	
-	// Get litestream binary path
-	litestreamBinary := filepath.Join(".", ".dep", "litestream")
-	
-	// Check if litestream is already installed
-	if _, err := os.Stat(litestreamBinary); os.IsNotExist(err) {
-		t.Logf("⚠️  Litestream binary not found at %s, attempting to install...", litestreamBinary)
-		
-		// Try to install just litestream
-		if err := dep.InstallBinary("litestream", false); err != nil {
-			t.Logf("⚠️  Failed to install litestream via dep system: %v", err)
-			t.Skip("Litestream binary not available")
-		}
-		
-		// Verify installation
-		if _, err := os.Stat(litestreamBinary); os.IsNotExist(err) {
-			t.Logf("⚠️  Litestream still not found after installation attempt")
-			t.Skip("Litestream binary not available")
-		}
-	}
-	
-	// Check if we have a real litestream binary (not placeholder)
-	content, err := os.ReadFile(litestreamBinary)
+	litestreamBinary, err := config.GetAbsoluteDepPath("litestream")
 	if err != nil {
-		t.Skip("Cannot read litestream binary")
-	}
-	if strings.Contains(string(content), "Placeholder") {
-		t.Skip("Litestream binary is placeholder, skipping integration test")
+		t.Skip("Litestream binary not available")
 	}
 
 	// Create temporary test directories
@@ -74,7 +49,7 @@ func TestLitestreamFilesystemIntegration(t *testing.T) {
 	}
 
 	// Create Litestream config for filesystem
-	config := fmt.Sprintf(`
+	litestreamConfig := fmt.Sprintf(`
 dbs:
   - path: %s
     replicas:
@@ -84,7 +59,7 @@ dbs:
         retention: 1h
 `, dbPath, backupPath)
 
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(litestreamConfig), 0644); err != nil {
 		t.Fatalf("Failed to write config: %v", err)
 	}
 
@@ -181,7 +156,7 @@ func TestLitestreamMultiWrite(t *testing.T) {
 	}
 
 	// Create config with faster sync for testing
-	config := fmt.Sprintf(`
+	litestreamConfig := fmt.Sprintf(`
 dbs:
   - path: %s
     replicas:
@@ -191,40 +166,15 @@ dbs:
         retention: 30m
 `, dbPath, backupPath)
 
-	if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(litestreamConfig), 0644); err != nil {
 		t.Fatalf("Failed to write config: %v", err)
 	}
 
 	// Check if litestream is available via dep system
 	t.Log("🔧 Checking litestream binary via dep system...")
-	
-	// Get litestream binary path
-	litestreamBinary := filepath.Join(".", ".dep", "litestream")
-	
-	// Check if litestream is already installed
-	if _, err := os.Stat(litestreamBinary); os.IsNotExist(err) {
-		t.Logf("⚠️  Litestream binary not found at %s, attempting to install...", litestreamBinary)
-		
-		// Try to install just litestream
-		if err := dep.InstallBinary("litestream", false); err != nil {
-			t.Logf("⚠️  Failed to install litestream via dep system: %v", err)
-			t.Skip("Litestream binary not available")
-		}
-		
-		// Verify installation
-		if _, err := os.Stat(litestreamBinary); os.IsNotExist(err) {
-			t.Logf("⚠️  Litestream still not found after installation attempt")
-			t.Skip("Litestream binary not available")
-		}
-	}
-	
-	// Check if we have a real litestream binary (not placeholder)
-	content, err := os.ReadFile(litestreamBinary)
+	litestreamBinary, err := config.GetAbsoluteDepPath("litestream")
 	if err != nil {
-		t.Skip("Cannot read litestream binary")
-	}
-	if strings.Contains(string(content), "Placeholder") {
-		t.Skip("Litestream binary is placeholder, skipping integration test")
+		t.Skip("Litestream binary not available")
 	}
 
 	// Create initial database

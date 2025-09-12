@@ -1,0 +1,6 @@
+<deck>
+<slide>
+<text xp="50" yp="95" sp="4" font="sans" color="black">Documentation</text>
+<text type="markdown" file="docs/business/README.md" xp="50" yp="50" sp="1.2"/>
+</slide>
+</deck>

@@ -158,7 +158,7 @@ func (h *HealthChecker) getToolPath(toolName string) string {
 	}
 	
 	// Return absolute path using constants
-	path := filepath.Join(BuildRoot, "bin", binaryName)
+	path := filepath.Join(GetBuildRoot(), "bin", binaryName)
 	absPath, _ := filepath.Abs(path)
 	return absPath
 }
@@ -435,7 +435,7 @@ func (h *HealthChecker) checkAssets() []HealthIssue {
 	}
 
 	// Check output directories are writable
-	outputDir := filepath.Join(config.GetDataPath(), CacheDirPath)
+	outputDir := GetCachePath() // Now points to environment-aware cache
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		issues = append(issues, HealthIssue{
 			Type:       "assets",

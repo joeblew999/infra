@@ -17,10 +17,15 @@ to both native binaries and WASM modules for use in the system.`,
 
 // GetDeckCmd returns the deck command for registration
 func GetDeckCmd() *cobra.Command {
+	// Ensure all subcommands are added (in case init() didn't run properly)
+	if len(deckCmd.Commands()) == 0 {
+		initializeDeckCommands()
+	}
 	return deckCmd
 }
 
-func init() {
+// initializeDeckCommands ensures all subcommands are properly added
+func initializeDeckCommands() {
 	deckCmd.AddCommand(build.BuildCmd)
 	deckCmd.AddCommand(web.WebCmd)
 	deckCmd.AddCommand(WatchCmd)
@@ -28,13 +33,18 @@ func init() {
 	deckCmd.AddCommand(HealthCmd)
 	
 	// Set up flags for watch command
-	WatchCmd.Flags().String("formats", "svg", "Output formats to generate (comma-separated): svg,png,pdf")
+	WatchCmd.Flags().String("formats", "svg,png,pdf", "Output formats to generate (comma-separated): svg,png,pdf")
 	
 	// Set up flags for update command (simplified)
-	UpdateCmd.Flags().BoolP("force", "f", false, "Force update by removing existing .source directory")
+	UpdateCmd.Flags().BoolP("force", "f", false, "Force update by removing existing repo-tests directory")
 	
 	// Set up flags for health command
 	HealthCmd.Flags().BoolP("verbose", "v", false, "Verbose output during health checks")
 	HealthCmd.Flags().BoolP("json", "j", false, "Output health report in JSON format")
 	HealthCmd.Flags().String("tool", "", "Check specific tool only (e.g., decksh, svgdeck)")
+}
+
+func init() {
+	// Initialize all deck commands
+	initializeDeckCommands()
 }

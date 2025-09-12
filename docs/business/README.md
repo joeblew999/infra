@@ -1,248 +1,202 @@
 # Infrastructure Management System - Business Overview
 
-**Transform your business operations with enterprise-grade automation, branded communications, and secure workflows.**
+A self-hosted platform for managing web services, document generation, workflow automation, and secure communications.
 
-## 🧠 Revolutionary AI Capability
+## What This System Does
 
-**The world's first business system where AI can continuously improve and refine your work - not just generate it once.**
+This is a Go-based infrastructure management platform that orchestrates several services:
 
-### The Breakthrough: Editable AST Technology
-Unlike traditional AI that starts from scratch each time, our **Abstract Syntax Tree (AST)** technology allows AI to:
+- **Web server** with embedded documentation and status pages
+- **Document generation** using templates and brand consistency tools
+- **Workflow automation** for business processes
+- **Secure messaging** between system components
+- **AI integration** via MCP (Model Context Protocol) for various assistants
 
-- **Build continuously** on previous work instead of starting over
-- **Maintain context** and remember all your business requirements  
-- **Evolve your materials** through iterative improvements
-- **Preserve consistency** while making targeted enhancements
+The system runs as a single binary that manages multiple services through process supervision.
 
-**Traditional AI**: "Create email" → Generate → Done (dead end)  
-**Our AI**: "Create email" → Generate → "Make it more professional" → Refine → "Add testimonials" → Enhance → Continuous evolution
+## AI Integration
 
-➡️ **[See AI-Powered Business Automation Details](AI_POWERED.md)**
+The system includes MCP (Model Context Protocol) support, which allows AI assistants to:
 
-### Universal AI Integration (MCP Protocol)
-**Connect to every AI assistant on every device - mobile, desktop, web, and Chinese super-apps:**
+- Access and modify system components
+- Generate documents using existing templates
+- Interact with workflow systems
+- Query system status and logs
 
-- **Mobile AI**: Siri, Google Assistant, WeChat AI, Alipay AI
-- **Desktop AI**: ChatGPT, Claude, Copilot, Bard
-- **Future-Proof**: Works with new AI platforms as they emerge
-- **Global Reach**: Chinese market integration (WeChat 1.3B users, Alipay 1B users)
+This works with Claude, ChatGPT, and other MCP-compatible AI tools. The integration allows iterative refinement of generated content rather than starting from scratch each time.
 
-**Business Impact**: Instead of building separate mobile apps, one MCP integration connects you to **every AI on every device globally**.
+## Core Components
 
-➡️ **[See AI MCP Integration Strategy](AI_MCP_INTEGRATION.md)**  
-➡️ **[See Mobile AI Global Strategy](MOBILE_AI_STRATEGY.md)**
+### 1. Document Generation (Deck)
+A template system for generating consistent branded documents:
 
----
+- **PDF generation** from templates with your brand assets
+- **Web pages** using shared CSS and design components
+- **Email templates** with MJML for consistent rendering
+- **Presentations** and reports with embedded charts
 
-## 🏢 Core Business Capabilities
+The system uses a declarative syntax where you define content structure, and it handles the visual formatting automatically.
 
-This platform addresses three critical business needs plus AI-powered evolution:
+### 2. Workflow Automation (Bento)  
+Stream processing and workflow automation using visual configurations:
 
-### 1. **Corporate Branding & Communications** 
-**Problem**: Inconsistent branding across web, email, and documents  
-**Solution**: Unified brand management with automatic generation
+- **Data transformation** - Process and route messages between systems
+- **Event handling** - Respond to webhooks, file changes, timers
+- **API integration** - Connect to external services and databases
+- **Content processing** - Generate documents, send emails, update records
 
-- **Web Pages** - Brand-consistent websites and landing pages
-- **PDF Documents** - Professional reports, invoices, contracts with your branding  
-- **Email Communications** - Branded email templates and campaigns
-- **Presentations** - Corporate slide decks and visualizations
+Based on Benthos stream processor with a configuration interface.
 
-### 2. **Business Process Automation**
-**Problem**: Manual workflows slow down operations and increase errors  
-**Solution**: Visual workflow automation that business users can understand
+### 3. Infrastructure Services
+Standard infrastructure components with process management:
 
-- **Customer Onboarding** - Automated welcome sequences
-- **Invoice Processing** - Automated billing and payment flows
-- **Content Publishing** - Automated content distribution
-- **Data Processing** - Real-time data transformation and routing
+- **HTTP server** with automatic HTTPS via Caddy
+- **Message bus** using NATS for inter-service communication
+- **Database** via embedded PocketBase
+- **Process supervision** to keep services running
+- **Monitoring** and logging for all components
 
-### 3. **Enterprise Security & Compliance**
-**Problem**: Security gaps and compliance risks  
-**Solution**: Built-in security and audit trails
+## Use Cases
 
-- **Secure Communications** - End-to-end message encryption
-- **Access Control** - Role-based permissions and authentication
-- **Audit Trails** - Complete activity logging for compliance
-- **Data Privacy** - GDPR/SOC2 compliant data handling
+### When This Makes Sense
+- You need consistent document generation without manual design work
+- You have repetitive workflows that could be automated
+- You want to self-host rather than use SaaS tools
+- You need audit trails and process logging
+- You're comfortable with technical setup and maintenance
 
-## 💼 Business Value Proposition
+### When It Doesn't
+- You only need simple static websites
+- Your document needs are minimal or highly custom
+- You prefer managed SaaS solutions
+- You don't have technical resources for setup/maintenance
+- You need enterprise-grade support contracts
 
-### ROI Metrics
-- **75% faster** document generation (vs manual design)
-- **90% reduction** in branding inconsistencies  
-- **60% less time** spent on routine workflows
-- **100% compliance** audit trail for all operations
+## How It Works
 
-### Cost Savings
-- **No design agency fees** for routine branded materials
-- **No workflow software subscriptions** (Zapier, etc.)
-- **Reduced IT overhead** with self-managed infrastructure
-- **Lower compliance costs** with built-in audit logging
+### Document Templates (Deck)
+The system uses a template language for creating branded documents:
 
-### Business Benefits
-- **Faster Time-to-Market** - Launch campaigns and products faster
-- **Consistent Brand Experience** - Professional appearance across all touchpoints
-- **Scalable Operations** - Handle growth without proportional staff increases
-- **Risk Reduction** - Automated processes reduce human error
-
-## 🎨 Corporate Branding System
-
-### Deck: Visual Brand Management
-Transform your brand guidelines into automated templates:
-
-**Input**: Your brand guidelines (colors, fonts, logos)  
-**Output**: Consistent branded materials across all channels
+1. **Define your brand assets** - colors, fonts, logos in configuration files
+2. **Write content** in a simple markup format
+3. **Generate outputs** - PDF, HTML, SVG automatically styled
 
 ```
-Brand Guidelines → Professional Documents
-    ↓
-├── Web Pages (HTML/CSS)
-├── PDF Reports & Invoices  
-├── Email Templates (MJML)
-├── Presentation Slides
-└── Marketing Materials
+Content + Brand Config = Styled Document
+example.dsh + brand.json = example.pdf
 ```
 
-**Business Impact**:
-- Maintain brand consistency without design review bottlenecks
-- Generate professional materials in minutes, not days
-- Eliminate "off-brand" communications
-- Scale branded content production without scaling design team
+The template system handles:
+- Consistent typography and color schemes
+- Logo placement and sizing
+- Layout and spacing rules
+- Multi-format output (PDF, web, print)
 
-### MJML: Email Brand Consistency  
-Professional email communications that work everywhere:
+### Email Templates
+MJML integration for responsive email design:
 
-- **Responsive Design** - Looks perfect on all devices
-- **Brand Compliance** - Automatic brand guideline enforcement
-- **Deliverability** - Optimized for inbox placement
-- **Template Library** - Pre-built professional templates
+- Templates use your brand configuration automatically  
+- Responsive design for mobile and desktop
+- Compatible with major email providers
+- Version control for template changes
 
-## 🔄 Workflow Automation System
+## Workflow Automation
 
-### Bento: Visual Business Process Designer
-Design workflows that business users can understand and modify:
+### Stream Processing (Bento)
+The system includes Benthos for data processing and workflow automation:
 
-**Customer Onboarding Example**:
+- **File processing** - Watch directories, process files as they arrive
+- **API integration** - HTTP requests, webhooks, database operations  
+- **Message routing** - Transform and route data between systems
+- **Scheduled tasks** - Run processes on timers or intervals
+
+Configuration is done through YAML files that define inputs, processors, and outputs. For example:
+
+```yaml
+input:
+  file:
+    paths: [ "./invoices/*.json" ]
+pipeline:
+  processors:
+    - mapping: |
+        root.customer = this.client_name
+        root.amount = this.total.format_number()
+output:
+  http_client:
+    url: "https://accounting-system.com/api/invoices"
 ```
-New Customer → Send Welcome Email → Create Account → Assign Success Manager → Schedule Kickoff Call
-```
 
-**Invoice Processing Example**:
-```
-Generate Invoice → Send to Customer → Track Payment → Update Accounting → Send Receipt
-```
+### Common Patterns
+- **Document generation** - Trigger PDF creation from form submissions
+- **Email automation** - Send templated emails based on events
+- **Data sync** - Keep systems in sync with periodic data transfers
+- **File monitoring** - Process uploads, generate reports automatically
 
-**Content Publishing Example**:
-```
-Content Created → Legal Review → Brand Approval → Multi-Channel Distribution → Performance Tracking
-```
+## Security and Infrastructure
 
-### Real-World Applications
+### Message Bus (NATS)
+Internal services communicate via NATS messaging:
 
-**E-commerce Business**:
-- Order processing and fulfillment automation
-- Customer service ticket routing
-- Inventory management workflows
-- Marketing campaign automation
+- **Service coordination** - Services can send messages and events
+- **Message persistence** - Optional message storage for reliability
+- **Authentication** - Access control for message topics
+- **Monitoring** - Built-in metrics and logging
 
-**Professional Services**:  
-- Client onboarding and offboarding
-- Project milestone tracking
-- Invoice and payment processing
-- Compliance documentation workflows
+### HTTP Server (Caddy)
+Web interface and API access through Caddy:
 
-**SaaS Business**:
-- User signup and activation flows
-- Feature usage tracking and upselling
-- Support ticket escalation
-- Billing and subscription management
+- **Automatic HTTPS** - TLS certificates via Let's Encrypt or internal CA
+- **Reverse proxy** - Routes requests to appropriate services
+- **Access logging** - HTTP request logging for monitoring
+- **Static files** - Serves documentation and web interface
 
-## 🔒 Enterprise Security Framework
+### Data Storage  
+- **PocketBase** - Embedded SQLite database for application data
+- **File storage** - Local filesystem for templates and generated documents
+- **Configuration** - YAML/JSON files for service configuration
 
-### NATS: Secure Message Infrastructure
-Enterprise-grade messaging with complete audit trails:
+## Getting Started
 
-- **Message Encryption** - All internal communications encrypted
-- **Access Controls** - Role-based message routing permissions  
-- **Audit Logging** - Complete message history for compliance
-- **Real-time Monitoring** - Immediate alerts for security events
+### Installation
+1. **Download the binary** or build from source
+2. **Run `./infra service`** to start all services
+3. **Access web interface** at http://localhost:1337
+4. **Check service status** at http://localhost:1337/status
 
-### Caddy: Web Security Gateway
-Automatic HTTPS and advanced security features:
+### Initial Configuration
+- **Brand assets** - Add your logos, colors, fonts to `.data/brand/`
+- **Templates** - Create document templates in `.data/deck/`
+- **Workflows** - Configure Bento YAML files in `.data/bento/`
+- **Users** - Set up authentication via PocketBase admin panel
 
-- **Automatic SSL/TLS** - No manual certificate management
-- **DDoS Protection** - Built-in attack mitigation
-- **Access Logging** - Complete web traffic audit trail
-- **Rate Limiting** - Prevent abuse and ensure availability
+### Deployment Options
+- **Local development** - Run directly on your machine
+- **Docker** - Use included containerization
+- **Cloud hosting** - Deploy to any VPS or cloud provider
+- **On-premise** - Run on your own servers
 
-### Compliance Features
-- **SOC 2 Ready** - Built-in controls for security audits
-- **GDPR Compliant** - Data privacy and right-to-delete features
-- **HIPAA Compatible** - Healthcare data protection capabilities
-- **PCI DSS Support** - Payment card data security features
+The system is designed to be self-contained with minimal external dependencies.
 
-## 📊 Implementation Timeline
+## Monitoring and Maintenance
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] Install and configure system
-- [ ] Upload brand assets (logos, colors, fonts)  
-- [ ] Set up basic user accounts and permissions
-- [ ] Test core functionality
+The system includes basic monitoring capabilities:
 
-### Phase 2: Branding (Week 3-4)
-- [ ] Create branded email templates
-- [ ] Design PDF document templates
-- [ ] Set up web page templates
-- [ ] Train team on template usage
+- **Service status** - Check if all components are running
+- **Process logs** - View logs for each service
+- **System metrics** - Basic performance and resource usage
+- **Health checks** - HTTP endpoints for uptime monitoring
 
-### Phase 3: Workflows (Week 5-8)
-- [ ] Map existing business processes
-- [ ] Build core workflow automations
-- [ ] Set up monitoring and alerts
-- [ ] Train staff on workflow management
+### What to Monitor
+- **Document generation** - Check if templates compile without errors
+- **Workflow execution** - Monitor Bento pipeline success/failure rates  
+- **Storage usage** - Keep an eye on disk space for generated files
+- **Service availability** - Ensure all components stay running
 
-### Phase 4: Advanced Features (Week 9-12)
-- [ ] Implement advanced security policies
-- [ ] Set up compliance reporting
-- [ ] Optimize performance and scaling
-- [ ] Full team training and adoption
+## Further Reading
 
-## 💰 Pricing Considerations
+- **[Technical Documentation](../technical/)** - Detailed setup and configuration
+- **[API Reference](../api/)** - REST API endpoints and usage
+- **[Template Documentation](../templates/)** - Creating and managing templates
+- **[Workflow Examples](../workflows/)** - Common automation patterns
 
-### Self-Hosted Benefits
-- **No per-user fees** - Scale without software license costs
-- **Data sovereignty** - Your data stays on your infrastructure  
-- **Customization freedom** - Modify system to exact business needs
-- **No vendor lock-in** - Complete control over your business processes
-
-### Hosting Options
-- **Cloud Deployment** - Deploy on AWS, GCP, Azure, or Fly.io
-- **On-Premise** - Install on your own servers for maximum control
-- **Hybrid** - Mix of cloud and on-premise for optimal performance
-
-## 🎯 Success Metrics
-
-Track your implementation success:
-
-### Operational Metrics
-- **Document Generation Time** - Target: Under 5 minutes per document
-- **Workflow Completion Rate** - Target: 95%+ automated processes complete successfully
-- **Brand Compliance Score** - Target: 100% branded materials pass guidelines
-- **Security Incident Count** - Target: Zero breaches or compliance violations
-
-### Business Metrics  
-- **Revenue per Employee** - Measure productivity gains from automation
-- **Customer Satisfaction** - Track improvement from consistent communications
-- **Time-to-Market** - Measure faster campaign and product launches
-- **Compliance Cost** - Track reduction in audit and compliance expenses
-
-## 🚀 Next Steps
-
-1. **[Schedule Demo](../technical/BETA_TESTING.md)** - See the system in action
-2. **[Technical Assessment](../technical/)** - Have your IT team review requirements  
-3. **[Implementation Planning](IMPLEMENTATION.md)** - Plan your rollout strategy
-4. **[Training Program](TRAINING.md)** - Prepare your team for adoption
-
----
-
-**Ready to transform your business operations?** Contact us to schedule a personalized demonstration and implementation consultation.
+This system works best when you have technical resources available for setup and ongoing maintenance. It's designed for organizations that prefer self-hosting over SaaS solutions.

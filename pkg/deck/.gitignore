@@ -1,7 +1,7 @@
 # Source, Build Release artifacts
 .build/
 .release/
-.source/
+repo-tests/
 
 # Build artifacts
 *.log

@@ -12,6 +12,9 @@ import (
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/spf13/cobra"
+	
+	// Import deck package to ensure all deck commands are loaded
+	_ "github.com/joeblew999/infra/pkg/deck/cmd"
 )
 
 var caddyCmd = &cobra.Command{
@@ -192,6 +195,9 @@ func RunCLI() {
 	// Add deck presentation tools
 	AddDeckToCLI(cliCmd)
 	
+	// Add font management tools
+	AddFontToCLI(cliCmd)
+	
 	// Add go-zero microservices tools
 	AddGoZeroToCLI(cliCmd)
 	
@@ -208,4 +214,7 @@ func RunCLI() {
 	// Move these to cli namespace
 	cliCmd.AddCommand(pocketbase.Cmd)
 	cliCmd.AddCommand(conduit.Cmd)
+	
+	// Add deck visualization tools
+	AddDeckToCLI(cliCmd)
 }
