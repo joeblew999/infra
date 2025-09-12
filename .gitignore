@@ -14,6 +14,9 @@ infra*
 # Where are data is stored like databases, etc.
 .data
 
+# Test data directories (isolated test artifacts)
+.data-test
+
 # Whenre binary dependencies live.
 .dep
 
