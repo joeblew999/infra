@@ -5,6 +5,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const (
@@ -48,6 +49,9 @@ const (
 	// DataDir is the root directory for all application data (e.g., databases, NATS stores).
 	DataDir = ".data"
 
+	// TestDataDir is the root directory for test data (isolated from production data).
+	TestDataDir = ".data-test"
+
 	// LogsDir is the directory for application log files.
 	LogsDir = ".logs"
 
@@ -79,6 +83,12 @@ const (
 
 	// FontDir is the directory for cached fonts
 	FontDir = "font"
+
+	// DeckDir is the directory for deck build artifacts
+	DeckDir = "deck"
+
+	// MjmlDir is the directory for MJML templates and cache
+	MjmlDir = "mjml"
 
 	// TerraformDir is the directory containing Terraform/OpenTofu configuration files.
 	TerraformDir = "terraform"
@@ -131,6 +141,24 @@ func GetDataPath() string {
 	return filepath.Join(".", DataDir)
 }
 
+// GetTestDataPath returns the absolute path to the .data-test directory.
+// This is used for test isolation, keeping test artifacts separate from production data.
+func GetTestDataPath() string {
+	return filepath.Join(".", TestDataDir)
+}
+
+// IsTestEnvironment returns true if running in a test environment.
+// This detects go test execution by checking for the testing package.
+func IsTestEnvironment() bool {
+	// Check if we're running under go test by looking for .test suffix in args
+	for _, arg := range os.Args {
+		if strings.HasSuffix(arg, ".test") {
+			return true
+		}
+	}
+	return false
+}
+
 // GetLogsPath returns the absolute path to the .logs directory.
 // In Fly.io production, this uses the data directory for logs
 func GetLogsPath() string {
@@ -141,9 +169,15 @@ func GetLogsPath() string {
 	return filepath.Join(".", LogsDir)
 }
 
-// Get returns the absolute path to a binary dependency.
+// Get returns the relative path to a binary dependency.
 func Get(name string) string {
 	return filepath.Join(GetDepPath(), GetBinaryName(name))
+}
+
+// GetAbsoluteDepPath returns the absolute path to a binary dependency.
+func GetAbsoluteDepPath(name string) (string, error) {
+	relPath := Get(name)
+	return filepath.Abs(relPath)
 }
 
 // GetTofuBinPath returns the absolute path to the tofu binary.
@@ -282,7 +316,11 @@ func GetKoDefaultPlatforms() []string {
 }
 
 // GetPocketBaseDataPath returns the absolute path to the PocketBase data directory.
+// In test environments, uses .data-test/pocketbase for isolation.
 func GetPocketBaseDataPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), "pocketbase")
+	}
 	return filepath.Join(GetDataPath(), "pocketbase")
 }
 
@@ -302,7 +340,11 @@ func GetBentoPort() string {
 }
 
 // GetFontPath returns the absolute path to the font cache directory.
+// In test environments, uses .data-test/font for isolation.
 func GetFontPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), FontDir)
+	}
 	return filepath.Join(GetDataPath(), FontDir)
 }
 
@@ -312,7 +354,11 @@ func GetFontPathForFamily(family string) string {
 }
 
 // GetCaddyPath returns the absolute path to the caddy configuration directory.
+// In test environments, uses .data-test/caddy for isolation.
 func GetCaddyPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), "caddy")
+	}
 	return filepath.Join(GetDataPath(), "caddy")
 }
 
@@ -334,6 +380,11 @@ func GetWebServerPort() string {
 // GetNATSPort returns the default port for NATS server.
 func GetNATSPort() string {
 	return "4222"
+}
+
+// GetNatsS3Port returns the default port for the NATS S3 gateway.
+func GetNatsS3Port() string {
+	return "5222"
 }
 
 // GetMCPPort returns the default port for MCP server.
@@ -366,8 +417,12 @@ func GetDockerImageFullName() string {
 	return GetDockerImageName() + ":" + GetDockerImageTag()
 }
 
-// GetNATSClusterDataPath returns the absolute path to the NATS cluster data directory
+// GetNATSClusterDataPath returns the absolute path to the NATS cluster data directory.
+// In test environments, uses .data-test/nats-cluster for isolation.
 func GetNATSClusterDataPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), "nats-cluster")
+	}
 	return filepath.Join(GetDataPath(), "nats-cluster")
 }
 
@@ -414,4 +469,56 @@ func GetXTemplatePort() string {
 // GetXTemplateBinPath returns the absolute path to the xtemplate binary
 func GetXTemplateBinPath() string {
 	return Get(BinaryXtemplate)
+}
+
+// GetDeckPath returns the absolute path to the deck build directory.
+// In test environments, uses .data-test/deck for isolation.
+func GetDeckPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), DeckDir)
+	}
+	return filepath.Join(GetDataPath(), DeckDir)
+}
+
+// GetDeckBinPath returns the absolute path to the deck binaries directory.
+func GetDeckBinPath() string {
+	return filepath.Join(GetDeckPath(), "bin")
+}
+
+// GetDeckWASMPath returns the absolute path to the deck WASM directory.
+func GetDeckWASMPath() string {
+	return filepath.Join(GetDeckPath(), "wasm")
+}
+
+// GetDeckCachePath returns the absolute path to the deck cache directory.
+func GetDeckCachePath() string {
+	return filepath.Join(GetDeckPath(), "cache")
+}
+
+// GetMjmlPath returns the absolute path to the MJML directory.
+// In test environments, uses .data-test/mjml for isolation.
+func GetMjmlPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), MjmlDir)
+	}
+	return filepath.Join(GetDataPath(), MjmlDir)
+}
+
+// GetMjmlTemplatePath returns the absolute path to MJML templates directory.
+func GetMjmlTemplatePath() string {
+	return filepath.Join(GetMjmlPath(), "templates")
+}
+
+// GetMjmlCachePath returns the absolute path to MJML cache directory.
+func GetMjmlCachePath() string {
+	return filepath.Join(GetMjmlPath(), "cache")
+}
+
+// GetAuthPath returns the absolute path to the auth data directory.
+// In test environments, uses .data-test/auth for isolation.
+func GetAuthPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), "auth")
+	}
+	return filepath.Join(GetDataPath(), "auth")
 }
