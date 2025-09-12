@@ -9,6 +9,7 @@ import (
 	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/mox"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/spf13/cobra"
@@ -144,6 +145,60 @@ func handleCaddyServe(args []string) error {
 	return runner.FileServer(root, port)
 }
 
+func newMoxCmd() *cobra.Command {
+	moxCmd := &cobra.Command{
+		Use:   "mox",
+		Short: "Manage mox mail server",
+		Long:  `Commands for managing the mox mail server:
+
+  start          Start the mox mail server
+  init           Initialize the mox mail server`,
+	}
+
+	moxCmd.AddCommand(
+		newMoxStartCmd(),
+		newMoxInitCmd(),
+	)
+
+	return moxCmd
+}
+
+func newMoxStartCmd() *cobra.Command {
+	startCmd := &cobra.Command{
+		Use:   "start",
+		Short: "Start the mox mail server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, _ := cmd.Flags().GetString("domain")
+			adminEmail, _ := cmd.Flags().GetString("admin-email")
+			return mox.StartSupervised(domain, adminEmail)
+		},
+	}
+
+	startCmd.Flags().String("domain", "localhost", "Domain for the mail server")
+	startCmd.Flags().String("admin-email", "admin@localhost", "Admin email for the mail server")
+
+	return startCmd
+}
+
+func newMoxInitCmd() *cobra.Command {
+	initCmd := &cobra.Command{
+		Use:   "init",
+		Short: "Initialize the mox mail server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			domain, _ := cmd.Flags().GetString("domain")
+			adminEmail, _ := cmd.Flags().GetString("admin-email")
+			server := mox.NewServer(domain, adminEmail)
+			return server.Init()
+		},
+	}
+
+	initCmd.Flags().String("domain", "localhost", "Domain for the mail server")
+	initCmd.Flags().String("admin-email", "admin@localhost", "Admin email for the mail server")
+
+	return initCmd
+}
+
+
 // cliCmd is the parent command for all CLI tool wrappers
 var cliCmd = &cobra.Command{
 	Use:   "cli",
@@ -167,6 +222,7 @@ BINARY TOOLS:
   flyctl           Direct flyctl commands
   nats             NATS messaging operations
   bento            Stream processing operations
+  mox              Mox mail server
 
 Use "infra cli [tool] --help" for detailed information about each tool.`,
 }
@@ -181,6 +237,9 @@ func RunCLI() {
 	cliCmd.AddCommand(flyctlCmd)
 	cliCmd.AddCommand(nats.NewNATSCmd())
 	cliCmd.AddCommand(bento.NewBentoCmd())
+	cliCmd.AddCommand(newMoxCmd())
+	
+	cliCmd.AddCommand(newMoxCmd())
 	
 	// Add development/build workflow tools
 	AddWorkflowsToCLI(cliCmd)

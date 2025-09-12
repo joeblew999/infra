@@ -77,14 +77,9 @@ func (d *DeployWorkflow) Execute() error {
 		return fmt.Errorf("volume setup failed: %w", err)
 	}
 
-	// Step 5: Build and push container images to multiple registries
-	if err := d.buildMultiRegistryImages(); err != nil {
-		return fmt.Errorf("multi-registry build failed: %w", err)
-	}
-
-	// Step 6: Deploy using GHCR image
-	if err := d.deploy(); err != nil {
-		return fmt.Errorf("deployment failed: %w", err)
+	// Step 5: Build and push container, then deploy immediately
+	if err := d.buildAndDeploy(); err != nil {
+		return fmt.Errorf("build and deploy failed: %w", err)
 	}
 
 	// Step 7: Verify deployment
@@ -120,21 +115,11 @@ func (d *DeployWorkflow) checkAuth() error {
 		return nil
 	}
 
-	// Use FLY_API_TOKEN or FLY_ACCESS_TOKEN from environment
-	token := os.Getenv("FLY_API_TOKEN")
-	if token == "" {
-		token = os.Getenv("FLY_ACCESS_TOKEN")
-	}
+	// Try to get token using helper function
+	token := d.getFlyToken()
 	
 	if token == "" {
-		log.Info("No Fly.io token found, attempting to use flyctl authentication...")
-		
-		// Check if flyctl is already authenticated
-		_, err := runBinaryWithOutput(config.GetFlyctlBinPath(), "auth", "whoami")
-		if err == nil {
-			log.Info("Using existing flyctl authentication")
-			return nil
-		}
+		log.Info("No Fly.io token found, attempting to authenticate with flyctl...")
 		
 		// Try to authenticate with flyctl
 		log.Info("Starting flyctl authentication (this will open a browser)...")
@@ -144,10 +129,15 @@ func (d *DeployWorkflow) checkAuth() error {
 		}
 		
 		log.Info("Successfully authenticated with flyctl")
-		return nil
+		// Try to get token again after authentication
+		token = d.getFlyToken()
 	}
 	
-	log.Info("Using Fly.io token from environment")
+	if token != "" {
+		log.Info("Using Fly.io token for authentication")
+	} else {
+		log.Info("Using flyctl session authentication")
+	}
 	return nil
 }
 
@@ -281,6 +271,40 @@ func (d *DeployWorkflow) buildMultiRegistryImages() error {
 	return multiRegistry.Execute()
 }
 
+// buildAndDeploy builds container to Fly registry and deploys immediately  
+func (d *DeployWorkflow) buildAndDeploy() error {
+	log.Info("Building and deploying container")
+	
+	// Create multi-registry workflow for Fly registry only
+	opts := MultiRegistryBuildOptions{
+		GitHash:           config.GetRuntimeGitHash(),
+		Environment:       d.opts.Environment,
+		PushToGHCR:        false, // Skip GHCR for speed
+		PushToFlyRegistry: true,  // Only push to Fly registry
+		DryRun:            d.opts.DryRun,
+		AppName:           d.opts.AppName,
+	}
+	
+	multiRegistry := NewMultiRegistryBuildWorkflow(opts)
+	
+	// Build and push to Fly registry
+	if err := multiRegistry.Execute(); err != nil {
+		return fmt.Errorf("fly registry build failed: %w", err)
+	}
+	
+	// Deploy immediately using the Fly registry image
+	image := fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
+	log.Info("Deploying using Fly.io registry image", "image", image)
+	
+	if d.opts.DryRun {
+		log.Info("[DRY RUN] Would deploy with image", "image", image)
+		return nil
+	}
+
+	args := []string{"deploy", "-a", d.opts.AppName, "--image", image}
+	return runBinary(config.GetFlyctlBinPath(), args...)
+}
+
 // deploy deploys the application to Fly.io using best available image
 func (d *DeployWorkflow) deploy() error {
 	// Choose image based on what's available - prefer GHCR if available
@@ -389,4 +413,30 @@ func runBinaryWithOutput(path string, args ...string) (string, error) {
 	}
 	
 	return string(output), nil
+}
+
+// getFlyToken gets FLY token from environment or flyctl
+func (d *DeployWorkflow) getFlyToken() string {
+	// Check environment variables first
+	token := os.Getenv("FLY_API_TOKEN")
+	if token == "" {
+		token = os.Getenv("FLY_ACCESS_TOKEN")
+	}
+	
+	// If no env token, try to get from flyctl
+	if token == "" {
+		cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "whoami")
+		if cmd.Run() == nil {
+			// flyctl is authenticated, get the token
+			if tokenCmd := exec.Command(config.GetFlyctlBinPath(), "auth", "token"); tokenCmd != nil {
+				if output, err := tokenCmd.Output(); err == nil {
+					token = strings.TrimSpace(string(output))
+					// Cache it in environment for this session
+					os.Setenv("FLY_API_TOKEN", token)
+				}
+			}
+		}
+	}
+	
+	return token
 }

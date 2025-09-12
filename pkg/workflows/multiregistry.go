@@ -154,6 +154,14 @@ func (m *MultiRegistryBuildWorkflow) buildAndPushWithTag(repo, tag string) error
 		fmt.Sprintf("GIT_HASH=%s", m.opts.GitHash),
 		fmt.Sprintf("ENVIRONMENT=%s", m.opts.Environment),
 	)
+	
+	// Add authentication tokens for ko to use
+	if githubToken := m.getGitHubToken(); githubToken != "" {
+		env = append(env, fmt.Sprintf("GITHUB_TOKEN=%s", githubToken))
+	}
+	if flyToken := m.getFlyToken(); flyToken != "" {
+		env = append(env, fmt.Sprintf("FLY_API_TOKEN=%s", flyToken))
+	}
 
 	// Build and push with Ko
 	args := []string{
@@ -183,23 +191,15 @@ func (m *MultiRegistryBuildWorkflow) authenticateGHCR() error {
 		return nil
 	}
 
-	token := os.Getenv("GITHUB_TOKEN")
+	token := m.getGitHubToken()
 	if token == "" {
 		return fmt.Errorf("GITHUB_TOKEN not set")
 	}
 
-	log.Info("Authenticating with GitHub Container Registry")
+	log.Info("Authenticating with GitHub Container Registry (ko will use GITHUB_TOKEN directly)")
 	
-	// Use docker login to authenticate
-	cmd := exec.Command("docker", "login", "ghcr.io", "-u", "joeblew999", "--password-stdin")
-	cmd.Stdin = strings.NewReader(token)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker login to ghcr.io failed: %w", err)
-	}
-
+	// Ko handles authentication directly via GITHUB_TOKEN environment variable
+	// No need for docker login - ko has built-in registry authentication
 	return nil
 }
 
@@ -210,27 +210,25 @@ func (m *MultiRegistryBuildWorkflow) authenticateFlyRegistry() error {
 		return nil
 	}
 
-	token := os.Getenv("FLY_API_TOKEN")
-	if token == "" {
-		token = os.Getenv("FLY_ACCESS_TOKEN")
-	}
-	if token == "" {
-		return fmt.Errorf("FLY_API_TOKEN or FLY_ACCESS_TOKEN not set")
-	}
-
+	token := m.getFlyToken()
 	log.Info("Authenticating with Fly.io registry")
 
-	// Use flyctl to authenticate with registry
-	cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "docker")
-	env := append(os.Environ(), "FLY_ACCESS_TOKEN="+token)
-	cmd.Env = env
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("flyctl auth docker failed: %w", err)
+	// Ko can read ~/.docker/config.json for registry authentication
+	// We just need to ensure flyctl has configured the registry credentials
+	if token != "" {
+		// If we have a token, run flyctl auth docker to configure ~/.docker/config.json
+		cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "docker")
+		env := append(os.Environ(), "FLY_ACCESS_TOKEN="+token)
+		cmd.Env = env
+		
+		// Run silently - we don't need to see the output
+		if err := cmd.Run(); err != nil {
+			log.Warn("Failed to configure Fly registry credentials", "error", err)
+			// Don't fail - ko might still work with existing credentials
+		}
 	}
-
+	
+	// Ko will use the credentials from ~/.docker/config.json
 	return nil
 }
 
@@ -239,13 +237,13 @@ func (m *MultiRegistryBuildWorkflow) CheckCredentials() error {
 	var missing []string
 
 	if m.opts.PushToGHCR {
-		if os.Getenv("GITHUB_TOKEN") == "" {
+		if m.getGitHubToken() == "" {
 			missing = append(missing, "GITHUB_TOKEN (for GHCR)")
 		}
 	}
 
 	if m.opts.PushToFlyRegistry {
-		if os.Getenv("FLY_API_TOKEN") == "" && os.Getenv("FLY_ACCESS_TOKEN") == "" {
+		if m.getFlyToken() == "" {
 			missing = append(missing, "FLY_API_TOKEN or FLY_ACCESS_TOKEN (for Fly registry)")
 		}
 	}
@@ -255,4 +253,50 @@ func (m *MultiRegistryBuildWorkflow) CheckCredentials() error {
 	}
 
 	return nil
+}
+
+// isFlyctlAuthenticated checks if flyctl is authenticated
+func (m *MultiRegistryBuildWorkflow) isFlyctlAuthenticated() bool {
+	cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "whoami")
+	return cmd.Run() == nil
+}
+
+// getFlyToken gets FLY token from environment or flyctl
+func (m *MultiRegistryBuildWorkflow) getFlyToken() string {
+	// Check environment variables first
+	token := os.Getenv("FLY_API_TOKEN")
+	if token == "" {
+		token = os.Getenv("FLY_ACCESS_TOKEN")
+	}
+	
+	// If no env token, try to get from flyctl
+	if token == "" && m.isFlyctlAuthenticated() {
+		cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "token")
+		if output, err := cmd.Output(); err == nil {
+			token = strings.TrimSpace(string(output))
+			// Cache it in environment for this session
+			os.Setenv("FLY_API_TOKEN", token)
+		}
+	}
+	
+	return token
+}
+
+// getGitHubToken gets GitHub token from environment or gh CLI
+func (m *MultiRegistryBuildWorkflow) getGitHubToken() string {
+	// Check environment variable first
+	token := os.Getenv("GITHUB_TOKEN")
+	
+	// If no env token, try to get from gh CLI
+	if token == "" {
+		ghPath := config.GetGhBinPath()
+		cmd := exec.Command(ghPath, "auth", "token")
+		if output, err := cmd.Output(); err == nil {
+			token = strings.TrimSpace(string(output))
+			// Cache it in environment for this session
+			os.Setenv("GITHUB_TOKEN", token)
+		}
+	}
+	
+	return token
 }

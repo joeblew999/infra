@@ -708,5 +708,13 @@
    "repo": "wpnpeiris/nats-s3",
    "package": "cmd/nats-s3",
    "version": "main"
+   },
+  {
+   "name": "mox",
+   "description": "Modern secure mail server with automatic HTTPS, DMARC, and webmail",
+   "source": "go-build",
+   "repo": "mjl-/mox",
+   "package": ".",
+   "version": "v0.0.15"
    }
 ]

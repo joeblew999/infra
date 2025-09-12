@@ -19,6 +19,7 @@ import (
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/gops"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/mox"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/joeblew999/infra/pkg/xtemplate"
@@ -41,7 +42,8 @@ var serviceCmd = &cobra.Command{
 	Long:  "Start all infrastructure services with goreman supervision. This is identical to running the root command without arguments.",
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
-		RunService(true, false, false, env) // Use embedded docs in production
+		noMox, _ := cmd.Flags().GetBool("no-mox")
+		RunService(true, false, false, noMox, env) // Use embedded docs in production
 	},
 }
 
@@ -73,9 +75,10 @@ func init() {
 	
 	apiCheckCmd.Flags().String("old", "HEAD~1", "Old commit to compare against")
 	apiCheckCmd.Flags().String("new", "HEAD", "New commit to compare")
+	serviceCmd.Flags().Bool("no-mox", false, "Disable mox mail server")
 }
 
-func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
+func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, noMox bool, mode string) {
 	log.Info("Running in Service mode with goreman supervision...")
 
 	var natsCleanup func()
@@ -196,6 +199,16 @@ func RunService(noDevDocs bool, noNATS bool, noPocketbase bool, mode string) {
 		log.Warn("XTemplate failed to start", "error", err)
 	} else {
 		log.Info("✅ XTemplate development server started supervised", "port", config.GetXTemplatePort())
+	}
+
+	// Start mox mail server
+	if !noMox {
+		log.Info("🚀 Step 8: Starting mox mail server...")
+		if err := mox.StartSupervised("localhost", "admin@localhost"); err != nil {
+			log.Warn("Mox failed to start", "error", err)
+		} else {
+			log.Info("✅ Mox mail server started supervised")
+		}
 	}
 
 	// Show process status from goreman (external services only)
@@ -450,6 +463,11 @@ var shutdownCmd = &cobra.Command{
 			portToInt(config.GetCaddyPort()),      // Caddy HTTP
 			443,  // Caddy HTTPS (fixed)
 			portToInt(config.GetNatsS3Port()), // NATS S3 Gateway
+			25,    // mox smtp
+			143,   // mox imap
+			465,   // mox smtps
+			587,   // mox submission
+			993,   // mox imaps
 		}
 		
 		portsKilled := 0
@@ -471,6 +489,7 @@ var shutdownCmd = &cobra.Command{
 			"pocketbase",  // PocketBase server
 			"xtemplate",   // XTemplate development server
 			"nats-s3",     // NATS S3 Gateway
+			"mox",         // Mox mail server
 		}
 		
 		processesKilled := 0

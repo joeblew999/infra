@@ -1,7 +1,11 @@
 # todo
 
 
+Use as a docker container registry.
 
+ko create the OCI and tar 
+
+nats s3 with some wrapper code is a poor many docker registry.
 
 
 ## DEV and PROD and CLUSTER

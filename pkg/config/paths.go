@@ -210,6 +210,11 @@ func GetClaudeBinPath() string {
 	return Get(BinaryClaude)
 }
 
+// GetGhBinPath returns the absolute path to the gh binary.
+func GetGhBinPath() string {
+	return Get(BinaryGh)
+}
+
 // GetTerraformPath returns the absolute path to the terraform directory.
 func GetTerraformPath() string {
 	return filepath.Join(".", TerraformDir)
@@ -521,4 +526,23 @@ func GetAuthPath() string {
 		return filepath.Join(GetTestDataPath(), "auth")
 	}
 	return filepath.Join(GetDataPath(), "auth")
+}
+
+// GetMoxDataPath returns the absolute path to the mox data directory.
+// In test environments, uses .data-test/mox for isolation.
+func GetMoxDataPath() string {
+	if IsTestEnvironment() {
+		return filepath.Join(GetTestDataPath(), "mox")
+	}
+	return filepath.Join(GetDataPath(), "mox")
+}
+
+// GetMoxConfigPath returns the absolute path to the mox configuration file.
+func GetMoxConfigPath() string {
+	return filepath.Join(GetMoxDataPath(), "moxmail.conf")
+}
+
+// GetMoxBinPath returns the absolute path to the mox binary.
+func GetMoxBinPath() string {
+	return Get(BinaryMox)
 }

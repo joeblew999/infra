@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-09-11 15:34:44.302857 +0700 +07 m=+0.002666335
+// Generated at 2025-09-12 11:10:54.123173 +0700 +07 m=+0.001152126
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -31,6 +31,7 @@ const (
 	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
 	BinaryProcessCompose = "process-compose" // Process orchestration and management tool with YAML configuration
 	BinaryNatsS3 = "nats-s3" // S3 gateway for NATS JetStream Object Store
+	BinaryMox = "mox" // Modern secure mail server with automatic HTTPS, DMARC, and webmail
 )
 
 // AllBinaryNames returns all available binary names from dep.json
@@ -59,6 +60,7 @@ func AllBinaryNames() []string {
 		BinaryGoctl,
 		BinaryProcessCompose,
 		BinaryNatsS3,
+		BinaryMox,
 	}
 }
 

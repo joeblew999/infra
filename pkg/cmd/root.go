@@ -46,7 +46,7 @@ Use "infra [command] --help" for detailed information about any command.`,
 	Version: getVersionString(),
 	Run: func(cmd *cobra.Command, args []string) {
 		env, _ := cmd.Flags().GetString("env")
-		RunService(false, false, false, env) // Always start all services
+		RunService(false, false, false, false, env) // Always start all services
 	},
 }
 
