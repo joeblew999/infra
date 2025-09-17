@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/joeblew999/infra/pkg/config"
+	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 )
 
@@ -23,15 +25,21 @@ var conduitStartCmd = &cobra.Command{
 	Short: "Start Conduit and connectors",
 	Long:  `Start Conduit and all configured connectors as managed processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		fmt.Println("Starting Conduit service...")
 		if err := service.EnsureAndStart(false); err != nil {
 			log.Fatal("Failed to start Conduit service:", err)
 		}
-		
+
 		fmt.Println("✅ Conduit service started successfully")
-		
+
 		// Keep running (like a daemon)
 		select {}
 	},
@@ -43,17 +51,23 @@ var conduitStopCmd = &cobra.Command{
 	Short: "Stop Conduit and connectors",
 	Long:  `Stop all running Conduit processes gracefully.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		fmt.Println("Stopping Conduit service...")
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		if err := service.Stop(); err != nil {
 			log.Fatal("Failed to stop Conduit service:", err)
 		}
-		
+
 		fmt.Println("✅ Conduit service stopped successfully")
 	},
 }
@@ -64,25 +78,32 @@ var conduitStatusCmd = &cobra.Command{
 	Short: "Show Conduit process status",
 	Long:  `Display the current status of all Conduit processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		status := service.Status()
 		if len(status) == 0 {
 			fmt.Println("No Conduit processes configured")
 			return
 		}
-		
+
 		fmt.Println("Conduit Process Status:")
-		fmt.Println("======================")
+		fmt.Println("=======================")
 		for name, state := range status {
-			fmt.Printf("%-30s: %s\n", name, state)
+			fmt.Printf("% -30s: %s\n", name, state)
 		}
 	},
 }
+
 
 // conduitRestartCmd restarts Conduit and connectors
 var conduitRestartCmd = &cobra.Command{
@@ -90,17 +111,23 @@ var conduitRestartCmd = &cobra.Command{
 	Short: "Restart Conduit and connectors",
 	Long:  `Restart all Conduit processes gracefully.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		fmt.Println("Restarting Conduit service...")
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		if err := service.Restart(); err != nil {
 			log.Fatal("Failed to restart Conduit service:", err)
 		}
-		
+
 		fmt.Println("✅ Conduit service restarted successfully")
 	},
 }
@@ -118,17 +145,23 @@ var conduitCoreStartCmd = &cobra.Command{
 	Short: "Start only the core conduit process",
 	Long:  `Start only the core conduit process, without connectors.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		fmt.Println("Starting core conduit...")
 		if err := service.StartCore(); err != nil {
 			log.Fatal("Failed to start core conduit:", err)
 		}
-		
+
 		fmt.Println("✅ Core conduit started successfully")
 	},
 }
@@ -139,17 +172,23 @@ var conduitCoreStopCmd = &cobra.Command{
 	Short: "Stop only the core conduit process",
 	Long:  `Stop only the core conduit process, leaving connectors running.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		fmt.Println("Stopping core conduit...")
 		if err := service.StopCore(); err != nil {
 			log.Fatal("Failed to stop core conduit:", err)
 		}
-		
+
 		fmt.Println("✅ Core conduit stopped successfully")
 	},
 }
@@ -167,17 +206,23 @@ var conduitConnectorsStartCmd = &cobra.Command{
 	Short: "Start all connector processes",
 	Long:  `Start all configured connector processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		fmt.Println("Starting connectors...")
 		if err := service.StartConnectors(); err != nil {
 			log.Fatal("Failed to start connectors:", err)
 		}
-		
+
 		fmt.Println("✅ Connectors started successfully")
 	},
 }
@@ -188,17 +233,23 @@ var conduitConnectorsStopCmd = &cobra.Command{
 	Short: "Stop all connector processes",
 	Long:  `Stop all running connector processes.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		service := NewService()
-		
+		natsURL := fmt.Sprintf("nats://localhost:%s", config.GetNATSPort())
+		nc, err := nats.Connect(natsURL)
+		if err != nil {
+			log.Fatal("Failed to connect to NATS:", err)
+		}
+		defer nc.Close()
+		service := NewService(nc)
+
 		if err := service.Initialize(); err != nil {
 			log.Fatal("Failed to initialize service:", err)
 		}
-		
+
 		fmt.Println("Stopping connectors...")
 		if err := service.StopConnectors(); err != nil {
 			log.Fatal("Failed to stop connectors:", err)
 		}
-		
+
 		fmt.Println("✅ Connectors stopped successfully")
 	},
 }
@@ -207,18 +258,18 @@ func init() {
 	// Add debug flag to all commands
 	conduitStartCmd.Flags().Bool("debug", false, "Enable debug logging")
 	conduitRestartCmd.Flags().Bool("debug", false, "Enable debug logging")
-	
+
 	// Add subcommands to root
 	Cmd.AddCommand(conduitStartCmd)
 	Cmd.AddCommand(conduitStopCmd)
 	Cmd.AddCommand(conduitStatusCmd)
 	Cmd.AddCommand(conduitRestartCmd)
-	
+
 	// Add core subcommands
 	conduitCoreCmd.AddCommand(conduitCoreStartCmd)
 	conduitCoreCmd.AddCommand(conduitCoreStopCmd)
 	Cmd.AddCommand(conduitCoreCmd)
-	
+
 	// Add connectors subcommands
 	conduitConnectorsCmd.AddCommand(conduitConnectorsStartCmd)
 	conduitConnectorsCmd.AddCommand(conduitConnectorsStopCmd)

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,7 @@ func setupS3IntegrationTest(t *testing.T) (string, string, func()) {
 	t.Helper()
 
 	// Start embedded NATS server
-	natsAddr, natsCleanup, err := nats.StartEmbeddedNATS(context.Background())
+	natsAddr, _, natsCleanup, err := nats.StartEmbeddedNATS(context.Background())
 	require.NoError(t, err)
 
 	// Start the nats-s3 gateway
@@ -123,6 +124,8 @@ func TestS3GatewayIntegration_WhiteBox(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	// 2. Verify with NATS CLI
+	require.NoError(t, dep.InstallBinary("nats", false))
+
 	natsCliPath, err := config.GetAbsoluteDepPath("nats")
 	require.NoError(t, err)
 

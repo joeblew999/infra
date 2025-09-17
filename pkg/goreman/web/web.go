@@ -1,24 +1,32 @@
 package web
 
 import (
-	"embed"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
-	"path/filepath"
+	"net/url"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	datastarlib "github.com/starfederation/datastar-go/datastar"
+
+	"github.com/joeblew999/infra/pkg/config"
+	infodatastar "github.com/joeblew999/infra/pkg/datastar"
 	"github.com/joeblew999/infra/pkg/goreman"
-	pkgweb "github.com/joeblew999/infra/pkg/web"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/web/templates"
 )
 
-//go:embed templates/*.html
-var templateFS embed.FS
+const processesStreamInterval = 3 * time.Second
 
-// ProcessStatusWeb represents process status for web display
+//go:embed templates/processes-page.html
+var processesPageTemplate string
+
+// ProcessStatusWeb represents the process status payload for the JSON API.
 type ProcessStatusWeb struct {
 	Name      string `json:"name"`
 	Status    string `json:"status"`
@@ -28,163 +36,132 @@ type ProcessStatusWeb struct {
 	CanStop   bool   `json:"can_stop"`
 }
 
-// PageData holds the template data for rendering pages
-type PageData struct {
-	Navigation template.HTML
-	Footer     template.HTML
+// WebHandler provides HTTP handlers for process monitoring.
+type WebHandler struct{}
+
+// NewWebHandler creates a new web handler. The webDir parameter is retained for compatibility.
+func NewWebHandler(_ string) *WebHandler {
+	return &WebHandler{}
 }
 
-// WebHandler provides HTTP handlers for process monitoring
-type WebHandler struct {
-	manager   *goreman.Manager
-	templates *template.Template
-	webDir    string
-}
-
-// NewWebHandler creates a new web handler
-func NewWebHandler(webDir string) *WebHandler {
-	// Load templates from embedded filesystem first, fallback to webDir
-	templates := template.New("")
-	
-	// Try embedded templates first (for Ko builds)
-	if tmpl, err := template.ParseFS(templateFS, "templates/*.html"); err == nil {
-		templates = tmpl
-	} else if webDir != "" {
-		// Fallback to filesystem templates (for development)
-		globPattern := filepath.Join(webDir, "templates", "*.html")
-		if tmpl, err := template.ParseGlob(globPattern); err == nil {
-			templates = tmpl
-		}
-	}
-	
-	return &WebHandler{
-		manager:   goreman.GetManager(),
-		templates: templates,
-		webDir:    webDir,
-	}
-}
-
-// SetupRoutes configures the process monitoring routes on a chi router
+// SetupRoutes configures the process monitoring routes on a chi router.
 func (w *WebHandler) SetupRoutes(r chi.Router) {
 	r.Get("/", w.ProcessesPageHandler)
-	r.Get("/api", w.ProcessesAPIHandler) 
+	r.Get("/api", w.ProcessesAPIHandler)
+	r.Get("/api/stream", w.ProcessesStreamHandler)
 	r.Post("/api/{name}/{action}", w.ProcessActionHandler)
 	r.Post("/api/demo/register", w.RegisterDemoProcessHandler)
 }
 
-// ProcessesPageHandler serves the main processes page
+// ProcessesPageHandler serves the main processes page.
 func (w *WebHandler) ProcessesPageHandler(rw http.ResponseWriter, r *http.Request) {
-	w.renderTemplate(rw, "/processes", "processes")
-}
+	tmpl, err := template.New("processes-page").Parse(processesPageTemplate)
+	if err != nil {
+		log.Error("error parsing processes template", "error", err)
+		http.Error(rw, "failed to render page", http.StatusInternalServerError)
+		return
+	}
 
-// renderTemplate is a helper for rendering templates with nav/footer
-func (w *WebHandler) renderTemplate(rw http.ResponseWriter, currentPath, templateName string) {
-	// Get centralized navigation and footer
-	navHTML, err := pkgweb.RenderNav(currentPath)
-	if err != nil {
-		log.Error("Error rendering navigation", "error", err)
-		http.Error(rw, "Failed to render navigation", http.StatusInternalServerError)
+	var content strings.Builder
+	data := struct {
+		BasePath string
+	}{BasePath: config.ProcessesHTTPPath}
+
+	if err := tmpl.Execute(&content, data); err != nil {
+		log.Error("error executing processes template", "error", err)
+		http.Error(rw, "failed to render page", http.StatusInternalServerError)
 		return
 	}
-	
-	footerHTML, err := pkgweb.RenderFooter()
+
+	fullHTML, err := templates.RenderBasePage("Processes", content.String(), config.ProcessesHTTPPath)
 	if err != nil {
-		log.Error("Error rendering footer", "error", err)
-		footerHTML = ""
-	}
-	
-	// Try to load template from embedded filesystem first
-	var tmpl *template.Template
-	if w.templates != nil {
-		if t := w.templates.Lookup(templateName + ".html"); t != nil {
-			tmpl = t
-		}
-	}
-	
-	// Fallback to filesystem if embedded template not found
-	if tmpl == nil && w.webDir != "" {
-		templatePath := filepath.Join(w.webDir, "templates", templateName+".html")
-		var err error
-		tmpl, err = template.New(templateName + ".html").ParseFiles(templatePath)
-		if err != nil {
-			log.Error("Error loading template", "template", templateName, "error", err)
-			http.Error(rw, "Template not found", http.StatusInternalServerError)
-			return
-		}
-	}
-	
-	if tmpl == nil {
-		http.Error(rw, "Template not found", http.StatusInternalServerError)
+		log.Error("error rendering base page", "error", err)
+		http.Error(rw, "failed to render page", http.StatusInternalServerError)
 		return
 	}
-	
-	data := PageData{
-		Navigation: template.HTML(navHTML),
-		Footer:     template.HTML(footerHTML),
-	}
-	
+
 	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
-	err = tmpl.Execute(rw, data)
-	if err != nil {
-		log.Error("Error executing template", "template", templateName, "error", err)
-		http.Error(rw, "Failed to render template", http.StatusInternalServerError)
+	_, _ = rw.Write([]byte(fullHTML))
+}
+
+// ProcessesStreamHandler streams live process updates via DataStar SSE.
+func (w *WebHandler) ProcessesStreamHandler(rw http.ResponseWriter, r *http.Request) {
+	sse := datastarlib.NewSSE(rw, r)
+
+	if err := w.sendProcessSnapshot(sse); err != nil {
+		log.Error("error sending initial process snapshot", "error", err)
+		return
+	}
+
+	ticker := time.NewTicker(processesStreamInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			if err := w.sendProcessSnapshot(sse); err != nil {
+				log.Error("error streaming process snapshot", "error", err)
+				return
+			}
+		}
 	}
 }
 
-// ProcessesAPIHandler provides JSON API for process status
-func (w *WebHandler) ProcessesAPIHandler(rw http.ResponseWriter, r *http.Request) {
-	status := goreman.GetAllStatus()
-	processes := make([]ProcessStatusWeb, 0, len(status))
-	
-	running := 0
-	stopped := 0
-	
-	for name, stat := range status {
-		indicator := getStatusIndicator(stat)
-		uptime := "--"
-		
-		if stat == "running" {
-			running++
-			uptime = "Running"
-		} else {
-			stopped++
-		}
-		
-		processes = append(processes, ProcessStatusWeb{
-			Name:      name,
-			Status:    stat,
-			Indicator: indicator,
-			Uptime:    uptime,
-			CanStart:  stat != "running",
-			CanStop:   stat == "running",
-		})
+func (w *WebHandler) sendProcessSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
+	snapshot := collectProcessSnapshot()
+
+	html, err := infodatastar.RenderProcessCards(mapProcessSnapshot(snapshot))
+	if err != nil {
+		return fmt.Errorf("render process cards: %w", err)
 	}
-	
-	response := map[string]interface{}{
+
+	return sse.PatchElements(html)
+}
+
+// ProcessesAPIHandler provides JSON API for process status.
+func (w *WebHandler) ProcessesAPIHandler(rw http.ResponseWriter, r *http.Request) {
+	snapshot := collectProcessSnapshot()
+
+	processes := make([]ProcessStatusWeb, len(snapshot.Processes))
+	for i, proc := range snapshot.Processes {
+		processes[i] = ProcessStatusWeb{
+			Name:      proc.Name,
+			Status:    proc.Status,
+			Indicator: proc.Indicator,
+			Uptime:    proc.Uptime,
+			CanStart:  proc.CanStart,
+			CanStop:   proc.CanStop,
+		}
+	}
+
+	response := map[string]any{
 		"processes": processes,
 		"summary": map[string]int{
-			"total":   len(status),
-			"running": running,
-			"stopped": stopped,
+			"total":   snapshot.Summary.Total,
+			"running": snapshot.Summary.Running,
+			"stopped": snapshot.Summary.Stopped,
 		},
-		"timestamp": time.Now().Unix(),
+		"timestamp": snapshot.Timestamp.Unix(),
 	}
-	
+
 	rw.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(rw).Encode(response)
+	if err := json.NewEncoder(rw).Encode(response); err != nil {
+		log.Error("error encoding process status", "error", err)
+	}
 }
 
-// ProcessActionHandler handles process start/stop/restart actions
+// ProcessActionHandler handles process start/stop/restart actions.
 func (w *WebHandler) ProcessActionHandler(rw http.ResponseWriter, r *http.Request) {
-	// Extract process name and action from chi URL parameters
 	processName := chi.URLParam(r, "name")
 	action := chi.URLParam(r, "action")
-	
+
 	if processName == "" || action == "" {
-		http.Error(rw, "Missing name or action parameter", http.StatusBadRequest)
+		http.Error(rw, "missing name or action", http.StatusBadRequest)
 		return
 	}
-	
+
 	var err error
 	switch action {
 	case "start":
@@ -194,17 +171,155 @@ func (w *WebHandler) ProcessActionHandler(rw http.ResponseWriter, r *http.Reques
 	case "restart":
 		err = goreman.Restart(processName)
 	default:
-		http.Error(rw, "Invalid action", http.StatusBadRequest)
+		http.Error(rw, "invalid action", http.StatusBadRequest)
 		return
 	}
-	
+
 	if err != nil {
-		http.Error(rw, fmt.Sprintf("Action failed: %v", err), http.StatusInternalServerError)
+		log.Error("process action failed", "name", processName, "action", action, "error", err)
+		http.Error(rw, fmt.Sprintf("action failed: %v", err), http.StatusInternalServerError)
 		return
 	}
-	
-	rw.WriteHeader(http.StatusOK)
-	json.NewEncoder(rw).Encode(map[string]string{"status": "success"})
+
+	rw.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(rw).Encode(map[string]string{"status": "success"})
+}
+
+// RegisterDemoProcessHandler registers a long-running demo process for testing.
+func (w *WebHandler) RegisterDemoProcessHandler(rw http.ResponseWriter, r *http.Request) {
+	goreman.Register("test-process", &goreman.ProcessConfig{
+		Command:    "sh",
+		Args:       []string{"-c", "while true; do echo 'Test process running...'; sleep 5; done"},
+		WorkingDir: ".",
+	})
+
+	rw.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(rw).Encode(map[string]string{
+		"status":  "success",
+		"message": fmt.Sprintf("Demo process registered. Use %s/api/test-process/start to start it.", config.ProcessesHTTPPath),
+	})
+}
+
+// Internal snapshot types used to generate both JSON and SSE responses.
+type processSnapshot struct {
+	Processes []processState
+	Summary   processSummary
+	Timestamp time.Time
+}
+
+type processSummary struct {
+	Total   int
+	Running int
+	Stopped int
+}
+
+type processState struct {
+	Name      string
+	Status    string
+	Indicator string
+	Uptime    string
+	CanStart  bool
+	CanStop   bool
+}
+
+func collectProcessSnapshot() processSnapshot {
+	statusMap := goreman.GetAllStatus()
+	names := make([]string, 0, len(statusMap))
+	for name := range statusMap {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	states := make([]processState, 0, len(names))
+	running := 0
+	stopped := 0
+
+	for _, name := range names {
+		status := statusMap[name]
+		state := processState{
+			Name:      name,
+			Status:    status,
+			Indicator: getStatusIndicator(status),
+			Uptime:    formatProcessUptime(status),
+			CanStart:  status != "running",
+			CanStop:   status == "running",
+		}
+
+		if status == "running" {
+			running++
+		} else {
+			stopped++
+		}
+
+		states = append(states, state)
+	}
+
+	return processSnapshot{
+		Processes: states,
+		Summary: processSummary{
+			Total:   len(states),
+			Running: running,
+			Stopped: stopped,
+		},
+		Timestamp: time.Now(),
+	}
+}
+
+func mapProcessSnapshot(snapshot processSnapshot) infodatastar.ProcessTemplateData {
+	processes := make([]infodatastar.ProcessCard, len(snapshot.Processes))
+	base := strings.TrimSuffix(config.ProcessesHTTPPath, "/")
+
+	for i, proc := range snapshot.Processes {
+		border, badge := processCardClasses(proc.Status)
+		encoded := url.PathEscape(proc.Name)
+
+		processes[i] = infodatastar.ProcessCard{
+			Name:             proc.Name,
+			StatusLabel:      strings.ToUpper(proc.Status),
+			Indicator:        proc.Indicator,
+			Uptime:           proc.Uptime,
+			ShowStart:        proc.CanStart,
+			ShowStop:         proc.CanStop,
+			ShowRestart:      proc.CanStop,
+			StartAction:      fmt.Sprintf("%s/api/%s/start", base, encoded),
+			StopAction:       fmt.Sprintf("%s/api/%s/stop", base, encoded),
+			RestartAction:    fmt.Sprintf("%s/api/%s/restart", base, encoded),
+			CardBorderClass:  border,
+			StatusBadgeClass: badge,
+		}
+	}
+
+	return infodatastar.ProcessTemplateData{
+		LastUpdatedDisplay: snapshot.Timestamp.Format("15:04:05"),
+		LastUpdatedISO:     snapshot.Timestamp.Format(time.RFC3339),
+		Summary: infodatastar.ProcessSummary{
+			Total:   snapshot.Summary.Total,
+			Running: snapshot.Summary.Running,
+			Stopped: snapshot.Summary.Stopped,
+		},
+		Processes:    processes,
+		HasProcesses: len(processes) > 0,
+	}
+}
+
+func formatProcessUptime(status string) string {
+	if status == "running" {
+		return "Running"
+	}
+	return "Stopped"
+}
+
+func processCardClasses(status string) (string, string) {
+	switch status {
+	case "running":
+		return "border-emerald-200 dark:border-emerald-600", "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200"
+	case "starting", "stopping":
+		return "border-amber-200 dark:border-amber-600", "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+	case "stopped", "killed":
+		return "border-rose-200 dark:border-rose-600", "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200"
+	default:
+		return "border-gray-200 dark:border-gray-700", "bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200"
+	}
 }
 
 func getStatusIndicator(status string) string {
@@ -222,21 +337,4 @@ func getStatusIndicator(status string) string {
 	default:
 		return "❓"
 	}
-}
-
-// RegisterDemoProcessHandler registers a long-running demo process for testing
-func (w *WebHandler) RegisterDemoProcessHandler(rw http.ResponseWriter, r *http.Request) {
-	// Register a long-running test process
-	goreman.Register("test-process", &goreman.ProcessConfig{
-		Command:    "sh",
-		Args:       []string{"-c", "while true; do echo 'Test process running...'; sleep 5; done"},
-		WorkingDir: ".",
-		Env:        []string{},
-	})
-
-	rw.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(rw).Encode(map[string]string{
-		"status": "success",
-		"message": "Demo process registered. Use /api/processes/test-process/start to start it.",
-	})
 }

@@ -12,7 +12,7 @@ import (
 
 // GitHubRelease represents GitHub API response for latest release
 // This is a minimal struct - we only need the tag_name field
-// We use interface{} for unused fields to reduce memory usage
+// We use any for unused fields to reduce memory usage
 // https://docs.github.com/en/rest/releases/releases#get-the-latest-release
 type GitHubRelease struct {
 	TagName    string `json:"tag_name"`

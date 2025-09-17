@@ -49,7 +49,7 @@ type NotificationData struct {
 	EmailData
 	NotificationType string                 `json:"notification_type"`
 	Priority         string                 `json:"priority"`
-	Details          map[string]interface{} `json:"details"`
+	Details          map[string]any `json:"details"`
 	ActionRequired   bool                   `json:"action_required"`
 }
 
@@ -88,7 +88,7 @@ type SocialLink struct {
 }
 
 // TestData provides canonical test data for all template types
-func TestData() map[string]interface{} {
+func TestData() map[string]any {
 	baseData := EmailData{
 		Name:        "Test User",
 		Email:       "test@example.com",
@@ -103,7 +103,7 @@ func TestData() map[string]interface{} {
 		CompanyURL:  "https://testcompany.com",
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"simple": baseData,
 		
 		"welcome": WelcomeEmailData{
@@ -125,7 +125,7 @@ func TestData() map[string]interface{} {
 			NotificationType: "system",
 			Priority:         "high",
 			ActionRequired:   true,
-			Details: map[string]interface{}{
+			Details: map[string]any{
 				"server": "test-server",
 				"metric": "CPU usage",
 			},

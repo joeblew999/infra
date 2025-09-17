@@ -7,10 +7,11 @@ import (
 	"html/template"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/joeblew999/infra/pkg/config"
-	pkgweb "github.com/joeblew999/infra/pkg/web"
+	"github.com/joeblew999/infra/web/templates"
 )
 
 //go:embed templates/config-home.html
@@ -42,10 +43,11 @@ func (s *ConfigWebService) RegisterRoutes(r chi.Router) {
 	r.Get("/json", s.handleConfigJSON)
 	r.Get("/status", s.handleEnvStatus)
 	r.Get("/secrets", s.handleSecretsManagement)
-	
+
 	// API routes
 	r.Get("/api/config", s.handleConfigAPI)
 	r.Get("/api/env-status", s.handleEnvStatusAPI)
+	r.Get("/api/build", s.HandleBuildInfo)
 	r.Post("/api/secrets/set", s.handleSetSecret)
 }
 
@@ -68,20 +70,20 @@ type PageData struct {
 	DataStar      template.HTML
 	Header        template.HTML
 	ConfigSubNav  template.HTML
-	Config        interface{}
+	Config        any
 	EnvStatus     map[string]string
 	MissingVars   []string
 }
 
 // renderTemplate is a helper for rendering config templates with nav/footer
-func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []byte, currentPath, templateName string, data interface{}) {
+func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []byte, currentPath, templateName string, data any) {
 	// Get centralized navigation and footer
-	navHTML, err := pkgweb.RenderNav(currentPath)
+	navHTML, err := templates.RenderNav(currentPath)
 	if err != nil {
 		navHTML = ""
 	}
-	
-	footerHTML, err := pkgweb.RenderFooter()
+
+	footerHTML, err := templates.RenderFooter()
 	if err != nil {
 		footerHTML = ""
 	}
@@ -102,8 +104,8 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 	pageData := PageData{
 		Navigation:   template.HTML(navHTML),
 		Footer:       template.HTML(footerHTML),
-		DataStar:     pkgweb.GetDataStarScript(),
-		Header:       pkgweb.GetHeaderHTML(),
+		DataStar:     templates.GetDataStarScript(),
+		Header:       templates.GetHeaderHTML(),
 		ConfigSubNav: template.HTML(configSubNavHTML),
 	}
 	
@@ -111,7 +113,7 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 	switch v := data.(type) {
 	case *config.Config:
 		pageData.Config = v
-	case map[string]interface{}:
+	case map[string]any:
 		if envStatus, ok := v["EnvStatus"].(map[string]string); ok {
 			pageData.EnvStatus = envStatus
 		}
@@ -143,7 +145,7 @@ func (s *ConfigWebService) handleEnvStatus(w http.ResponseWriter, r *http.Reques
 	envStatus := config.GetEnvStatus()
 	missing := config.GetMissingEnvVars()
 	
-	data := map[string]interface{}{
+	data := map[string]any{
 		"EnvStatus":   envStatus,
 		"MissingVars": missing,
 	}
@@ -168,7 +170,7 @@ func (s *ConfigWebService) handleEnvStatusAPI(w http.ResponseWriter, r *http.Req
 	envStatus := config.GetEnvStatus()
 	missing := config.GetMissingEnvVars()
 	
-	response := map[string]interface{}{
+	response := map[string]any{
 		"env_status": envStatus,
 		"missing":    missing,
 		"all_set":    len(missing) == 0,
@@ -253,4 +255,31 @@ func (s *ConfigWebService) renderConfigSubNav(currentPath string) (string, error
 	}
 	
 	return result.String(), nil
+}
+
+// HandleBuildInfo provides build information as JSON API
+func (s *ConfigWebService) HandleBuildInfo(w http.ResponseWriter, r *http.Request) {
+	buildInfo := struct {
+		Version     string `json:"version"`
+		GitHash     string `json:"git_hash"`
+		ShortHash   string `json:"short_hash"`
+		BuildTime   string `json:"build_time"`
+		Timestamp   string `json:"timestamp"`
+		Environment string `json:"environment"`
+	}{
+		Version:     config.GetVersion(),
+		GitHash:     config.GitHash,
+		ShortHash:   config.GetShortHash(),
+		BuildTime:   config.BuildTime,
+		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Environment: func() string {
+			if config.IsProduction() {
+				return "production"
+			}
+			return "development"
+		}(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(buildInfo)
 }

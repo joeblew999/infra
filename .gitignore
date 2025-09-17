@@ -23,6 +23,9 @@ infra*
 # Where ko builds OCI images
 .oci
 
+# Where MCP playwright store stuff
+.playwright-mcp
+
 # Remote taskfiles store
 .task
 
@@ -32,4 +35,8 @@ terraform
 
 # Our docker files
 docker
+
+# Node.js dependencies
+node_modules/
+package-lock.json
 

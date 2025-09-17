@@ -127,7 +127,7 @@ func main() {
 		NotificationType: "System Alert",
 		Priority:         "high",
 		ActionRequired:   true,
-		Details: map[string]interface{}{
+		Details: map[string]any{
 			"server":     "web-01",
 			"cpu_usage":  "95%",
 			"memory":     "78%",
@@ -150,7 +150,7 @@ func main() {
 
 	// Example 5: Business announcement email
 	fmt.Println("\n=== Business Announcement Email Example ===")
-	businessData := map[string]interface{}{
+	businessData := map[string]any{
 		"subject":                "Grand Opening in Austin!",
 		"preview":                "Join us for our grand opening event",
 		"company_name":           "Croft's Accountants",

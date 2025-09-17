@@ -191,8 +191,8 @@ func TestAuthServiceConfiguration(t *testing.T) {
 	
 	t.Logf("✅ Auth service created successfully")
 	
-	// Test user creation through service
-	testUser, err := authService.CreateTestUser("integration-test-user")
+	// Test user creation through webauthn service directly (test-only)
+	testUser, err := authService.webauthn.CreateTestUser("integration-test-user")
 	if err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}

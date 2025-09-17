@@ -361,7 +361,7 @@ func (c *DefaultCollector) collectForPlatform(ctx context.Context, binary *DepBi
 }
 
 // createPlatformInstaller creates an installer configured for a specific platform
-func (c *DefaultCollector) createPlatformInstaller(binary *DepBinary, platformConfig *PlatformConfig) (interface{}, error) {
+func (c *DefaultCollector) createPlatformInstaller(binary *DepBinary, platformConfig *PlatformConfig) (any, error) {
 	// For now, we'll use a simplified approach
 	// In a full implementation, we'd need to mock the platform detection
 	// to make installers think they're running on the target platform
@@ -371,7 +371,7 @@ func (c *DefaultCollector) createPlatformInstaller(binary *DepBinary, platformCo
 }
 
 // downloadBinaryForPlatform downloads a binary for a specific platform
-func (c *DefaultCollector) downloadBinaryForPlatform(installer interface{}, binary *DepBinary, platformConfig *PlatformConfig, tempDir string) (string, error) {
+func (c *DefaultCollector) downloadBinaryForPlatform(installer any, binary *DepBinary, platformConfig *PlatformConfig, tempDir string) (string, error) {
 	// This is a simplified implementation
 	// Full implementation would need to:
 	// 1. Mock runtime.GOOS and runtime.GOARCH for the target platform

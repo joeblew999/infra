@@ -1,0 +1,24 @@
+<h2 class="text-xl sm:text-2xl font-semibold mb-4">🔧 Process Supervision</h2>
+<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+    Goreman supervises long-running infrastructure tasks. Monitor status, start or stop processes, and
+    watch updates stream live via DataStar.
+</p>
+
+<div id="processes-stream"
+     class="space-y-4"
+     data-on-load="@get('{{.BasePath}}/api/stream')">
+    <div id="processes-dashboard" class="text-center py-12">
+        <div class="inline-flex items-center gap-3 px-4 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 rounded-lg">
+            <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Connecting to supervisor stream…
+        </div>
+    </div>
+</div>
+
+<div class="text-center text-xs text-gray-500 dark:text-gray-400">
+    Having trouble? <button class="text-blue-600 dark:text-blue-300 hover:underline"
+        data-on-click="@get('{{.BasePath}}/api/stream')">Reconnect stream</button>
+</div>

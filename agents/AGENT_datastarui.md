@@ -4,8 +4,11 @@ For: https://github.com/CoreyCole/datastarui
 
 REF: https://raw.githubusercontent.com/CoreyCole/datastarui/refs/heads/main/CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with 
- in this repository.
+BUT we do not use just. We use "go run ." to do things...
+
+This file provides guidance to Claude Code (claude.ai/code) when working with  in this repository.
+
+
 
 ## Project Overview
 

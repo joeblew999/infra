@@ -2,7 +2,6 @@ package auth
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/nats-io/nkeys"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // AuthService provides complete authentication functionality
@@ -48,7 +48,7 @@ func (s *AuthService) RegisterRoutes(r chi.Router) {
 	r.Get("/dashboard", s.dashboard)
 	r.Post("/logout", s.logout)
 	r.Post("/login/conditional", s.conditionalLogin)
-	r.Post("/test/create-user", s.createTestUser)
+	// SECURITY: Test user creation route removed for production safety
 }
 
 // NewAuthRouter creates a subrouter with all auth routes configured
@@ -73,10 +73,7 @@ func (s *AuthService) DeleteUserSession(sessionID string) error {
 	return s.webauthn.DeleteUserSession(sessionID)
 }
 
-// CreateTestUser wraps the webauthn service method
-func (s *AuthService) CreateTestUser(username string) (*User, error) {
-	return s.webauthn.CreateTestUser(username)
-}
+// SECURITY: Removed CreateTestUser method - should only be used in tests
 
 // CreateUserSession wraps the webauthn service method
 func (s *AuthService) CreateUserSession(sessionID, userID string, ttl time.Duration) error {
@@ -88,23 +85,24 @@ func (s *AuthService) writeJSON(w http.ResponseWriter, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
-func (s *AuthService) mustDecode(r *http.Request, v any) {
+func (s *AuthService) decode(r *http.Request, v any) error {
 	if err := json.NewDecoder(r.Body).Decode(v); err != nil {
-		fmt.Printf("DEBUG: JSON decode error: %v\n", err)
-		panic(err)
+		log.Debug("JSON decode error", "error", err)
+		return err
 	}
+	return nil
 }
 
 func (s *AuthService) beginRegister(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	if username == "" {
-		http.Error(w, "username required", 400)
+		http.Error(w, "username required", http.StatusBadRequest)
 		return
 	}
 
 	options, token, err := s.webauthn.BeginRegistration(username)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -119,11 +117,14 @@ func (s *AuthService) finishRegister(w http.ResponseWriter, r *http.Request) {
 		Token string                                `json:"token"`
 		Resp  protocol.ParsedCredentialCreationData `json:"response"`
 	}
-	s.mustDecode(r, &req)
+	if err := s.decode(r, &req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
 	user, err := s.webauthn.FinishRegistration(req.Token, &req.Resp)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -145,7 +146,7 @@ func (s *AuthService) beginLogin(w http.ResponseWriter, r *http.Request) {
 
 	options, token, err := s.webauthn.BeginLogin(username)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -160,11 +161,14 @@ func (s *AuthService) finishLogin(w http.ResponseWriter, r *http.Request) {
 		Token string                                 `json:"token"`
 		Resp  protocol.ParsedCredentialAssertionData `json:"response"`
 	}
-	s.mustDecode(r, &req)
+	if err := s.decode(r, &req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
 
 	user, sessionID, err := s.webauthn.FinishLogin(req.Token, &req.Resp)
 	if err != nil {
-		http.Error(w, err.Error(), 400)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -192,13 +196,13 @@ func (s *AuthService) finishLogin(w http.ResponseWriter, r *http.Request) {
 func (s *AuthService) dashboard(w http.ResponseWriter, r *http.Request) {
 	sessionCookie, err := r.Cookie("session")
 	if err != nil {
-		http.Error(w, "Please log in first", 401)
+		http.Error(w, "Please log in first", http.StatusUnauthorized)
 		return
 	}
 
 	userID, err := s.webauthn.GetUserSession(sessionCookie.Value)
 	if err != nil {
-		http.Error(w, "Invalid session", 401)
+		http.Error(w, "Invalid session", http.StatusUnauthorized)
 		return
 	}
 
@@ -230,81 +234,15 @@ func (s *AuthService) conditionalLogin(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		CredentialID string `json:"credentialId"`
 	}
-	s.mustDecode(r, &req)
-	
-	userID := "testuser"
-	sessionID := fmt.Sprintf("conditional-session-%d", time.Now().Unix())
-	
-	if err := s.webauthn.CreateUserSession(sessionID, userID, 30*time.Minute); err != nil {
-		http.Error(w, "Failed to create session", 500)
+	if err := s.decode(r, &req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 	
-	kp, _ := nkeys.CreateUser()
-	seed, _ := kp.Seed()
-	
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
-	
-	s.writeJSON(w, map[string]any{
-		"status":     "success",
-		"message":    "Conditional login successful",
-		"userId":     userID,
-		"sessionId":  sessionID,
-		"nats_seed":  string(seed),
-	})
+	// TODO: This should get the actual user from the credential lookup
+	// For now, return an error as this is not fully implemented
+	http.Error(w, "Conditional login not fully implemented", http.StatusNotImplemented)
 }
 
-func (s *AuthService) createTestUser(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username string `json:"username"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		req.Username = "testuser"
-	}
-	if req.Username == "" {
-		req.Username = "testuser"
-	}
-	
-	// Create user with mock credential
-	user, err := s.webauthn.CreateTestUser(req.Username)
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	
-	// Create login session (complete auth flow)
-	sessionID := fmt.Sprintf("test-session-%d", time.Now().Unix())
-	if err := s.webauthn.CreateUserSession(sessionID, user.WebAuthnName(), 30*time.Minute); err != nil {
-		http.Error(w, "Failed to create session", 500)
-		return
-	}
-	
-	// Set session cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    sessionID,
-		Path:     "/",
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
-	
-	// Generate NATS credentials
-	kp, _ := nkeys.CreateUser()
-	seed, _ := kp.Seed()
-	
-	s.writeJSON(w, map[string]any{
-		"status": "ok",
-		"username": user.WebAuthnName(),
-		"message": "Test user created with mock credential and session",
-		"sessionId": sessionID,
-		"nats_seed": string(seed),
-	})
-}
+// SECURITY: Removed createTestUser function - it was a backdoor allowing
+// authentication bypass by creating sessions without proper WebAuthn flow

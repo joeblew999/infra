@@ -18,8 +18,8 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// StartEmbeddedNATS starts an embedded NATS server and returns its client URL and a cleanup function.
-func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
+// StartEmbeddedNATS starts an embedded NATS server and returns its client URL, connection, and a cleanup function.
+func StartEmbeddedNATS(ctx context.Context) (string, *gonats.Conn, func(), error) {
 	// Initialize embedded NATS server
 	log.Info("Starting embedded NATS server...")
 
@@ -32,7 +32,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
 	)
 	if err != nil {
 		log.Error("Failed to create embedded NATS server", "error", err)
-		return "", nil, fmt.Errorf("Failed to create embedded NATS server: %w", err)
+		return "", nil, nil, fmt.Errorf("Failed to create embedded NATS server: %w", err)
 	}
 
 	// Wait for the server to be ready with longer timeout
@@ -50,7 +50,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
 	case <-time.After(maxWait):
 		// Log more detailed error
 		log.Error("NATS server timeout", "data_path", natsDataPath)
-		return "", nil, fmt.Errorf("timeout waiting for NATS server after %v", maxWait)
+		return "", nil, nil, fmt.Errorf("timeout waiting for NATS server after %v", maxWait)
 	}
 	
 	// Get server info for debugging
@@ -59,7 +59,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
 	// Get client connection from the embedded server
 	nc, err := natsServer.Client()
 	if err != nil {
-		return "", nil, fmt.Errorf("Failed to get NATS client: %w", err)
+		return "", nil, nil, fmt.Errorf("Failed to get NATS client: %w", err)
 	}
 
 	cleanup := func() {
@@ -67,7 +67,7 @@ func StartEmbeddedNATS(ctx context.Context) (string, func(), error) {
 		natsServer.Close()
 	}
 
-	return nc.ConnectedUrl(), cleanup, nil
+	return nc.ConnectedUrl(), nc, cleanup, nil
 }
 
 // StartS3GatewaySupervised starts the nats-s3 gateway as a supervised process.

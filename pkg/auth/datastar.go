@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/nats-io/nkeys"
 	"github.com/starfederation/datastar-go/datastar"
-	pkgweb "github.com/joeblew999/infra/pkg/web"
+	"github.com/joeblew999/infra/web/templates"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -44,16 +44,18 @@ func NewDatastarHandlers(authService *WebAuthnService, webDir string) *DatastarH
 	// Load fragment templates if webDir is provided
 	if webDir != "" {
 		globPattern := webDir + "/fragments/*.html"
-		fmt.Printf("DEBUG: Loading templates from: %s\n", globPattern)
-		
+		log.Debug("Loading auth fragment templates", "pattern", globPattern)
+
 		// Use ParseGlob but don't panic if no files found (for container deployments)
 		if _, err := templates.ParseGlob(globPattern); err != nil {
-			fmt.Printf("DEBUG: No fragment templates found at %s (continuing without auth fragments)\n", globPattern)
-		}
-		
-		// Debug: List loaded templates
-		for _, tmpl := range templates.Templates() {
-			fmt.Printf("DEBUG: Loaded template: %s\n", tmpl.Name())
+			log.Debug("No fragment templates found, continuing without auth fragments", "pattern", globPattern, "error", err)
+		} else {
+			// Log loaded templates in debug mode
+			templateNames := make([]string, 0, len(templates.Templates()))
+			for _, tmpl := range templates.Templates() {
+				templateNames = append(templateNames, tmpl.Name())
+			}
+			log.Debug("Loaded auth fragment templates", "templates", templateNames)
 		}
 	}
 	
@@ -95,14 +97,14 @@ func (h *DatastarHandlers) ServeIndex(w http.ResponseWriter, r *http.Request) {
 // renderTemplate is a helper for rendering templates with nav/footer
 func (h *DatastarHandlers) renderTemplate(w http.ResponseWriter, currentPath, templateName string) {
 	// Get centralized navigation and footer
-	navHTML, err := pkgweb.RenderNav(currentPath)
+	navHTML, err := templates.RenderNav(currentPath)
 	if err != nil {
 		log.Error("Error rendering navigation", "error", err)
 		http.Error(w, "Failed to render navigation", http.StatusInternalServerError)
 		return
 	}
 	
-	footerHTML, err := pkgweb.RenderFooter()
+	footerHTML, err := templates.RenderFooter()
 	if err != nil {
 		log.Error("Error rendering footer", "error", err)
 		footerHTML = ""
@@ -254,7 +256,7 @@ func (h *DatastarHandlers) LoginStart(w http.ResponseWriter, r *http.Request) {
 func (h *DatastarHandlers) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token    string      `json:"token"`
-		Response interface{} `json:"response"`
+		Response any `json:"response"`
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -288,7 +290,7 @@ func (h *DatastarHandlers) RegisterFinish(w http.ResponseWriter, r *http.Request
 func (h *DatastarHandlers) LoginFinish(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Token    string      `json:"token"`
-		Response interface{} `json:"response"`
+		Response any `json:"response"`
 	}
 	
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

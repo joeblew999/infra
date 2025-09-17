@@ -64,7 +64,7 @@ func (s *Service) Stop() error {
 }
 
 // RenderEmail renders an email template with the provided data
-func (s *Service) RenderEmail(templateName string, data interface{}) (string, error) {
+func (s *Service) RenderEmail(templateName string, data any) (string, error) {
 	html, err := s.renderer.RenderTemplate(templateName, data)
 	if err != nil {
 		log.Error("Failed to render email template", "template", templateName, "error", err)
@@ -145,8 +145,8 @@ func (s *Service) HasTemplate(name string) bool {
 }
 
 // GetCacheStats returns cache statistics
-func (s *Service) GetCacheStats() map[string]interface{} {
-	return map[string]interface{}{
+func (s *Service) GetCacheStats() map[string]any {
+	return map[string]any{
 		"cache_size":    s.renderer.GetCacheSize(),
 		"cache_enabled": s.renderer.options.EnableCache,
 		"templates":     len(s.renderer.templates),
@@ -154,7 +154,7 @@ func (s *Service) GetCacheStats() map[string]interface{} {
 }
 
 // Health checks the health of the MJML service
-func (s *Service) Health() map[string]interface{} {
+func (s *Service) Health() map[string]any {
 	templates := s.renderer.ListTemplates()
 	
 	status := "healthy"
@@ -162,7 +162,7 @@ func (s *Service) Health() map[string]interface{} {
 		status = "unhealthy"
 	}
 	
-	return map[string]interface{}{
+	return map[string]any{
 		"status":         status,
 		"templates":      len(templates),
 		"template_names": templates,

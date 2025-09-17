@@ -2,10 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/joeblew999/infra/pkg/bento"
-	"github.com/joeblew999/infra/pkg/caddy"
+	caddycmd "github.com/joeblew999/infra/pkg/caddy/cmd"
 	"github.com/joeblew999/infra/pkg/conduit"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
@@ -13,31 +12,15 @@ import (
 	"github.com/joeblew999/infra/pkg/nats"
 	"github.com/joeblew999/infra/pkg/pocketbase"
 	"github.com/spf13/cobra"
-	
+
+	"github.com/joeblew999/infra/pkg/workflows" // New import
+
 	// Import deck package to ensure all deck commands are loaded
 	_ "github.com/joeblew999/infra/pkg/deck/cmd"
 )
 
-var caddyCmd = &cobra.Command{
-	Use:                "caddy",
-	Short:              "Run caddy commands with environment-aware SSL",
-	DisableFlagParsing: true,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		// Check for special environment-aware commands
-		if len(args) > 0 {
-			switch args[0] {
-			case "proxy":
-				return handleCaddyProxy(args[1:])
-			case "serve":
-				return handleCaddyServe(args[1:])
-			default:
-				// Pass through to regular caddy binary
-				return ExecuteBinary(config.GetCaddyBinPath(), args...)
-			}
-		}
-		return ExecuteBinary(config.GetCaddyBinPath(), args...)
-	},
-}
+// caddyCmd is now delegated to the caddy package
+var caddyCmd = caddycmd.GetCaddyCmd()
 
 var tofuCmd = &cobra.Command{
 	Use:                "tofu",
@@ -75,81 +58,38 @@ var flyctlCmd = &cobra.Command{
 	},
 }
 
-// handleCaddyProxy handles environment-aware reverse proxy setup
-func handleCaddyProxy(args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("usage: caddy proxy <from-port> <to-port>")
-	}
-	
-	fromPort, err := strconv.Atoi(args[0])
-	if err != nil {
-		return fmt.Errorf("invalid from-port: %v", err)
-	}
-	
-	toPort, err := strconv.Atoi(args[1])
-	if err != nil {
-		return fmt.Errorf("invalid to-port: %v", err)
-	}
-	
-	runner := caddy.New()
-	from := fmt.Sprintf(":%d", fromPort)
-	to := fmt.Sprintf("localhost:%d", toPort)
-	
-	if config.ShouldUseHTTPS() {
-		from = fmt.Sprintf("localhost:%d", fromPort)
-	}
-	
-	var url string
-	if config.ShouldUseHTTPS() {
-		url = fmt.Sprintf("https://localhost:%d", fromPort)
-	} else {
-		url = fmt.Sprintf("http://localhost:%d", fromPort)
-	}
-	
-	fmt.Printf("Starting Caddy reverse proxy: %s -> %s (HTTPS: %v)\n", 
-		from, to, config.ShouldUseHTTPS())
-	fmt.Printf("🌐 URL: %s\n", url)
-	
-	return runner.ReverseProxy(from, to)
+// generateCmd is the parent command for all code generation tools
+var generateCmd = &cobra.Command{
+	Use:   "generate",
+	Short: "Code generation tools",
+	Long:  `Tools for generating various types of code within the infra project.`,
 }
 
-// handleCaddyServe handles environment-aware file server
-func handleCaddyServe(args []string) error {
-	root := "."
-	port := 8080
-	
-	if len(args) > 0 {
-		root = args[0]
-	}
-	if len(args) > 1 {
-		var err error
-		port, err = strconv.Atoi(args[1])
-		if err != nil {
-			return fmt.Errorf("invalid port: %v", err)
+// gozeroApiGenerateCmd generates go-zero API code
+var gozeroApiGenerateCmd = &cobra.Command{
+	Use:   "gozero-api",
+	Short: "Generate go-zero API code",
+	Long:  `Generate go-zero API code from a .api definition file.`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		apiFile, _ := cmd.Flags().GetString("api")
+		outputDir, _ := cmd.Flags().GetString("output")
+
+		if apiFile == "" {
+			return fmt.Errorf("missing --api flag")
 		}
-	}
-	
-	runner := caddy.New()
-	
-	var url string
-	if config.ShouldUseHTTPS() {
-		url = fmt.Sprintf("https://localhost:%d", port)
-	} else {
-		url = fmt.Sprintf("http://localhost:%d", port)
-	}
-	
-	fmt.Printf("Starting Caddy file server: %s on port %d (HTTPS: %v)\n", 
-		root, port, config.ShouldUseHTTPS())
-	fmt.Printf("🌐 URL: %s\n", url)
-	
-	return runner.FileServer(root, port)
+		if outputDir == "" {
+			return fmt.Errorf("missing --output flag")
+		}
+
+		return workflows.GenerateGoZeroCode(cmd.Context(), apiFile, outputDir)
+	},
 }
 
 func newMoxCmd() *cobra.Command {
 	moxCmd := &cobra.Command{
 		Use:   "mox",
 		Short: "Manage mox mail server",
-		Long:  `Commands for managing the mox mail server:
+		Long: `Commands for managing the mox mail server:
 
   start          Start the mox mail server
   init           Initialize the mox mail server`,
@@ -198,7 +138,6 @@ func newMoxInitCmd() *cobra.Command {
 	return initCmd
 }
 
-
 // cliCmd is the parent command for all CLI tool wrappers
 var cliCmd = &cobra.Command{
 	Use:   "cli",
@@ -223,6 +162,7 @@ BINARY TOOLS:
   nats             NATS messaging operations
   bento            Stream processing operations
   mox              Mox mail server
+  utm              UTM virtual machine management (macOS)
 
 Use "infra cli [tool] --help" for detailed information about each tool.`,
 }
@@ -238,42 +178,46 @@ func RunCLI() {
 	cliCmd.AddCommand(nats.NewNATSCmd())
 	cliCmd.AddCommand(bento.NewBentoCmd())
 	cliCmd.AddCommand(newMoxCmd())
-	
-	cliCmd.AddCommand(newMoxCmd())
-	
+
 	// Add development/build workflow tools
 	AddWorkflowsToCLI(cliCmd)
-	
+
 	// Add AI commands
 	AddAIToCLI(cliCmd)
-	
+
 	// Add debug and translation tools
 	AddDebugToCLI(cliCmd)
 	AddTokiToCLI(cliCmd)
-	
+
 	// Add deck presentation tools
 	AddDeckToCLI(cliCmd)
-	
+
 	// Add font management tools
 	AddFontToCLI(cliCmd)
-	
+
 	// Add go-zero microservices tools
 	AddGoZeroToCLI(cliCmd)
-	
+
 	// Add xtemplate web development tools
 	AddXTemplateToCLI(cliCmd)
-	
+
+	// Add UTM virtual machine management
+	AddUTMToCLI(cliCmd)
+
+	// Add goreman process supervision utilities
+	AddGoremanToCLI(cliCmd)
+
+	// Add generate command
+	cliCmd.AddCommand(generateCmd) // Add this line
+
 	// Add CLI parent command to root
 	rootCmd.AddCommand(cliCmd)
-	
+
 	// Keep essential management commands at root level
 	rootCmd.AddCommand(dep.Cmd)
 	rootCmd.AddCommand(config.Cmd)
-	
+
 	// Move these to cli namespace
 	cliCmd.AddCommand(pocketbase.Cmd)
 	cliCmd.AddCommand(conduit.Cmd)
-	
-	// Add deck visualization tools
-	AddDeckToCLI(cliCmd)
 }

@@ -218,8 +218,8 @@ func (w *WebAuthnService) CreateTestUser(username string) (*User, error) {
 }
 
 // FinishRegistrationFromJSON completes registration from JSON response
-func (w *WebAuthnService) FinishRegistrationFromJSON(token string, responseData interface{}) (*User, error) {
-	// Convert interface{} to JSON bytes and back to proper struct
+func (w *WebAuthnService) FinishRegistrationFromJSON(token string, responseData any) (*User, error) {
+	// Convert any to JSON bytes and back to proper struct
 	jsonBytes, err := json.Marshal(responseData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal response: %w", err)
@@ -239,8 +239,8 @@ func (w *WebAuthnService) FinishRegistrationFromJSON(token string, responseData 
 }
 
 // FinishLoginFromJSON completes login from JSON response
-func (w *WebAuthnService) FinishLoginFromJSON(token string, responseData interface{}) (*User, string, error) {
-	// Convert interface{} to JSON bytes and back to proper struct
+func (w *WebAuthnService) FinishLoginFromJSON(token string, responseData any) (*User, string, error) {
+	// Convert any to JSON bytes and back to proper struct
 	jsonBytes, err := json.Marshal(responseData)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to marshal response: %w", err)

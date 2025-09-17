@@ -20,7 +20,7 @@ func NewNATSCmd() *cobra.Command {
 All NATS CLI commands and flags are passed through directly.
 Examples:
   go run . nats server info
-  go run . nats stream list  
+  go run . nats stream list
   go run . nats consumer list
   go run . nats schema list
   go run . nats --help`,
@@ -35,7 +35,6 @@ Examples:
 		DisableFlagParsing: true,
 	}
 }
-
 
 // runNATSCommand executes the nats CLI with the given arguments
 func runNATSCommand(args ...string) error {

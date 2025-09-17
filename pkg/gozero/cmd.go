@@ -138,7 +138,7 @@ func (r *GoZeroRunner) runGoctl(operation string, args ...string) error {
 	
 	// Ensure goctl binary exists
 	if _, err := os.Stat(goctlPath); os.IsNotExist(err) {
-		return fmt.Errorf("goctl binary not found at %s - run 'infra dep local install goctl' first", goctlPath)
+		return fmt.Errorf("goctl binary not found at %s - run 'go run . dep install goctl' first", goctlPath)
 	}
 	
 	log.Info("Running goctl", "operation", operation, "args", args, "workdir", r.workDir)

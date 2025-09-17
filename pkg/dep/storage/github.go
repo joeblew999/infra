@@ -63,12 +63,12 @@ func (g *GitHub) UploadToPackages(owner, repo, binaryName, version, sourcePath s
 	return nil
 }
 
-// DownloadFromReleases downloads a binary from GitHub Releases
-// Uses platform-specific asset matching
+// DownloadFromReleases downloads a binary from GitHub Releases using direct HTTP
+// No authentication required - public releases only
 func (g *GitHub) DownloadFromReleases(owner, repo, releaseURL, destPath string, assets []AssetInfo) error {
-	// This is a fallback - since we don't have actual GitHub release assets yet
-	// for garble, we'll just proceed to build from source
-	return fmt.Errorf("no release assets found for %s/%s", owner, repo)
+	// TODO: Implement direct HTTP download from GitHub releases
+	// This should download public release assets without requiring GitHub CLI
+	return fmt.Errorf("direct GitHub releases download not implemented yet for %s/%s", owner, repo)
 }
 
 // DownloadFromPackages downloads a binary from GitHub Releases using GitHub CLI
@@ -155,18 +155,14 @@ func (g *GitHub) ensureGitHubCLI() error {
 		return nil // Already available
 	}
 
-	log.Info("GitHub CLI not found, installing it...")
-	
-	// Use the dep system to install GitHub CLI
-	// This creates a bootstrapping dependency but handles idempotency
-	cmd := exec.Command("go", "run", ".", "dep", "install", "gh")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to install GitHub CLI: %w", err)
+	// Check if we can find the gh binary at the configured path first
+	ghPath := config.Get("gh")
+	if _, err := os.Stat(ghPath); err == nil {
+		log.Info("GitHub CLI found at configured path", "path", ghPath)
+		return nil // Binary exists at expected location
 	}
-	
-	log.Info("GitHub CLI installed successfully")
-	return nil
+
+	// During dep installation or preflight, we can't auto-install to avoid circular dependency
+	// Just return a helpful error message
+	return fmt.Errorf("GitHub CLI not available at %s - run 'go run . dep install gh' first", ghPath)
 }

@@ -2,7 +2,9 @@ package bento
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/spf13/cobra"
@@ -20,9 +22,48 @@ func NewBentoCmd() *cobra.Command {
 		newStopCmd(),
 		newConfigCmd(),
 		newStatusCmd(),
+		newRunCmd(), // Add the new run command
 	)
 
 	return bentoCmd
+}
+
+func newRunCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "run",
+		Short: "Run a bento data pipeline from a file",
+		Long:  `Executes a bento data pipeline defined in a YAML or JSON file.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			pipelineFile, _ := cmd.Flags().GetString("pipeline-file")
+			if pipelineFile == "" {
+				return fmt.Errorf("missing --pipeline-file flag")
+			}
+
+			pipelineConfig, err := os.ReadFile(pipelineFile)
+			if err != nil {
+				return fmt.Errorf("failed to read pipeline file: %w", err)
+			}
+
+			port, err := strconv.Atoi(config.GetBentoPort())
+			if err != nil {
+				return fmt.Errorf("invalid bento port: %w", err)
+			}
+
+			service, err := NewService(port) // Use config for port
+			if err != nil {
+				return fmt.Errorf("failed to create bento service: %w", err)
+			}
+
+			if err := service.RunPipeline(pipelineConfig); err != nil {
+				return fmt.Errorf("failed to run pipeline: %w", err)
+			}
+
+			fmt.Println("Bento pipeline executed successfully")
+			return nil
+		},
+	}
+	cmd.Flags().String("pipeline-file", "", "Path to the pipeline definition file (YAML or JSON)")
+	return cmd
 }
 
 func newStartCmd() *cobra.Command {

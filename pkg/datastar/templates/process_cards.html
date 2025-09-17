@@ -1,0 +1,78 @@
+<div id="processes-dashboard" class="space-y-6" data-last-updated="{{.LastUpdatedISO}}">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-semibold flex items-center gap-2">
+                🔍 Process Monitor
+            </h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Supervised tasks managed by Goreman. Actions apply instantly; updates stream live.
+            </p>
+        </div>
+        <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+            Last updated: {{.LastUpdatedDisplay}}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/40 p-4 text-center">
+            <div class="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</div>
+            <div class="mt-1 text-2xl font-semibold text-gray-900 dark:text-white">{{.Summary.Total}}</div>
+        </div>
+        <div class="rounded-lg border border-emerald-200 dark:border-emerald-700 bg-emerald-50/70 dark:bg-emerald-900/30 p-4 text-center">
+            <div class="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Running</div>
+            <div class="mt-1 text-2xl font-semibold text-emerald-700 dark:text-emerald-200">{{.Summary.Running}}</div>
+        </div>
+        <div class="rounded-lg border border-rose-200 dark:border-rose-700 bg-rose-50/70 dark:bg-rose-900/30 p-4 text-center">
+            <div class="text-xs uppercase tracking-wide text-rose-700 dark:text-rose-300">Stopped</div>
+            <div class="mt-1 text-2xl font-semibold text-rose-700 dark:text-rose-200">{{.Summary.Stopped}}</div>
+        </div>
+    </div>
+
+    {{if .HasProcesses}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {{range .Processes}}
+        <div class="rounded-lg border {{.CardBorderClass}} bg-white dark:bg-gray-800/60 p-4 shadow-sm">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-base font-semibold text-gray-900 dark:text-white">{{.Name}}</div>
+                    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        <span>{{.Indicator}}</span>
+                        <span>{{.Uptime}}</span>
+                    </div>
+                </div>
+                <span class="px-2 py-1 text-xs font-semibold rounded-full {{.StatusBadgeClass}}">{{.StatusLabel}}</span>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+                {{if .ShowStart}}
+                <button class="px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                        data-on-click="@post('{{.StartAction}}')">
+                    ▶️ Start
+                </button>
+                {{end}}
+
+                {{if .ShowStop}}
+                <button class="px-3 py-1.5 text-xs font-semibold rounded-md bg-rose-600 text-white hover:bg-rose-700 transition"
+                        data-on-click="@post('{{.StopAction}}')">
+                    ⏹️ Stop
+                </button>
+                {{end}}
+
+                {{if .ShowRestart}}
+                <button class="px-3 py-1.5 text-xs font-semibold rounded-md bg-amber-600 text-white hover:bg-amber-700 transition"
+                        data-on-click="@post('{{.RestartAction}}')">
+                    🔄 Restart
+                </button>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+    </div>
+    {{else}}
+    <div class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-10 text-center">
+        <div class="text-2xl mb-2">📭</div>
+        <div class="text-sm text-gray-600 dark:text-gray-400">No supervised processes detected.</div>
+        <div class="text-xs text-gray-500 dark:text-gray-500 mt-2">Use the CLI or start services to populate this list.</div>
+    </div>
+    {{end}}
+</div>

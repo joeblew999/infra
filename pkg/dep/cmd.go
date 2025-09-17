@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/joeblew999/infra/pkg/dep/collection"
+	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // Cmd is the main dep command that gets added to the root CLI
@@ -21,7 +24,7 @@ var Cmd = &cobra.Command{
 Local Development:
   dep local:install   - Install/sync binaries to configured versions
   dep local:remove    - Remove installed binary
-  dep local:list      - List configured binaries  
+  dep local:list      - List configured binaries
   dep local:status    - Show installation status
   dep local:sync      - Sync all binaries to configured versions
 
@@ -33,7 +36,10 @@ Collection (Multi-platform):
 Distribution:
   dep release:binary  - Publish binary to managed releases
   dep release:all     - Publish all collected binaries
-  dep release:status  - Show release status`,
+  dep release:status  - Show release status
+
+Maintenance:
+  dep clean           - Clean all dependency system data and caches`,
 }
 
 // ========================
@@ -56,9 +62,36 @@ var collectCmd = &cobra.Command{
 
 // Release Phase
 var releaseCmd = &cobra.Command{
-	Use:   "release", 
+	Use:   "release",
 	Short: "Binary distribution and releases",
 	Long:  `Commands for publishing collected binaries to managed releases.`,
+}
+
+// Clean Command
+var cleanCmd = &cobra.Command{
+	Use:   "clean",
+	Short: "Clean all dependency system data and caches",
+	Long: `Clean all dependency system data and caches to debug issues.
+
+This command removes:
+  • .dep/ directory (local binaries)
+  • .dep/.collection/ directory (multi-platform collections)
+  • Generated code (pkg/config/binaries_gen.go)
+
+Use this when the dependency system is having unexplained issues.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("🧹 Cleaning dependency system...")
+
+		if err := cleanDepSystem(); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ Error cleaning dependency system: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("✅ Dependency system cleaned successfully!")
+		fmt.Println("\n🔄 Next steps:")
+		fmt.Println("  • Run 'go run . dep local install' to reinstall binaries")
+		fmt.Println("  • Generated code will be recreated on next service startup")
+	},
 }
 
 // ========================
@@ -283,6 +316,7 @@ func init() {
 	Cmd.AddCommand(localCmd)
 	Cmd.AddCommand(collectCmd)
 	Cmd.AddCommand(releaseCmd)
+	Cmd.AddCommand(cleanCmd)
 	
 	// Local phase commands
 	localCmd.AddCommand(localInstallCmd)
@@ -412,5 +446,46 @@ func formatBytesForCollection(bytes int64) string {
 		exp++
 	}
 	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
+}
+
+// ========================
+// Clean Command Implementation
+// ========================
+
+func cleanDepSystem() error {
+	depPath := config.GetDepPath()
+
+	// 1. Remove .dep directory (local binaries)
+	fmt.Printf("🗑️  Removing .dep directory: %s\n", depPath)
+	if err := os.RemoveAll(depPath); err != nil {
+		log.Error("Failed to remove .dep directory", "path", depPath, "error", err)
+		return fmt.Errorf("failed to remove .dep directory: %w", err)
+	}
+	fmt.Printf("✅ .dep directory removed\n")
+
+	// 2. Remove .dep/.collection directory (multi-platform collections)
+	// This is actually inside .dep so it's already removed, but let's be explicit
+	collectionPath := filepath.Join(depPath, ".collection")
+	fmt.Printf("🗑️  Collection directory: %s (already removed with .dep)\n", collectionPath)
+
+	// 3. Remove generated code
+	generatedFile := "pkg/config/binaries_gen.go"
+	fmt.Printf("🗑️  Removing generated code: %s\n", generatedFile)
+	if err := os.Remove(generatedFile); err != nil {
+		if !os.IsNotExist(err) {
+			log.Error("Failed to remove generated file", "file", generatedFile, "error", err)
+			return fmt.Errorf("failed to remove generated file %s: %w", generatedFile, err)
+		}
+		fmt.Printf("📝 Generated file %s did not exist\n", generatedFile)
+	} else {
+		fmt.Printf("✅ Generated code removed\n")
+	}
+
+	// 4. Clean any Go build caches related to dep system (optional)
+	fmt.Printf("🗑️  Cleaning Go build cache for dep system\n")
+	// Note: We don't clean the entire Go cache, just let Go handle it naturally
+	fmt.Printf("✅ Build cache cleanup deferred to Go\n")
+
+	return nil
 }
 

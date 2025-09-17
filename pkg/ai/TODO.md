@@ -1,6 +1,8 @@
 # TODO
 
-Each Gateway on Users phpnes has an AI Client, and we need to expose our MCP to them.
+Each Gateway on Users phones has an AI Client, and we need to expose our MCP to them.
+
+go-zero seems the best way to do htis.
 
 The docs are in ./.docs/Mobile_MCP.md
 

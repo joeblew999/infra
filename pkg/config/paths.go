@@ -3,6 +3,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,27 +13,27 @@ const (
 	// Environment variables
 	// NOTE: ALL environment variables MUST be declared as constants here and used throughout the code.
 	// This ensures centralized management and prevents hardcoded strings scattered across functions.
-	EnvVarEnvironment   = "ENVIRONMENT"
-	EnvVarFlyAppName    = "FLY_APP_NAME"
-	EnvVarKoDockerRepo  = "KO_DOCKER_REPO"
+	EnvVarEnvironment  = "ENVIRONMENT"
+	EnvVarFlyAppName   = "FLY_APP_NAME"
+	EnvVarKoDockerRepo = "KO_DOCKER_REPO"
 
 	// Registry and image constants
 	// NOTE: All registry URLs and image names are constants to prevent obfuscation
-	FlyRegistryURL           = "registry.fly.io/"
-	FlyRegistryFallback      = "registry.fly.io/infra"
-	KoLocalRegistry          = "ko.local"
-	ChainguardStaticImage    = "cgr.dev/chainguard/static:latest"
-	ChainguardGoImage        = "cgr.dev/chainguard/go:latest"
+	FlyRegistryURL        = "registry.fly.io/"
+	FlyRegistryFallback   = "registry.fly.io/infra"
+	KoLocalRegistry       = "ko.local"
+	ChainguardStaticImage = "cgr.dev/chainguard/static:latest"
+	ChainguardGoImage     = "cgr.dev/chainguard/go:latest"
 
 	// Platform constants
 	PlatformLinuxAmd64 = "linux/amd64"
 	PlatformLinuxArm64 = "linux/arm64"
 
 	// Configuration file names
-	KoConfigFileName = ".ko.yaml"
+	KoConfigFileName      = ".ko.yaml"
 	LoggingConfigFileName = "infra.log.json"
-	ChangelogFileName = "CHANGELOG.md"
-	ClaudeConfigFileName = "claude.json"
+	ChangelogFileName     = "CHANGELOG.md"
+	ClaudeConfigFileName  = "claude.json"
 
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
@@ -56,20 +57,20 @@ const (
 	LogsDir = ".logs"
 
 	// NATS stream constants
-	NATSLogStreamName   = "LOGS"
+	NATSLogStreamName    = "LOGS"
 	NATSLogStreamSubject = "logs.app"
-	
+
 	// NATS cluster configuration
 	NATSClusterNameLocal      = "infra-local"
 	NATSClusterNameProduction = "infra-cluster"
 	NATSDockerImage           = "nats:alpine"
-	
+
 	// NATS cluster ports for local development (separate from embedded NATS on 4222)
-	NATSClusterBasePort = 4322  // Starting port for client connections (4322, 4323, 4324...)
+	NATSClusterBasePort  = 4322 // Starting port for client connections (4322, 4323, 4324...)
 	NATSClusterBaseCPort = 6222 // Cluster port - SAME for all nodes (standard NATS clustering)
-	NATSClusterBaseHTTP = 8322  // Starting port for HTTP monitoring (8322, 8323, 8324...)
+	NATSClusterBaseHTTP  = 8322 // Starting port for HTTP monitoring (8322, 8323, 8324...)
 	NATSClusterNodeCount = 6    // Number of nodes in cluster
-	
+
 	// Fly.io regions for NATS cluster deployment are defined in GetFlyRegions() function
 
 	// DocsDir is the directory containing Markdown documentation files.
@@ -98,15 +99,16 @@ const (
 	BinaryDepNameFormat = "%s_%s_%s"
 
 	// Navigation paths for web interface
-	HomeHTTPPath    = "/"
-	MetricsHTTPPath = "/metrics"
-	LogsHTTPPath    = "/logs"
-	StatusHTTPPath  = "/status"
+	HomeHTTPPath      = "/"
+	MetricsHTTPPath   = "/metrics"
+	LogsHTTPPath      = "/logs"
+	StatusHTTPPath    = "/status"
+	ProcessesHTTPPath = "/processes"
 
 	// Environment detection
-	EnvProduction = "production"
+	EnvProduction  = "production"
 	EnvDevelopment = "development"
-	
+
 	// Binary constants are now auto-generated in binaries_gen.go
 	// Run `go generate` to regenerate from dep.json
 )
@@ -137,6 +139,9 @@ func GetDataPath() string {
 	if IsProduction() {
 		// In Fly.io production, use the mounted volume at /app/.data
 		return "/app/.data"
+	}
+	if IsTestEnvironment() {
+		return GetTestDataPath()
 	}
 	return filepath.Join(".", DataDir)
 }
@@ -297,7 +302,7 @@ func GetKoDockerRepo() string {
 	if repo := os.Getenv(EnvVarKoDockerRepo); repo != "" {
 		return repo
 	}
-	
+
 	if IsProduction() {
 		// Use Fly.io registry in production (assuming FLY_APP_NAME is set)
 		if appName := os.Getenv(EnvVarFlyAppName); appName != "" {
@@ -305,7 +310,7 @@ func GetKoDockerRepo() string {
 		}
 		return FlyRegistryFallback // fallback
 	}
-	
+
 	// Local development - use local registry or ko.local
 	return KoLocalRegistry
 }
@@ -387,6 +392,11 @@ func GetNATSPort() string {
 	return "4222"
 }
 
+// GetNATSURL returns the client connection URL for the embedded NATS server.
+func GetNATSURL() string {
+	return fmt.Sprintf("nats://localhost:%s", GetNATSPort())
+}
+
 // GetNatsS3Port returns the default port for the NATS S3 gateway.
 func GetNatsS3Port() string {
 	return "5222"
@@ -412,7 +422,7 @@ func GetDockerImageName() string {
 	return "infra-local"
 }
 
-// GetDockerImageTag returns the default Docker image tag 
+// GetDockerImageTag returns the default Docker image tag
 func GetDockerImageTag() string {
 	return "latest"
 }
@@ -457,8 +467,8 @@ func GetNATSClusterNodeCount() int {
 // GetNATSClusterPortsForNode returns the client, cluster, and HTTP ports for a specific node
 func GetNATSClusterPortsForNode(nodeIndex int) (client, cluster, http int) {
 	return NATSClusterBasePort + nodeIndex,
-		   NATSClusterBaseCPort, // Same cluster port for all nodes
-		   NATSClusterBaseHTTP + nodeIndex
+		NATSClusterBaseCPort, // Same cluster port for all nodes
+		NATSClusterBaseHTTP + nodeIndex
 }
 
 // GetXTemplatePath returns the absolute path to the xtemplate templates directory
@@ -545,4 +555,32 @@ func GetMoxConfigPath() string {
 // GetMoxBinPath returns the absolute path to the mox binary.
 func GetMoxBinPath() string {
 	return Get(BinaryMox)
+}
+
+// GetAPIPath returns the absolute path to the API services directory.
+func GetAPIPath() string {
+	return filepath.Join(".", "api")
+}
+
+// GetAPIServices returns a list of API service directories that should be code generated.
+// This can be overridden by environment variables or configuration files.
+func GetAPIServices() []string {
+	// Allow override via environment variable (comma-separated)
+	if envServices := os.Getenv("API_SERVICES"); envServices != "" {
+		services := strings.Split(envServices, ",")
+		var trimmed []string
+		for _, service := range services {
+			if s := strings.TrimSpace(service); s != "" {
+				trimmed = append(trimmed, s)
+			}
+		}
+		return trimmed
+	}
+
+	// Default services - these can be discovered or configured
+	return []string{
+		"api/deck",
+		"api/fast",
+		"api/testservice",
+	}
 }

@@ -154,7 +154,7 @@ func (r *Renderer) LoadTemplatesFromDir(dir string) error {
 }
 
 // RenderTemplate renders a template with the given data to HTML
-func (r *Renderer) RenderTemplate(name string, data interface{}) (string, error) {
+func (r *Renderer) RenderTemplate(name string, data any) (string, error) {
 	r.mu.RLock()
 	tmpl, exists := r.templates[name]
 	r.mu.RUnlock()
@@ -291,7 +291,7 @@ func (r *Renderer) GetCacheSize() int {
 }
 
 // createCacheKey creates a deterministic cache key based on template name and data content
-func (r *Renderer) createCacheKey(name string, data interface{}) (string, error) {
+func (r *Renderer) createCacheKey(name string, data any) (string, error) {
 	// Serialize data to JSON for consistent hashing
 	dataBytes, err := json.Marshal(data)
 	if err != nil {

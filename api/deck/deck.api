@@ -13,6 +13,7 @@ type GenerateDeckRequest {
 	Style       string `json:"style,optional,default=clean"` // clean, minimal, detailed
 	Width       int    `json:"width,optional,default=10"` // deck width
 	Height      int    `json:"height,optional,default=6"` // deck height
+// This is a test comment
 }
 
 type GenerateDeckResponse {

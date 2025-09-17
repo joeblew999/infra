@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/nats-io/nats.go"
+
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/goreman"
 )
@@ -14,6 +16,7 @@ import (
 type Service struct {
 	manager *goreman.Manager
 	config  *ServiceConfig
+	natsConn  *nats.Conn
 }
 
 // ServiceConfig defines service configuration
@@ -24,13 +27,17 @@ type ServiceConfig struct {
 }
 
 // NewService creates a new Conduit service
-func NewService() *Service {
+func NewService(nc *nats.Conn) *Service {
+	manager := goreman.NewManager()
+	manager.SetNATSConn(nc)
+
 	return &Service{
-		manager: goreman.NewManager(),
+		manager: manager,
 		config: &ServiceConfig{
 			WorkingDir: ".",
 			Timeout:    30 * time.Second,
 		},
+		natsConn: nc,
 	}
 }
 

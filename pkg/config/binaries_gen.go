@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-09-12 11:10:54.123173 +0700 +07 m=+0.001152126
+// Generated at 2025-09-17 13:45:51.092706 +0700 +07 m=+0.001997293
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -18,9 +18,9 @@ const (
 	BinaryBun = "bun" // Fast JavaScript runtime, package manager, and bundler
 	BinaryClaude = "claude" // Claude Code CLI for AI-powered development assistance
 	BinaryNats = "nats" // CLI for NATS messaging system and JetStream management
-	BinaryLitestream = "litestream" // SQLite replication and disaster recovery tool (CGO-free fork)
-	BinaryDeckTools = "deck-tools" // Deck.sh presentation tools and utilities
-	BinaryZig = "zig" // General-purpose programming language and toolchain for optimal software
+	BinaryNatsServer = "nats-server" // NATS Server is a simple, high performance open source messaging system.
+	BinaryNatsTop = "nats-top" // A top-like tool for monitoring NATS servers.
+	BinaryLitestream = "litestream" // SQLite replication and disaster recovery tool
 	BinaryToki = "toki" // Multi-language translation tool with pluralization support
 	BinaryGoose = "goose" // AI-powered software development agent for complex tasks
 	BinaryGs = "gs" // Manage stacked Git branches for systematic development workflows
@@ -29,9 +29,9 @@ const (
 	BinaryTinygo = "tinygo" // Go compiler for microcontrollers and WebAssembly
 	BinaryXtemplate = "xtemplate" // HTML/template-based hypertext preprocessor and rapid web development server
 	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
-	BinaryProcessCompose = "process-compose" // Process orchestration and management tool with YAML configuration
 	BinaryNatsS3 = "nats-s3" // S3 gateway for NATS JetStream Object Store
 	BinaryMox = "mox" // Modern secure mail server with automatic HTTPS, DMARC, and webmail
+	BinaryUtm = "utm" // Full-featured system emulator and virtual machine host for macOS
 )
 
 // AllBinaryNames returns all available binary names from dep.json
@@ -47,9 +47,9 @@ func AllBinaryNames() []string {
 		BinaryBun,
 		BinaryClaude,
 		BinaryNats,
+		BinaryNatsServer,
+		BinaryNatsTop,
 		BinaryLitestream,
-		BinaryDeckTools,
-		BinaryZig,
 		BinaryToki,
 		BinaryGoose,
 		BinaryGs,
@@ -58,9 +58,9 @@ func AllBinaryNames() []string {
 		BinaryTinygo,
 		BinaryXtemplate,
 		BinaryGoctl,
-		BinaryProcessCompose,
 		BinaryNatsS3,
 		BinaryMox,
+		BinaryUtm,
 	}
 }
 

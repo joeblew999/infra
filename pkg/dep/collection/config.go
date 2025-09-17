@@ -2,8 +2,11 @@ package collection
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/joeblew999/infra/pkg/config"
 )
@@ -31,13 +34,60 @@ type Config struct {
 	VerifySignatures bool `json:"verify_signatures"`
 }
 
+// getGitOwner attempts to get the git owner from git config or environment
+func getGitOwner() string {
+	// Try environment variable first
+	if owner := os.Getenv("GIT_OWNER"); owner != "" {
+		return owner
+	}
+
+	// Try git config user.name
+	if cmd := exec.Command("git", "config", "user.name"); cmd != nil {
+		if output, err := cmd.Output(); err == nil {
+			if owner := strings.TrimSpace(string(output)); owner != "" {
+				return owner
+			}
+		}
+	}
+
+	// Try remote.origin.url to extract owner
+	if cmd := exec.Command("git", "config", "--get", "remote.origin.url"); cmd != nil {
+		if output, err := cmd.Output(); err == nil {
+			url := strings.TrimSpace(string(output))
+			// Parse GitHub URL to extract owner
+			// https://github.com/owner/repo.git or git@github.com:owner/repo.git
+			if strings.Contains(url, "github.com") {
+				if strings.HasPrefix(url, "git@") {
+					// git@github.com:owner/repo.git
+					parts := strings.Split(url, ":")
+					if len(parts) > 1 {
+						repoPath := strings.TrimSuffix(parts[1], ".git")
+						if pathParts := strings.Split(repoPath, "/"); len(pathParts) > 0 {
+							return pathParts[0]
+						}
+					}
+				} else if strings.HasPrefix(url, "https://") {
+					// https://github.com/owner/repo.git
+					parts := strings.Split(strings.TrimPrefix(url, "https://github.com/"), "/")
+					if len(parts) > 0 {
+						return parts[0]
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback to hardcoded value
+	return "joeblew999"
+}
+
 // DefaultConfig returns the default configuration
 func DefaultConfig() *Config {
 	return &Config{
 		CollectionDir:   filepath.Join(config.GetDepPath(), ".collection"),
 		PlatformMatrix: []string{
 			"darwin-amd64",
-			"darwin-arm64", 
+			"darwin-arm64",
 			"linux-amd64",
 			"linux-arm64",
 			"windows-amd64",
@@ -45,7 +95,7 @@ func DefaultConfig() *Config {
 		},
 		ConcurrentLimit:  4,
 		ManagedRepo:      "infra-binaries",
-		ManagedOwner:     "joeblew999", // TODO: Get from git config or env
+		ManagedOwner:     getGitOwner(),
 		ReleasePrefix:    "",
 		PreferManaged:    true,
 		FallbackChain:    []string{"managed", "original", "cache"},

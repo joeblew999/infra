@@ -673,7 +673,7 @@ func (h *HealthChecker) determineOverallHealth(report *HealthReport) string {
 	return "degraded"
 }
 
-func (h *HealthChecker) logf(format string, args ...interface{}) {
+func (h *HealthChecker) logf(format string, args ...any) {
 	if h.verbose {
 		log.Info(fmt.Sprintf(format, args...))
 	}

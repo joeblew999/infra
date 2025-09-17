@@ -60,3 +60,4 @@ func GetRuntimeGitBranch() string {
 	}
 	return ""
 }
+

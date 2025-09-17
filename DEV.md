@@ -3,7 +3,6 @@
 Development instructions are in the `agents/` folder:
 
 - **agents/AGENT_golang.md** - Go development and API compatibility system
-- **agents/AGENT_taskfile.md** - Taskfile patterns
 - **agents/AGENT_datastar.md** - DataStar web interface  
 - **agents/AGENT_datastarui.md** - DataStar UI components
 

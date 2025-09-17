@@ -172,26 +172,10 @@ async function checkSessionStatus() {
   }
 }
 
-// Test user creation
-async function createTestUser() {
-  const username = document.getElementById('username').value || 'testuser';
-  
-  try {
-    const response = await fetch('/test/create-user', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({username: username})
-    });
-    
-    const result = await response.json();
-    if (response.ok) {
-      document.getElementById('log').textContent = `Test user '${result.username}' created successfully! You can now manage credentials.`;
-    } else {
-      document.getElementById('log').textContent = `Error: ${result.message || 'Failed to create test user'}`;
-    }
-  } catch (error) {
-    document.getElementById('log').textContent = `Error: ${error.message}`;
-  }
+// Test user creation - DISABLED FOR SECURITY
+// Use DataStar register flow instead
+function createTestUser() {
+  document.getElementById('log').textContent = 'Test user creation disabled for security. Use "Register New Passkey" instead.';
 }
 
 // Logout

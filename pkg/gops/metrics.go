@@ -5,53 +5,51 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/nats-io/nats.go"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
-	"github.com/shirou/gopsutil/v3/mem"
 
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// SystemMetrics represents the overall system metrics collected from a server.
+// SystemMetrics represents basic system metrics without CGO dependencies
 type SystemMetrics struct {
-	ServerID  string `json:"server_id"`
-	Timestamp string `json:"timestamp"`
-	CPU       CPU    `json:"cpu"`
-	Memory    Memory `json:"memory"`
-	Disk      Disk   `json:"disk"`
+	ServerID  string       `json:"server_id"`
+	Timestamp string       `json:"timestamp"`
+	Runtime   RuntimeStats `json:"runtime"`
 }
 
-// CPU represents CPU usage metrics.
-type CPU struct {
-	Percent float64 `json:"percent"`
+// RuntimeStats represents Go runtime statistics
+type RuntimeStats struct {
+	NumGoroutines int     `json:"num_goroutines"`
+	NumCPU        int     `json:"num_cpu"`
+	MemAlloc      uint64  `json:"mem_alloc_mb"`
+	MemTotal      uint64  `json:"mem_total_mb"`
+	MemSys        uint64  `json:"mem_sys_mb"`
+	NumGC         uint32  `json:"num_gc"`
+	GOOS          string  `json:"goos"`
+	GOARCH        string  `json:"goarch"`
 }
 
-// Memory represents memory usage metrics.
-type Memory struct {
-	TotalMB   uint64  `json:"total_mb"`
-	UsedMB    uint64  `json:"used_mb"`
-	UsedPercent float64 `json:"used_percent"`
-}
-
-// Disk represents disk usage metrics, keyed by path (e.g., "/").
-type Disk struct {
-	// Key is the mount point (e.g., "/")
-	MountPoints map[string]DiskUsage `json:"mount_points"`
-}
-
-// DiskUsage represents usage statistics for a single disk mount point.
-type DiskUsage struct {
-	TotalGB   uint64  `json:"total_gb"`
-	UsedGB    uint64  `json:"used_gb"`
-	UsedPercent float64 `json:"used_percent"`
-}
-
-// GetSystemMetrics collects and returns current system metrics.
+// GetSystemMetrics collects basic system metrics using only Go runtime (no CGO)
 func GetSystemMetrics() (SystemMetrics, error) {
-	metrics := SystemMetrics{}
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	metrics := SystemMetrics{
+		Timestamp: time.Now().Format(time.RFC3339),
+		Runtime: RuntimeStats{
+			NumGoroutines: runtime.NumGoroutine(),
+			NumCPU:        runtime.NumCPU(),
+			MemAlloc:      m.Alloc / (1024 * 1024),
+			MemTotal:      m.TotalAlloc / (1024 * 1024),
+			MemSys:        m.Sys / (1024 * 1024),
+			NumGC:         m.NumGC,
+			GOOS:          runtime.GOOS,
+			GOARCH:        runtime.GOARCH,
+		},
+	}
 
 	// Server ID
 	hostname, err := os.Hostname()
@@ -60,45 +58,12 @@ func GetSystemMetrics() (SystemMetrics, error) {
 	}
 	metrics.ServerID = hostname
 
-	// Timestamp
-	metrics.Timestamp = time.Now().Format(time.RFC3339)
-
-	// CPU
-	cpuPercents, err := cpu.Percent(time.Second, false) // Average CPU over 1 second
-	if err != nil {
-		return metrics, fmt.Errorf("failed to get CPU percent: %w", err)
-	}
-	if len(cpuPercents) > 0 {
-		metrics.CPU.Percent = cpuPercents[0]
-	}
-
-	// Memory
-	vMem, err := mem.VirtualMemory()
-	if err != nil {
-		return metrics, fmt.Errorf("failed to get virtual memory info: %w", err)
-	}
-	metrics.Memory.TotalMB = vMem.Total / (1024 * 1024)
-	metrics.Memory.UsedMB = vMem.Used / (1024 * 1024)
-	metrics.Memory.UsedPercent = vMem.UsedPercent
-
-	// Disk
-	metrics.Disk.MountPoints = make(map[string]DiskUsage)
-	diskUsage, err := disk.Usage("/") // Root filesystem
-	if err != nil {
-		return metrics, fmt.Errorf("failed to get disk usage for /: %w", err)
-	}
-	metrics.Disk.MountPoints["/"] = DiskUsage{
-		TotalGB:   diskUsage.Total / (1024 * 1024 * 1024),
-		UsedGB:    diskUsage.Used / (1024 * 1024 * 1024),
-		UsedPercent: diskUsage.UsedPercent,
-	}
-
 	return metrics, nil
 }
 
-// StartMetricCollection starts a goroutine to periodically collect and publish system metrics to NATS.
+// StartMetricCollection starts metric collection using only Go runtime stats (CGO-free)
 func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Duration) {
-	log.Info("Starting metric collection", "interval", interval)
+	log.Info("Starting simple metric collection (CGO-free)", "interval", interval)
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -112,12 +77,12 @@ func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Dur
 	for {
 		select {
 		case <-ctx.Done():
-			log.Info("Metric collection stopped")
+			log.Info("Simple metric collection stopped")
 			return
 		case <-ticker.C:
 			metrics, err := GetSystemMetrics()
 			if err != nil {
-				log.Error("Failed to collect system metrics", "error", err)
+				log.Error("Failed to collect simple system metrics", "error", err)
 				continue
 			}
 
@@ -132,7 +97,7 @@ func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Dur
 				log.Error("Failed to publish metrics to NATS", "topic", topic, "error", err)
 				continue
 			}
-			log.Debug("Metrics published", "topic", topic, "server_id", hostname)
+			log.Debug("Simple metrics published", "topic", topic, "server_id", hostname)
 		}
 	}
 }

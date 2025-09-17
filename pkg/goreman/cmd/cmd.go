@@ -1,15 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
 	"text/tabwriter"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/nats-io/nats.go"
+	"github.com/spf13/cobra"
 )
 
 // PsCmd shows running processes
@@ -21,9 +24,9 @@ var PsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		watch, _ := cmd.Flags().GetBool("watch")
 		if watch {
-			watchProcesses()
+			watchProcesses(cmd)
 		} else {
-			showProcesses()
+			showProcesses(cmd)
 		}
 	},
 }
@@ -36,11 +39,22 @@ var StartCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		processName := args[0]
-		if err := goreman.Start(processName); err != nil {
-			log.Error("Failed to start process", "name", processName, "error", err)
+		ctx := cmd.Context()
+		resp, err := sendProcessCommand(ctx, "start", processName)
+		if err != nil {
+			log.Warn("Remote start failed, falling back to local manager", "error", err)
+			if err := goreman.Start(processName); err != nil {
+				log.Error("Failed to start process", "name", processName, "error", err)
+				os.Exit(1)
+			}
+			fmt.Printf("✅ Started process: %s\n", processName)
+			return
+		}
+		if !resp.Success {
+			log.Error("Failed to start process", "name", processName, "error", resp.Message)
 			os.Exit(1)
 		}
-		fmt.Printf("✅ Started process: %s\n", processName)
+		fmt.Println("✅", resp.Message)
 	},
 }
 
@@ -52,11 +66,22 @@ var StopCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		processName := args[0]
-		if err := goreman.Stop(processName); err != nil {
-			log.Error("Failed to stop process", "name", processName, "error", err)
+		ctx := cmd.Context()
+		resp, err := sendProcessCommand(ctx, "stop", processName)
+		if err != nil {
+			log.Warn("Remote stop failed, falling back to local manager", "error", err)
+			if err := goreman.Stop(processName); err != nil {
+				log.Error("Failed to stop process", "name", processName, "error", err)
+				os.Exit(1)
+			}
+			fmt.Printf("🛑 Stopped process: %s\n", processName)
+			return
+		}
+		if !resp.Success {
+			log.Error("Failed to stop process", "name", processName, "error", resp.Message)
 			os.Exit(1)
 		}
-		fmt.Printf("🛑 Stopped process: %s\n", processName)
+		fmt.Println("🛑", resp.Message)
 	},
 }
 
@@ -68,11 +93,22 @@ var RestartCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		processName := args[0]
-		if err := goreman.Restart(processName); err != nil {
-			log.Error("Failed to restart process", "name", processName, "error", err)
+		ctx := cmd.Context()
+		resp, err := sendProcessCommand(ctx, "restart", processName)
+		if err != nil {
+			log.Warn("Remote restart failed, falling back to local manager", "error", err)
+			if err := goreman.Restart(processName); err != nil {
+				log.Error("Failed to restart process", "name", processName, "error", err)
+				os.Exit(1)
+			}
+			fmt.Printf("🔄 Restarted process: %s\n", processName)
+			return
+		}
+		if !resp.Success {
+			log.Error("Failed to restart process", "name", processName, "error", resp.Message)
 			os.Exit(1)
 		}
-		fmt.Printf("🔄 Restarted process: %s\n", processName)
+		fmt.Println("🔄", resp.Message)
 	},
 }
 
@@ -105,7 +141,7 @@ var ServicesCmd = &cobra.Command{
 			fmt.Println("💡 Services register themselves when their packages are imported")
 			return
 		}
-		
+
 		fmt.Println("🔧 Available Services:")
 		for _, service := range services {
 			fmt.Printf("   • %s\n", service)
@@ -114,9 +150,42 @@ var ServicesCmd = &cobra.Command{
 	},
 }
 
-func showProcesses() {
-	status := goreman.GetAllStatus()
-	
+func showProcesses(cmd *cobra.Command) {
+	ctx := cmd.Context()
+	status, err := fetchRemoteStatuses(ctx)
+	if err != nil {
+		log.Warn("Failed to fetch remote process status", "error", err)
+		status = goreman.GetAllStatus()
+	}
+
+	renderProcessTable(status)
+}
+
+func watchProcesses(cmd *cobra.Command) {
+	fmt.Println("👀 Watching processes (Press Ctrl+C to exit)")
+	fmt.Println()
+
+	for {
+		// Clear screen
+		fmt.Print("\033[2J\033[H")
+
+		// Show timestamp
+		fmt.Printf("🕒 Last updated: %s\n\n", time.Now().Format("15:04:05"))
+
+		// Show processes
+		status, err := fetchRemoteStatuses(cmd.Context())
+		if err != nil {
+			log.Warn("Failed to fetch remote process status", "error", err)
+			status = goreman.GetAllStatus()
+		}
+		renderProcessTable(status)
+
+		// Wait before refresh
+		time.Sleep(2 * time.Second)
+	}
+}
+
+func renderProcessTable(status map[string]string) {
 	if len(status) == 0 {
 		fmt.Println("📭 No supervised processes found")
 		fmt.Println("💡 Use 'infra supervised' to start the demo or register processes")
@@ -126,23 +195,18 @@ func showProcesses() {
 	fmt.Println("🔍 Supervised Process Status")
 	fmt.Println()
 
-	// Create table writer
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-	
-	// Header
 	fmt.Fprintln(w, "NAME\tSTATUS\tINDICATOR")
 	fmt.Fprintln(w, "----\t------\t---------")
 
-	// Process rows
 	for name, stat := range status {
 		indicator := getStatusIndicator(stat)
 		fmt.Fprintf(w, "%s\t%s\t%s\n", name, strings.ToUpper(stat), indicator)
 	}
-	
+
 	w.Flush()
 	fmt.Println()
-	
-	// Summary
+
 	running := 0
 	stopped := 0
 	for _, stat := range status {
@@ -152,27 +216,38 @@ func showProcesses() {
 			stopped++
 		}
 	}
-	
+
 	fmt.Printf("📊 Summary: %d total, %d running, %d stopped\n", len(status), running, stopped)
 }
 
-func watchProcesses() {
-	fmt.Println("👀 Watching processes (Press Ctrl+C to exit)")
-	fmt.Println()
-	
-	for {
-		// Clear screen
-		fmt.Print("\033[2J\033[H")
-		
-		// Show timestamp
-		fmt.Printf("🕒 Last updated: %s\n\n", time.Now().Format("15:04:05"))
-		
-		// Show processes
-		showProcesses()
-		
-		// Wait before refresh
-		time.Sleep(2 * time.Second)
+func fetchRemoteStatuses(ctx context.Context) (map[string]string, error) {
+	resp, err := sendProcessCommand(ctx, "status", "")
+	if err != nil {
+		return nil, err
 	}
+	if !resp.Success {
+		return nil, fmt.Errorf("%s", resp.Message)
+	}
+	if resp.Statuses == nil {
+		return map[string]string{}, nil
+	}
+	return resp.Statuses, nil
+}
+
+func sendProcessCommand(ctx context.Context, action, name string) (*goreman.ControlResponse, error) {
+	nc, err := connectNATS()
+	if err != nil {
+		return nil, err
+	}
+	defer nc.Drain()
+
+	cmd := goreman.ControlCommand{Action: action, Name: name}
+	return goreman.ExecuteCommand(ctx, nc, cmd)
+}
+
+func connectNATS() (*nats.Conn, error) {
+	addr := fmt.Sprintf("nats://127.0.0.1:%s", config.GetNATSPort())
+	return nats.Connect(addr)
 }
 
 func getStatusIndicator(status string) string {
@@ -190,6 +265,25 @@ func getStatusIndicator(status string) string {
 	default:
 		return "❓"
 	}
+}
+
+// GetGoremanCmd returns the main goreman command for CLI integration
+func GetGoremanCmd() *cobra.Command {
+	goremanCmd := &cobra.Command{
+		Use:   "goreman",
+		Short: "Process management and monitoring",
+		Long:  `Monitor and manage supervised processes via goreman`,
+	}
+
+	// Add subcommands
+	goremanCmd.AddCommand(PsCmd)
+	goremanCmd.AddCommand(StartCmd)
+	goremanCmd.AddCommand(StopCmd)
+	goremanCmd.AddCommand(RestartCmd)
+	goremanCmd.AddCommand(RegisterCmd)
+	goremanCmd.AddCommand(ServicesCmd)
+
+	return goremanCmd
 }
 
 func init() {

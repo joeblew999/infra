@@ -34,7 +34,7 @@ func TestTemplateFilesIntegration(t *testing.T) {
 	// Test each template type
 	testCases := []struct {
 		templateName string
-		data         interface{}
+		data         any
 		expectText   string
 	}{
 		{
@@ -148,7 +148,7 @@ func TestBusinessAnnouncementTemplate(t *testing.T) {
 		t.Skip("business_announcement template not found")
 	}
 
-	data := map[string]interface{}{
+	data := map[string]any{
 		"subject":                "Test Announcement",
 		"preview":                "Test preview text",
 		"company_name":           "Test Company",

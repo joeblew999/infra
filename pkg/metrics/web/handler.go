@@ -9,11 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/starfederation/datastar-go/datastar"
-	
+
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/metrics"
-	"github.com/joeblew999/infra/pkg/web"
+	"github.com/joeblew999/infra/web/templates"
 )
 
 //go:embed templates/metrics-cards.html
@@ -143,6 +144,25 @@ func formatDuration(d time.Duration) string {
 	}
 }
 
+// MetricsWebService provides web interface for metrics management
+type MetricsWebService struct{}
+
+// NewMetricsWebService creates a new metrics web service
+func NewMetricsWebService() *MetricsWebService {
+	return &MetricsWebService{}
+}
+
+// RegisterRoutes mounts all metrics routes on the provided router
+func (s *MetricsWebService) RegisterRoutes(r chi.Router) {
+	// Page routes
+	r.Get("/", HandleMetricsPage)
+
+	// API routes
+	r.Get("/api", HandleMetricsAPI)
+	r.Get("/api/history", HandleMetricsHistory)
+	r.Get("/api/stream", HandleMetricsStream)
+}
+
 // HandleMetricsPage renders the complete metrics page with navigation
 func HandleMetricsPage(w http.ResponseWriter, r *http.Request) {
 	// Parse the metrics page template
@@ -152,7 +172,7 @@ func HandleMetricsPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Execute the template to get the content HTML
 	var contentBuf strings.Builder
 	err = tmpl.Execute(&contentBuf, nil) // No data needed for the page template
@@ -161,15 +181,15 @@ func HandleMetricsPage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	// Use the centralized base page renderer
-	fullHTML, err := web.RenderBasePage("Metrics", contentBuf.String(), "/metrics")
+	fullHTML, err := templates.RenderBasePage("Metrics", contentBuf.String(), "/metrics")
 	if err != nil {
 		log.Error("Error rendering base page", "error", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(fullHTML))
 }

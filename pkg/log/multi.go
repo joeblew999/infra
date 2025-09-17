@@ -22,27 +22,28 @@ type MultiConfig struct {
 // Returns empty config if file doesn't exist or is invalid
 func LoadConfig() MultiConfig {
 	var cfg MultiConfig
-	
+
 	configFile := config.GetLoggingConfigFile()
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return cfg // Empty config = use defaults
 	}
-	
+
 	if err := json.Unmarshal(data, &cfg); err != nil {
 		return cfg // Invalid JSON = use defaults
 	}
-	
-	// Filter out NATS destinations when no NATS server available
-	// This prevents trying to connect to non-existent NATS
-	filtered := []DestinationConfig{}
-	for _, dest := range cfg.Destinations {
-		if dest.Type != "nats" {
-			filtered = append(filtered, dest)
+
+	for i := range cfg.Destinations {
+		dest := &cfg.Destinations[i]
+		if dest.Level == "" {
+			dest.Level = config.GetLoggingLevel()
+		}
+		if dest.Type == "nats" && dest.Subject == "" {
+			dest.Subject = config.NATSLogStreamSubject
 		}
 	}
-	
-	return MultiConfig{Destinations: filtered}
+
+	return cfg
 }
 
 // DestinationConfig defines a single log destination
@@ -52,6 +53,7 @@ type DestinationConfig struct {
 	Format  string `json:"format"`  // "json", "text"
 	Path    string `json:"path,omitempty"`    // for file destinations
 	Subject string `json:"subject,omitempty"` // for NATS
+	URL     string `json:"url,omitempty"`
 }
 
 // InitMultiLogger initializes multi-destination logging with slog-multi

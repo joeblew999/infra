@@ -57,7 +57,7 @@ func runSingleToolCheck(checker *deck.HealthChecker, toolName string, jsonOutput
 	
 	if err := checker.ValidateTool(toolName); err != nil {
 		if jsonOutput {
-			result := map[string]interface{}{
+			result := map[string]any{
 				"tool":    toolName,
 				"status":  "unhealthy",
 				"error":   err.Error(),
@@ -72,7 +72,7 @@ func runSingleToolCheck(checker *deck.HealthChecker, toolName string, jsonOutput
 	}
 
 	if jsonOutput {
-		result := map[string]interface{}{
+		result := map[string]any{
 			"tool":   toolName,
 			"status": "healthy",
 		}

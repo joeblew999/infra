@@ -4,7 +4,5 @@ import (
 	"embed"
 )
 
-//go:embed *
-//go:embed business/*
-//go:embed technical/*
+//go:embed * business technical examples
 var EmbeddedFS embed.FS

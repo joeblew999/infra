@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/starfederation/datastar-go/datastar"
 
 	"github.com/joeblew999/infra/pkg/log"
@@ -245,6 +246,22 @@ func getSourceColor(source string) string {
 	}
 }
 
+// LogsWebService provides web interface for logs management
+type LogsWebService struct{}
+
+// NewLogsWebService creates a new logs web service
+func NewLogsWebService() *LogsWebService {
+	return &LogsWebService{}
+}
+
+// RegisterRoutes mounts all logs routes on the provided router
+func (s *LogsWebService) RegisterRoutes(r chi.Router) {
+	// API routes
+	r.Get("/api/stream", StreamLogs)
+	r.Get("/api/config", HandleLogConfig)
+	r.Post("/api/config", HandleLogConfig)
+}
+
 // HandleLogConfig handles log configuration updates
 func HandleLogConfig(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
@@ -253,14 +270,14 @@ func HandleLogConfig(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(config)
 		return
 	}
-	
+
 	if r.Method == http.MethodPost {
 		var config LogStreamConfig
 		if err := json.NewDecoder(r.Body).Decode(&config); err != nil {
 			http.Error(w, "Invalid JSON", http.StatusBadRequest)
 			return
 		}
-		
+
 		// Here you could save the configuration to a file or database
 		// For now, just return success
 		w.Header().Set("Content-Type", "application/json")

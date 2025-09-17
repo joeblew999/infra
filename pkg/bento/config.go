@@ -23,7 +23,7 @@ type HTTPConfig struct {
 }
 
 type InputConfig struct {
-	Generate *GenerateConfig `yaml:"generate,omitempty"`
+	Generate *GenerateConfig `yaml:"generate,omitempty"`	
 	HTTP     *HTTPInputConfig `yaml:"http,omitempty"`
 	Kafka    *KafkaInputConfig `yaml:"kafka,omitempty"`
 }

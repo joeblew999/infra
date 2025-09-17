@@ -1,74 +1,47 @@
-# log
+# pkg/log
 
-We have wrapped the golang slog using the same interface.
+Lightweight wrapper around Go's `slog` that centralizes configuration and fans logs out to multiple destinations (stdout, files, NATS, etc.) using the `samber/slog-multi` adaptors.
 
-This is so that from here, so can use the slog adapters from: https://github.com/samber?tab=repositories
+## Defaults
 
-## Smart Defaults
+The active environment comes from either the `--env` flag or `ENVIRONMENT`. With no flag the CLI defaults to `production`, but internally we treat anything other than `production` as development (you can pass `--env=development` for clarity).
 
-`go run .` uses **JSON to stdout, info level** as the smart default. This provides structured logs that work everywhere without configuration.
+- **Development**: JSON logs to `stdout` at info level.
+- **Production**: JSON logs to `stdout` **and** NATS (`nats://localhost:4222`, subject `config.NATSLogStreamSubject`).
+- CLI overrides (level/format/destinations) are opt-in and only affect the current run:
+  ```bash
+  go run . --log-level=debug --log-format=text --log-output=stdout
+  go run . --log-output=stdout --log-output=file=.data/logs/infra.log
+  go run . --log-output=nats://localhost:4222?subject=logs.infra
+  ```
+  `--log-output` may be repeated. Supported forms: `stdout`, `stderr`, `file=/path/to.log`, `nats`, `nats:<subject>`, `nats=custom.subject`, or a full `nats://` URL with optional `?subject=` query. When the CLI specifies destinations, they replace environment defaults.
 
-## Configuration Override
+## Config File (optional)
 
-Create `infra.log.json` in the same directory to override the default. The file uses the same JSON structure as the multi-destination configuration.
+Place `infra.log.json` at the repo root to declare destinations in JSON. The schema matches `log.MultiConfig`:
 
-## Multi-Destination Logging
+```json
+{
+  "destinations": [
+    {"type": "stdout", "level": "info", "format": "json"},
+    {"type": "file", "format": "json", "path": ".data/logs/infra.log"},
+    {"type": "nats", "level": "info", "url": "nats://localhost:4222", "subject": "logs.infra"}
+  ]
+}
+```
 
-Instead of choosing just one destination for your logs, you can send them to several places at once.
+CLI flags take precedence over this file. When the file omits `level` or `format`, we fall back to the environment defaults above.
 
-https://github.com/samber/slog-multi lets you write the same log to multiple destinations simultaneously! This is perfect for your multi-device monitoring setup.
+## Runtime Reconfiguration
 
-## Runtime Configuration Support
+`log.ReconfigureMultiLogger(config)` swaps handlers without restarting the process, so long-running services can re-read configuration or respond to admin commands.
 
-Logs can be reconfigured at runtime without restarting the application. Use `ReconfigureMultiLogger(config)` to change destinations, formats, and levels on-the-fly.
+## Package Layout
 
-## Architecture
+- `log.go` – thin wrapper exposing `InitLogger` and convenience helpers (`Info`, `Warn`, etc.).
+- `multi.go` – multi-destination setup, CLI/config parsing, and NATS integration.
+- `runtime.go` – thread-safe setter/getter for the active logger, used by the reconfigure path.
 
-The package is split into three layers:
+## Downstream Usage
 
-- **log.go**: Original simple logger (backward compatible)
-- **multi.go**: Multi-destination logging with slog-multi + config loading
-- **runtime.go**: Runtime reconfiguration support
-
-## Adapters
-
-### NATS
-
-https://github.com/samber/slog-nats is for writing logs to Nats Jetstream, so we get a global view of everything in real time. Can even just use Nats Jetstream with no storage to make it fast.
-
-example: https://github.com/samber/slog-nats/blob/main/example/example.go
-
-### Quickwit
-
-https://github.com/samber/slog-quickwit is for writing logs to Quickwit, so we can search logs over time. Logs are stored in FS or S3 apparently.
-
-example: https://github.com/samber/slog-quickwit/blob/main/example/example.go
-
-## Configuration
-
-Configuration is JSON-based and supports multiple destination types with individual settings for each destination.
-
-Supported destination types:
-- stdout
-- stderr  
-- file
-- nats (planned)
-- quickwit (planned)
-
-Each destination can have its own:
-- Log level (debug, info, warn, error)
-- Output format (json, text)
-- Custom settings per destination type
-
-## Files
-
-- **infra.log.json**: Optional configuration file for multi-destination logging
-- **No file**: Uses smart default (JSON to stdout, info level)
-
-## Usage Patterns
-
-**Default**: `go run .` → JSON to stdout, info level
-**Configured**: Create `infra.log.json` → Multi-destination logging
-**Dynamic**: Use `ReconfigureMultiLogger()` for runtime changes
-
-All approaches maintain the same logging interface - no code changes needed when switching between configurations.
+Every package should import `github.com/joeblew999/infra/pkg/log` and use `log.Info`, `log.Warn`, etc. Supervised subprocesses (via `pkg/goreman`) stream their stdout/stderr back through this package, so all logs share the same routing and structure.

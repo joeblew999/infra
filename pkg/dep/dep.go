@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush, tinygo, xtemplate
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush, tinygo, xtemplate, utm
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -181,6 +181,20 @@ func Ensure(debug bool) error {
 	return EnsureWithCrossPlatform(debug, false)
 }
 
+// EnsureBinaries ensures a specific list of binaries are installed.
+func EnsureBinaries(names []string, debug bool) error {
+	log.Info("Ensuring specific binaries...", "binaries", names)
+
+	for _, name := range names {
+		if err := InstallBinary(name, debug); err != nil {
+			return fmt.Errorf("failed to install %s: %w", name, err)
+		}
+	}
+
+	log.Info("Specific binaries ensured.")
+	return nil
+}
+
 // EnsureWithCrossPlatform downloads and prepares all binaries with optional cross-platform support
 func EnsureWithCrossPlatform(debug, crossPlatform bool) error {
 	log.Info("Ensuring core binaries...")
@@ -294,6 +308,21 @@ func InstallBinaryWithCrossPlatform(name string, debug, crossPlatform bool) erro
 	case "github-release":
 		// Use new builders package for github-release
 		builder := builders.GitHubReleaseInstaller{}
+		// Convert AssetSelector types
+		var assets []builders.AssetSelector
+		for _, asset := range targetBinary.Assets {
+			assets = append(assets, builders.AssetSelector{
+				OS:    asset.OS,
+				Arch:  asset.Arch,
+				Match: asset.Match,
+			})
+		}
+		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
+			return err
+		}
+	case "macos-app":
+		// Use macOS app installer for DMG-based app installations
+		builder := builders.MacOSAppInstaller{}
 		// Convert AssetSelector types
 		var assets []builders.AssetSelector
 		for _, asset := range targetBinary.Assets {

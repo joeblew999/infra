@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -30,9 +31,22 @@ func TestGetTaskfilesPath(t *testing.T) {
 }
 
 func TestGetDataPath(t *testing.T) {
-	expected := filepath.Join(".", DataDir)
+	entChanged := os.Getenv("ENVIRONMENT")
+	defer os.Setenv("ENVIRONMENT", entChanged)
+
+	// default (development) should point at .data-test when running under go test
+	os.Unsetenv("ENVIRONMENT")
 	actual := GetDataPath()
+	expected := filepath.Join(".", TestDataDir)
 	if actual != expected {
-		t.Errorf("GetDataPath() = %s; want %s", actual, expected)
+		t.Errorf("GetDataPath() dev default = %s; want %s", actual, expected)
+	}
+
+	// production flag should force .data
+	os.Setenv("ENVIRONMENT", "production")
+	actual = GetDataPath()
+	const prodExpected = "/app/.data"
+	if actual != prodExpected {
+		t.Errorf("GetDataPath() production = %s; want %s", actual, prodExpected)
 	}
 }

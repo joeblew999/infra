@@ -61,14 +61,16 @@ type PlatformConfig struct {
 }
 
 type PathsConfig struct {
-	Dep         string `json:"dep"`
-	Bin         string `json:"bin"`
-	Data        string `json:"data"`
-	Docs        string `json:"docs"`
-	Taskfiles   string `json:"taskfiles"`
-	PocketBase  string `json:"pocketbase"`
-	NATS        string `json:"nats"`
-	Build       string `json:"build"`
+	Dep         string   `json:"dep"`
+	Bin         string   `json:"bin"`
+	Data        string   `json:"data"`
+	Docs        string   `json:"docs"`
+	Taskfiles   string   `json:"taskfiles"`
+	PocketBase  string   `json:"pocketbase"`
+	NATS        string   `json:"nats"`
+	Build       string   `json:"build"`
+	API         string   `json:"api"`
+	APIServices []string `json:"api_services"`
 }
 
 // PortsConfig contains port configuration for services
@@ -125,6 +127,8 @@ func GetConfig() Config {
 			PocketBase:  GetPocketBaseDataPath(),
 			NATS:        filepath.Join(GetDataPath(), "nats"),
 			Build:       GetBuildPath(),
+			API:         GetAPIPath(),
+			APIServices: GetAPIServices(),
 		},
 		Ports: PortsConfig{
 			WebServer:  "1337",

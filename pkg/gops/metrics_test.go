@@ -14,19 +14,13 @@ func TestGetSystemMetrics(t *testing.T) {
 	assert.NotEmpty(t, metrics.ServerID)
 	assert.NotEmpty(t, metrics.Timestamp)
 
-	// CPU assertions
-	assert.GreaterOrEqual(t, metrics.CPU.Percent, 0.0)
-
-	// Memory assertions
-	assert.Greater(t, metrics.Memory.TotalMB, uint64(0))
-	assert.GreaterOrEqual(t, metrics.Memory.UsedMB, uint64(0))
-	assert.GreaterOrEqual(t, metrics.Memory.UsedPercent, 0.0)
-
-	// Disk assertions
-	assert.NotEmpty(t, metrics.Disk.MountPoints)
-	rootDisk, ok := metrics.Disk.MountPoints["/"]
-	assert.True(t, ok, "Disk usage for root (/) should be present")
-	assert.Greater(t, rootDisk.TotalGB, uint64(0))
-	assert.GreaterOrEqual(t, rootDisk.UsedGB, uint64(0))
-	assert.GreaterOrEqual(t, rootDisk.UsedPercent, 0.0)
+	// Runtime assertions
+	assert.GreaterOrEqual(t, metrics.Runtime.NumGoroutines, 1)
+	assert.Greater(t, metrics.Runtime.NumCPU, 0)
+	assert.GreaterOrEqual(t, metrics.Runtime.MemAlloc, uint64(0))
+	assert.GreaterOrEqual(t, metrics.Runtime.MemTotal, uint64(0))
+	assert.GreaterOrEqual(t, metrics.Runtime.MemSys, uint64(0))
+	assert.GreaterOrEqual(t, metrics.Runtime.NumGC, uint32(0))
+	assert.NotEmpty(t, metrics.Runtime.GOOS)
+	assert.NotEmpty(t, metrics.Runtime.GOARCH)
 }

@@ -55,22 +55,9 @@ func (i *GoBuildInstaller) InstallWithPlatforms(name, repo, pkg, version string,
 		platforms = []Platform{{OS: runtime.GOOS, Arch: runtime.GOARCH}}
 	}
 
-	// For single platform builds, try GitHub Packages first
-	if len(platforms) == 1 && platforms[0].OS == runtime.GOOS && platforms[0].Arch == runtime.GOARCH {
-		installPath := filepath.Join(config.GetDepPath(), name)
-		if runtime.GOOS == "windows" {
-			installPath += ".exe"
-		}
-
-		// Phase 1: Try to download from GitHub Packages
-		githubStorage := storage.NewGitHub()
-		if err := githubStorage.DownloadFromPackages(owner, repoName, name, version, installPath); err == nil {
-			log.Info("Downloaded from GitHub Packages", "binary", name, "path", installPath)
-			return nil
-		}
-	}
-
-	log.Info("Binary not in GitHub Packages, building from source", "binary", name, "platforms", len(platforms))
+	// Skip GitHub Packages optimization for go-build sources
+	// These are meant to be built from source and don't require external dependencies
+	log.Info("Building from source (go-build)", "binary", name, "platforms", len(platforms))
 
 	// Phase 2: Build from source using git clone + go build
 	// Create isolated build directory in .dep/build

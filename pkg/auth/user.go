@@ -2,10 +2,10 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
+	"github.com/joeblew999/infra/pkg/log"
 )
 
 // User represents a WebAuthn user
@@ -88,10 +88,10 @@ func NewInMemoryUserStore() *InMemoryUserStore {
 func (s *InMemoryUserStore) GetUser(username string) (*User, error) {
 	user, exists := s.users[username]
 	if !exists {
-		fmt.Printf("DEBUG: User %s not found in store\n", username)
+		log.Debug("User not found in store", "username", username)
 		return nil, errors.New("user not found")
 	}
-	fmt.Printf("DEBUG: Found user %s with %d credentials\n", username, len(user.Credentials))
+	log.Debug("Found user with credentials", "username", username, "credential_count", len(user.Credentials))
 	return user, nil
 }
 
@@ -128,7 +128,7 @@ func (s *InMemoryUserStore) AddCredential(username string, credential *webauthn.
 		return errors.New("user not found")
 	}
 	user.AddCredential(credential)
-	fmt.Printf("DEBUG: Added credential for user %s, total credentials: %d\n", username, len(user.Credentials))
+	log.Debug("Added credential for user %s, total credentials: %d\n", username, len(user.Credentials))
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (s *InMemoryUserStore) RemoveCredential(username string, credentialID []byt
 	if !user.RemoveCredential(credentialID) {
 		return errors.New("credential not found")
 	}
-	fmt.Printf("DEBUG: Removed credential for user %s, remaining credentials: %d\n", username, len(user.Credentials))
+	log.Debug("Removed credential for user %s, remaining credentials: %d\n", username, len(user.Credentials))
 	return nil
 }
 
@@ -154,6 +154,6 @@ func (s *InMemoryUserStore) RemoveCredentialByIndex(username string, index int) 
 	if err := user.RemoveCredentialByIndex(index); err != nil {
 		return err
 	}
-	fmt.Printf("DEBUG: Removed credential at index %d for user %s, remaining credentials: %d\n", index, username, len(user.Credentials))
+	log.Debug("Removed credential at index %d for user %s, remaining credentials: %d\n", index, username, len(user.Credentials))
 	return nil
 }

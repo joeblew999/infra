@@ -172,3 +172,37 @@ output:
 
 	return os.WriteFile(configPath, []byte(config), 0644)
 }
+
+func (s *Service) RunPipeline(pipelineConfig []byte) error {
+	bentoPath, err := dep.Get("bento")
+	if err != nil {
+		return fmt.Errorf("bento binary not found: %w", err)
+	}
+
+	// Create a temporary file for the pipeline config
+	tmpFile, err := os.CreateTemp("", "bento-pipeline-*.yaml")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary pipeline file: %w", err)
+	}
+	defer os.Remove(tmpFile.Name()) // Clean up the temporary file
+
+	if _, err := tmpFile.Write(pipelineConfig); err != nil {
+		return fmt.Errorf("failed to write pipeline config to temporary file: %w", err)
+	}
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temporary pipeline file: %w", err)
+	}
+
+	// Execute bento with the temporary pipeline file
+	cmd := exec.Command(bentoPath, "run", tmpFile.Name())
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	log.Info("Running bento pipeline...")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("bento pipeline execution failed: %w", err)
+	}
+
+	log.Info("Bento pipeline completed.")
+	return nil
+}
