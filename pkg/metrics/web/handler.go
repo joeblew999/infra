@@ -40,6 +40,23 @@ type MetricsTemplateData struct {
 	Timestamp      int64
 }
 
+// MetricsWebService provides web interface for metrics management
+type MetricsWebService struct{}
+
+// NewMetricsWebService creates a new metrics web service
+func NewMetricsWebService() *MetricsWebService {
+	return &MetricsWebService{}
+}
+
+// RegisterRoutes mounts all metrics routes on the provided router
+func (s *MetricsWebService) RegisterRoutes(r chi.Router) {
+	// Metrics page routes
+	r.Get("/", HandleMetricsPage)
+	r.Get("/api", HandleMetricsAPI)
+	r.Get("/api/history", HandleMetricsHistory)
+	r.Get("/api/stream", HandleMetricsStream)
+}
+
 // HandleMetricsAPI returns current system metrics as JSON
 func HandleMetricsAPI(w http.ResponseWriter, r *http.Request) {
 	collector := metrics.GetCollector()
@@ -86,8 +103,8 @@ func HandleMetricsStream(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-r.Context().Done():
 			return
-		case metrics := <-metricsCh:
-			if err := sendMetricsUpdate(sse, &metrics); err != nil {
+		case m := <-metricsCh:
+			if err := sendMetricsUpdate(sse, &m); err != nil {
 				log.Error("Error sending metrics update", "error", err)
 				return
 			}
@@ -95,7 +112,39 @@ func HandleMetricsStream(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// sendMetricsUpdate formats and sends metrics data via SSE using templates
+// HandleMetricsPage renders the complete metrics page with navigation
+func HandleMetricsPage(w http.ResponseWriter, r *http.Request) {
+	// Parse the metrics page template
+	tmpl, err := template.New("metrics-page").Parse(metricsPageTemplate)
+	if err != nil {
+		log.Error("Error parsing metrics page template", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Execute the template to get the content HTML
+	var contentBuf strings.Builder
+	err = tmpl.Execute(&contentBuf, nil) // No data needed for the page template
+	if err != nil {
+		log.Error("Error executing metrics page template", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Use the centralized base page renderer
+	fullHTML, err := templates.RenderBasePage("Metrics", contentBuf.String(), "/metrics")
+	if err != nil {
+		log.Error("Error rendering base page", "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(fullHTML))
+}
+
+// Helper functions
+
 func sendMetricsUpdate(sse *datastar.ServerSentEventGenerator, m *metrics.SystemMetrics) error {
 	// Prepare template data
 	data := MetricsTemplateData{
@@ -129,7 +178,6 @@ func sendMetricsUpdate(sse *datastar.ServerSentEventGenerator, m *metrics.System
 	return sse.PatchElements(result.String())
 }
 
-// formatDuration formats a duration into a human-readable string
 func formatDuration(d time.Duration) string {
 	if d < time.Minute {
 		return fmt.Sprintf("%.0fs", d.Seconds())
@@ -142,54 +190,4 @@ func formatDuration(d time.Duration) string {
 		hours := int(d.Hours()) % 24
 		return fmt.Sprintf("%dd %dh", days, hours)
 	}
-}
-
-// MetricsWebService provides web interface for metrics management
-type MetricsWebService struct{}
-
-// NewMetricsWebService creates a new metrics web service
-func NewMetricsWebService() *MetricsWebService {
-	return &MetricsWebService{}
-}
-
-// RegisterRoutes mounts all metrics routes on the provided router
-func (s *MetricsWebService) RegisterRoutes(r chi.Router) {
-	// Page routes
-	r.Get("/", HandleMetricsPage)
-
-	// API routes
-	r.Get("/api", HandleMetricsAPI)
-	r.Get("/api/history", HandleMetricsHistory)
-	r.Get("/api/stream", HandleMetricsStream)
-}
-
-// HandleMetricsPage renders the complete metrics page with navigation
-func HandleMetricsPage(w http.ResponseWriter, r *http.Request) {
-	// Parse the metrics page template
-	tmpl, err := template.New("metrics-page").Parse(metricsPageTemplate)
-	if err != nil {
-		log.Error("Error parsing metrics page template", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Execute the template to get the content HTML
-	var contentBuf strings.Builder
-	err = tmpl.Execute(&contentBuf, nil) // No data needed for the page template
-	if err != nil {
-		log.Error("Error executing metrics page template", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	// Use the centralized base page renderer
-	fullHTML, err := templates.RenderBasePage("Metrics", contentBuf.String(), "/metrics")
-	if err != nil {
-		log.Error("Error rendering base page", "error", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(fullHTML))
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joeblew999/infra/pkg/auth"
 	"github.com/joeblew999/infra/pkg/caddy"
-	"github.com/joeblew999/infra/pkg/gops"
+	"github.com/joeblew999/infra/pkg/status"
 	"github.com/nats-io/nats.go"
 )
 
@@ -77,18 +77,18 @@ func checkPorts() error {
 	ports := []int{HTTPPort, CaddyPort}
 	
 	for _, port := range ports {
-		if !gops.IsPortAvailable(port) {
+		if !status.IsPortAvailable(port) {
 			if *forceFlag {
 				fmt.Printf("🔧 Killing process on port %d...\n", port)
-				if err := gops.KillProcessByPort(port); err != nil {
+				if err := status.KillProcessByPort(port); err != nil {
 					return fmt.Errorf("failed to kill process on port %d: %v", port, err)
 				}
 				// Wait a moment for the port to be released
-				if !gops.WaitForPortAvailable(port, 5*time.Second) {
+				if !status.WaitForPortAvailable(port, 5*time.Second) {
 					return fmt.Errorf("port %d still not available after cleanup", port)
 				}
 			} else {
-				pid := gops.GetProcessByPort(port)
+				pid := status.GetProcessByPort(port)
 				return fmt.Errorf("port %d is already in use (PID: %s). Use --force to kill existing processes", port, pid)
 			}
 		}

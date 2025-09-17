@@ -14,13 +14,13 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 	configweb "github.com/joeblew999/infra/pkg/config/web"
 	docsweb "github.com/joeblew999/infra/pkg/docs/web"
-	gopsweb "github.com/joeblew999/infra/pkg/gops/web"
 	goreman "github.com/joeblew999/infra/pkg/goreman"
 	goremanweb "github.com/joeblew999/infra/pkg/goreman/web"
 	"github.com/joeblew999/infra/pkg/log"
-	logsweb "github.com/joeblew999/infra/pkg/logs/web"
+	logsweb "github.com/joeblew999/infra/pkg/log/web"
 	"github.com/joeblew999/infra/pkg/metrics"
 	metricsweb "github.com/joeblew999/infra/pkg/metrics/web"
+	statusweb "github.com/joeblew999/infra/pkg/status/web"
 	"github.com/joeblew999/infra/web/demo"
 	"github.com/joeblew999/infra/web/templates"
 )
@@ -112,19 +112,21 @@ func (app *App) setupRoutes(devDocs bool) {
 		metricsWebService.RegisterRoutes(r)
 	})
 
+	// Status routes - using sub-router pattern
+	statusWebService := statusweb.NewStatusWebService()
+
 	// Logs routes - using sub-router pattern
 	logsWebService := logsweb.NewLogsWebService()
 	app.router.Route("/logs", func(r chi.Router) {
 		logsWebService.RegisterRoutes(r)
 	})
 
-	// System monitoring (gops) routes - share handlers between /status and /system
-	gopsWebService := gopsweb.NewGopsWebService()
+	// System monitoring routes - share handlers between /status and /system
 	app.router.Route(config.StatusHTTPPath, func(r chi.Router) {
-		gopsWebService.RegisterRoutes(r)
+		statusWebService.RegisterRoutes(r)
 	})
 	app.router.Route("/system", func(r chi.Router) {
-		gopsWebService.RegisterRoutes(r)
+		statusWebService.RegisterRoutes(r)
 	})
 
 	// Bento routes - using sub-router pattern

@@ -1,4 +1,4 @@
-package gops
+package status
 
 import (
 	"fmt"

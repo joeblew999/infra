@@ -16,7 +16,7 @@ import (
 	"github.com/joeblew999/infra/pkg/caddy"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/deck"
-	"github.com/joeblew999/infra/pkg/gops"
+	"github.com/joeblew999/infra/pkg/status"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/mox"
@@ -93,7 +93,7 @@ func Start(opts Options) error {
 	log.Info("🚀 Step 1: Starting web server (priority for health checks)...")
 
 	webPort := config.GetWebServerPort()
-	if !gops.IsPortAvailable(portToInt(webPort)) {
+	if !status.IsPortAvailable(portToInt(webPort)) {
 		err := fmt.Errorf("web server port %s is already in use", webPort)
 		log.Error("❌ Web server port in use. Please free the port and try again.", "port", webPort)
 		return err
@@ -221,13 +221,13 @@ func Shutdown() {
 	log.Info("🔍 Looking for main service process...")
 	mainProcessKilled := false
 
-	if err := gops.KillInfraGoRunProcess(); err == nil {
+	if err := status.KillInfraGoRunProcess(); err == nil {
 		log.Info("✅ Sent shutdown signal to infra go run process")
 		mainProcessKilled = true
 		time.Sleep(2 * time.Second)
 	}
 
-	if err := gops.KillProcessByName("infra"); err == nil {
+	if err := status.KillProcessByName("infra"); err == nil {
 		log.Info("✅ Sent graceful shutdown signal to infra binary process")
 		mainProcessKilled = true
 		time.Sleep(1 * time.Second)
@@ -253,7 +253,7 @@ func Shutdown() {
 
 	portsKilled := 0
 	for _, port := range ports {
-		if err := gops.KillProcessByPort(port); err == nil {
+		if err := status.KillProcessByPort(port); err == nil {
 			log.Info("✅ Stopped service on port", "port", port)
 			portsKilled++
 		}
@@ -274,7 +274,7 @@ func Shutdown() {
 
 	processesKilled := 0
 	for _, name := range processNames {
-		if err := gops.KillProcessByName(name); err == nil {
+		if err := status.KillProcessByName(name); err == nil {
 			log.Info("✅ Stopped process", "name", name)
 			processesKilled++
 		}

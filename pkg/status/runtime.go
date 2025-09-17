@@ -1,4 +1,4 @@
-package gops
+package status
 
 import (
 	"context"
@@ -13,13 +13,6 @@ import (
 	"github.com/joeblew999/infra/pkg/log"
 )
 
-// SystemMetrics represents basic system metrics without CGO dependencies
-type SystemMetrics struct {
-	ServerID  string       `json:"server_id"`
-	Timestamp string       `json:"timestamp"`
-	Runtime   RuntimeStats `json:"runtime"`
-}
-
 // RuntimeStats represents Go runtime statistics
 type RuntimeStats struct {
 	NumGoroutines int     `json:"num_goroutines"`
@@ -32,23 +25,35 @@ type RuntimeStats struct {
 	GOARCH        string  `json:"goarch"`
 }
 
-// GetSystemMetrics collects basic system metrics using only Go runtime (no CGO)
-func GetSystemMetrics() (SystemMetrics, error) {
+// GetRuntimeStats collects basic runtime statistics using only Go runtime (no CGO)
+func GetRuntimeStats() RuntimeStats {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 
-	metrics := SystemMetrics{
+	return RuntimeStats{
+		NumGoroutines: runtime.NumGoroutine(),
+		NumCPU:        runtime.NumCPU(),
+		MemAlloc:      m.Alloc / (1024 * 1024),
+		MemTotal:      m.TotalAlloc / (1024 * 1024),
+		MemSys:        m.Sys / (1024 * 1024),
+		NumGC:         m.NumGC,
+		GOOS:          runtime.GOOS,
+		GOARCH:        runtime.GOARCH,
+	}
+}
+
+// SimpleSystemMetrics represents basic system metrics without CGO dependencies
+type SimpleSystemMetrics struct {
+	ServerID  string       `json:"server_id"`
+	Timestamp string       `json:"timestamp"`
+	Runtime   RuntimeStats `json:"runtime"`
+}
+
+// GetSimpleSystemMetrics collects basic system metrics using only Go runtime (no CGO)
+func GetSimpleSystemMetrics() (SimpleSystemMetrics, error) {
+	metrics := SimpleSystemMetrics{
 		Timestamp: time.Now().Format(time.RFC3339),
-		Runtime: RuntimeStats{
-			NumGoroutines: runtime.NumGoroutine(),
-			NumCPU:        runtime.NumCPU(),
-			MemAlloc:      m.Alloc / (1024 * 1024),
-			MemTotal:      m.TotalAlloc / (1024 * 1024),
-			MemSys:        m.Sys / (1024 * 1024),
-			NumGC:         m.NumGC,
-			GOOS:          runtime.GOOS,
-			GOARCH:        runtime.GOARCH,
-		},
+		Runtime:   GetRuntimeStats(),
 	}
 
 	// Server ID
@@ -61,8 +66,8 @@ func GetSystemMetrics() (SystemMetrics, error) {
 	return metrics, nil
 }
 
-// StartMetricCollection starts metric collection using only Go runtime stats (CGO-free)
-func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Duration) {
+// StartSimpleMetricCollection starts metric collection using only Go runtime stats (CGO-free)
+func StartSimpleMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Duration) {
 	log.Info("Starting simple metric collection (CGO-free)", "interval", interval)
 
 	hostname, err := os.Hostname()
@@ -80,7 +85,7 @@ func StartMetricCollection(ctx context.Context, nc *nats.Conn, interval time.Dur
 			log.Info("Simple metric collection stopped")
 			return
 		case <-ticker.C:
-			metrics, err := GetSystemMetrics()
+			metrics, err := GetSimpleSystemMetrics()
 			if err != nil {
 				log.Error("Failed to collect simple system metrics", "error", err)
 				continue

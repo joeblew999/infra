@@ -1,8 +1,9 @@
-<h2 class="text-xl sm:text-2xl font-semibold mb-6">📊 System Metrics Dashboard</h2>
+<h2 class="text-xl sm:text-2xl font-semibold mb-6">📊 Historical Metrics & Trends</h2>
+<p class="text-gray-600 dark:text-gray-400 mb-6">Performance analytics and historical data visualization</p>
 
 <!-- Real-time Metrics Container -->
-<div id="metrics-container" 
-     data-on-load="@get('/api/metrics/stream')" 
+<div id="metrics-container"
+     data-on-load="@get('/metrics/api/stream')"
      class="space-y-6">
     <!-- Metrics data container that will be updated by SSE -->
     <div id="metrics-data">
