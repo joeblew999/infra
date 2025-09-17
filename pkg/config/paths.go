@@ -103,6 +103,7 @@ const (
 	MetricsHTTPPath   = "/metrics"
 	LogsHTTPPath      = "/logs"
 	StatusHTTPPath    = "/status"
+	ConfigHTTPPath    = "/config"
 	ProcessesHTTPPath = "/processes"
 
 	// Environment detection

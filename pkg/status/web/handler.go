@@ -12,7 +12,6 @@ import (
 	datastarlib "github.com/starfederation/datastar-go/datastar"
 
 	"github.com/joeblew999/infra/pkg/config"
-	infodatastar "github.com/joeblew999/infra/pkg/datastar"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/status"
 	"github.com/joeblew999/infra/web/templates"
@@ -122,7 +121,7 @@ func sendStatusSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
 
 	snapshot := mapStatusToTemplate(*systemStatus)
 
-	html, err := infodatastar.RenderStatusCards(snapshot)
+	html, err := RenderStatusCards(snapshot)
 	if err != nil {
 		return err
 	}
@@ -130,8 +129,8 @@ func sendStatusSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
 	return sse.PatchElements(html)
 }
 
-func mapStatusToTemplate(systemStatus status.SystemStatus) infodatastar.StatusTemplateData {
-	runtimeData := infodatastar.StatusRuntime{
+func mapStatusToTemplate(systemStatus status.SystemStatus) StatusTemplateData {
+	runtimeData := StatusRuntime{
 		Goroutines:     systemStatus.Runtime.NumGoroutines,
 		NumCPU:         systemStatus.Runtime.NumCPU,
 		HeapAlloc:      status.FormatBytes(systemStatus.HeapAllocBytes),
@@ -147,10 +146,10 @@ func mapStatusToTemplate(systemStatus status.SystemStatus) infodatastar.StatusTe
 		MemoryBarClass: pickMemoryBarClass(systemStatus.MemoryPercent),
 	}
 
-	services := make([]infodatastar.StatusService, len(systemStatus.Services))
+	services := make([]StatusService, len(systemStatus.Services))
 	for i, svc := range systemStatus.Services {
 		border, pill := serviceStyles(svc.Level)
-		services[i] = infodatastar.StatusService{
+		services[i] = StatusService{
 			Name:   svc.Name,
 			Status: svc.Status,
 			Detail: svc.Detail,
@@ -163,7 +162,7 @@ func mapStatusToTemplate(systemStatus status.SystemStatus) infodatastar.StatusTe
 
 	summary := buildSummary(systemStatus.Services)
 
-	return infodatastar.StatusTemplateData{
+	return StatusTemplateData{
 		LastUpdatedDisplay: systemStatus.Timestamp.Format("15:04:05"),
 		LastUpdatedISO:     systemStatus.Timestamp.Format(time.RFC3339),
 		SummaryIcon:        summary.Icon,

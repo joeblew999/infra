@@ -10,18 +10,17 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	datastarlib "github.com/starfederation/datastar-go/datastar"
+
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/web/templates"
 )
 
-//go:embed templates/config-home.html
-var configHomeHTML []byte
+//go:embed templates/config-page.html
+var configPageTemplate string
 
-//go:embed templates/env-status.html
-var envStatusHTML []byte
-
-//go:embed templates/secrets.html
-var secretsHTML []byte
+const configStreamInterval = 4 * time.Second
 
 // ConfigWebService provides web interface for configuration management
 type ConfigWebService struct {
@@ -38,15 +37,13 @@ func NewConfigWebService() *ConfigWebService {
 
 // RegisterRoutes mounts all config routes on the provided router
 func (s *ConfigWebService) RegisterRoutes(r chi.Router) {
-	// Configuration display routes
-	r.Get("/", s.handleConfigPage)
-	r.Get("/json", s.handleConfigJSON)
-	r.Get("/status", s.handleEnvStatus)
-	r.Get("/secrets", s.handleSecretsManagement)
+	// Config page routes
+	r.Get("/", HandleConfigPage)
+	r.Get("/api/stream", HandleConfigStream)
+	r.Get("/api/config", HandleConfigAPI)
 
-	// API routes
-	r.Get("/api/config", s.handleConfigAPI)
-	r.Get("/api/env-status", s.handleEnvStatusAPI)
+	// Legacy routes for backward compatibility
+	r.Get("/json", s.handleConfigJSON)
 	r.Get("/api/build", s.HandleBuildInfo)
 	r.Post("/api/secrets/set", s.handleSetSecret)
 }
@@ -127,10 +124,35 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 	}
 }
 
-// handleConfigPage serves the main configuration page
-func (s *ConfigWebService) handleConfigPage(w http.ResponseWriter, r *http.Request) {
-	cfg := config.GetConfig()
-	s.renderTemplate(w, configHomeHTML, "/config", "config-home", cfg)
+// HandleConfigPage renders the config page with the shared base layout.
+func HandleConfigPage(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.New("config-page").Parse(configPageTemplate)
+	if err != nil {
+		log.Error("error parsing config page template", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	var content strings.Builder
+	data := struct {
+		BasePath string
+	}{BasePath: config.ConfigHTTPPath}
+
+	if err := tmpl.Execute(&content, data); err != nil {
+		log.Error("error executing config page template", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	fullHTML, err := templates.RenderBasePage("Configuration", content.String(), config.ConfigHTTPPath)
+	if err != nil {
+		log.Error("error rendering base page", "error", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, _ = w.Write([]byte(fullHTML))
 }
 
 // handleConfigJSON serves configuration as JSON
@@ -140,22 +162,53 @@ func (s *ConfigWebService) handleConfigJSON(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(cfg)
 }
 
-// handleEnvStatus serves environment status page
-func (s *ConfigWebService) handleEnvStatus(w http.ResponseWriter, r *http.Request) {
-	envStatus := config.GetEnvStatus()
-	missing := config.GetMissingEnvVars()
-	
-	data := map[string]any{
-		"EnvStatus":   envStatus,
-		"MissingVars": missing,
+// Legacy handlers - these can be removed once migration to DataStar is complete
+
+// HandleConfigStream streams live config updates via DataStar SSE to the browser.
+func HandleConfigStream(w http.ResponseWriter, r *http.Request) {
+	sse := datastarlib.NewSSE(w, r)
+
+	if err := sendConfigSnapshot(sse); err != nil {
+		log.Error("error sending initial config snapshot", "error", err)
+		return
 	}
-	
-	s.renderTemplate(w, envStatusHTML, "/config/status", "env-status", data)
+
+	ticker := time.NewTicker(configStreamInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			if err := sendConfigSnapshot(sse); err != nil {
+				log.Error("error streaming config snapshot", "error", err)
+				return
+			}
+		}
+	}
 }
 
-// handleSecretsManagement serves secrets management interface
-func (s *ConfigWebService) handleSecretsManagement(w http.ResponseWriter, r *http.Request) {
-	s.renderTemplate(w, secretsHTML, "/config/secrets", "secrets", nil)
+// HandleConfigAPI is an HTTP handler for config endpoint
+func HandleConfigAPI(w http.ResponseWriter, r *http.Request) {
+	cfg := config.GetConfig()
+	envStatus := config.GetEnvStatus()
+	missingVars := config.GetMissingEnvVars()
+
+	response := map[string]any{
+		"config":      cfg,
+		"env_status":  envStatus,
+		"missing":     missingVars,
+		"all_set":     len(missingVars) == 0,
+		"timestamp":   time.Now().UTC(),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Error("Error encoding config data", "error", err)
+		http.Error(w, "Failed to encode config data", http.StatusInternalServerError)
+		return
+	}
 }
 
 // API handlers
@@ -282,4 +335,17 @@ func (s *ConfigWebService) HandleBuildInfo(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(buildInfo)
+}
+
+// Helper functions
+
+func sendConfigSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
+	snapshot := mapConfigToTemplate()
+
+	html, err := RenderConfigCards(snapshot)
+	if err != nil {
+		return err
+	}
+
+	return sse.PatchElements(html)
 }

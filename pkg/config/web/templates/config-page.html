@@ -1,0 +1,35 @@
+<div class="p-6 bg-white/90 dark:bg-gray-900/50 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-2">🛠️ Configuration Management</h1>
+        <p class="text-gray-600 dark:text-gray-400">
+            Live configuration viewer with real-time updates via DataStar
+        </p>
+    </div>
+
+    <!-- DataStar content area that will be updated -->
+    <div id="config-dashboard" data-star-merge>
+        <div class="flex items-center justify-center py-12">
+            <div class="text-center">
+                <div class="text-4xl mb-2">⏳</div>
+                <p class="text-gray-500 dark:text-gray-400">Loading configuration...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize DataStar SSE connection for live config updates
+document.addEventListener('DOMContentLoaded', function() {
+    // Connect to config stream
+    const eventSource = new EventSource('{{.BasePath}}/api/stream');
+
+    eventSource.addEventListener('datastar-merge', function(event) {
+        const data = JSON.parse(event.data);
+        document.getElementById('config-dashboard').outerHTML = data.selector;
+    });
+
+    eventSource.onerror = function(event) {
+        console.log('Config stream error:', event);
+    };
+});
+</script>
