@@ -1,4 +1,4 @@
-package datastar
+package web
 
 import (
 	"bytes"
@@ -52,7 +52,7 @@ var processCardsTemplate string
 // RenderProcessCards renders the live process dashboard partial for DataStar SSE updates.
 func RenderProcessCards(data ProcessTemplateData) (string, error) {
 	processCardsTplOnce.Do(func() {
-		processCardsTpl, processCardsTplErr = template.New("datastar-process-cards").Parse(processCardsTemplate)
+		processCardsTpl, processCardsTplErr = template.New("goreman-process-cards").Parse(processCardsTemplate)
 	})
 
 	if processCardsTplErr != nil {

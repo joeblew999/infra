@@ -17,6 +17,18 @@ func NewBentoWebService() *BentoWebService {
 
 // RegisterRoutes mounts all bento routes on the provided router
 func (s *BentoWebService) RegisterRoutes(r chi.Router) {
+	// Page route
+	r.Get("/playground", func(w http.ResponseWriter, r *http.Request) {
+		content, err := RenderPlaygroundPage()
+		if err != nil {
+			http.Error(w, "Failed to render Bento playground", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(content))
+	})
+
 	// API routes for bento functionality
 	r.Get("/api/builder", HandlePipelineBuilder)
 	r.Get("/api/templates", HandleGetTemplates)
@@ -28,7 +40,7 @@ func (s *BentoWebService) RegisterRoutes(r chi.Router) {
 func HandlePipelineBuilder(w http.ResponseWriter, r *http.Request) {
 	// Placeholder implementation - integrate with actual bento service
 	response := map[string]any{
-		"status": "success",
+		"status":  "success",
 		"builder": "Bento Pipeline Builder",
 		"version": "1.0.0",
 	}
@@ -61,7 +73,7 @@ func HandlePipelineValidate(w http.ResponseWriter, r *http.Request) {
 
 	// Placeholder implementation - integrate with actual bento validation
 	response := map[string]any{
-		"valid": true,
+		"valid":   true,
 		"message": "Pipeline configuration is valid",
 	}
 
@@ -80,8 +92,8 @@ func HandlePipelineExport(w http.ResponseWriter, r *http.Request) {
 	// Placeholder implementation - integrate with actual bento export
 	response := map[string]any{
 		"exported": true,
-		"format": "yaml",
-		"content": "# Bento pipeline configuration\ninput: {}\nprocessors: []\noutput: {}",
+		"format":   "yaml",
+		"content":  "# Bento pipeline configuration\ninput: {}\nprocessors: []\noutput: {}",
 	}
 
 	w.Header().Set("Content-Type", "application/json")

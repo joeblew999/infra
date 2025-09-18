@@ -14,8 +14,18 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/status"
-	"github.com/joeblew999/infra/web/templates"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
 )
+
+func init() {
+	templates.RegisterNavItem(templates.NavItem{
+		Href:  config.StatusHTTPPath,
+		Text:  "Status",
+		Icon:  "⚡",
+		Color: "gray",
+		Order: 90,
+	})
+}
 
 //go:embed templates/status-page.html
 var statusPageTemplate string

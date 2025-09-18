@@ -60,17 +60,6 @@ func (r *Renderer) RenderHomePage(w http.ResponseWriter, _ *http.Request) {
 	r.RenderPageContent(w, IndexHTML, "/", "Infrastructure Management System")
 }
 
-// RenderLogsPage renders the logs page
-func (r *Renderer) RenderLogsPage(w http.ResponseWriter, _ *http.Request) {
-	r.RenderPageContent(w, LogsHTML, "/logs", "Logs")
-}
-
-// RenderStatusPage renders the status page
-// RenderBentoPlaygroundPage renders the bento playground page
-func (r *Renderer) RenderBentoPlaygroundPage(w http.ResponseWriter, _ *http.Request) {
-	r.RenderPageContent(w, BentoPlaygroundHTML, "/bento-playground", "Bento Pipeline Builder")
-}
-
 // Render404Page renders the 404 error page
 func (r *Renderer) Render404Page(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusNotFound)

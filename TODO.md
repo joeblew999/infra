@@ -38,3 +38,5 @@ https://github.com/benbjohnson/litestream/releases/tag/v0.5.0-beta1 only has lin
 - they also have NATS Object Store integration, which is great for us. We need to get NATS running on fly properly in 6 regions.
 - https://github.com/corylanou/litestream-test might be useful for us. I made an issue to add NATS testing too.
 
+
+

@@ -1,0 +1,44 @@
+<section class="space-y-6">
+    <header class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-semibold text-gray-900 dark:text-white">🧩 XTemplate Development Server</h2>
+            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">File-based HTML server with live reload for rapid prototyping.</p>
+        </div>
+        <a href="{{.ProxyURL}}" class="px-4 py-2 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-sm transition-colors" target="_blank" rel="noopener">
+            Open Playground ↗
+        </a>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 bg-white/70 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Server Status</h3>
+            <dl class="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                <div class="flex justify-between"><dt>Template Directory</dt><dd class="font-mono">{{.TemplateDir}}</dd></div>
+                <div class="flex justify-between"><dt>Listen Address</dt><dd class="font-mono">{{.ListenAddr}}</dd></div>
+                <div class="flex justify-between"><dt>Binary Path</dt><dd class="font-mono">{{.BinaryPath}}</dd></div>
+            </dl>
+        </div>
+        <div class="p-4 bg-white/70 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Quick Actions</h3>
+            <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                <li>📁 Templates live in <code class="font-mono">{{.TemplateDir}}</code></li>
+                <li>⚡ Changes auto-refresh thanks to `--watchtemplates=true`</li>
+                <li>🛠️ Use `go run . cli xtemplate serve` for manual control</li>
+                <li>🧪 Proxy available at <code class="font-mono">/xtemplate/*</code> via Caddy</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">Current Files</h3>
+        {{if .TemplateFiles}}
+        <ul class="text-sm text-gray-600 dark:text-gray-300 space-y-1">
+            {{range .TemplateFiles}}
+            <li>📄 {{.}}</li>
+            {{end}}
+        </ul>
+        {{else}}
+        <p class="text-sm text-gray-500 dark:text-gray-400">No templates found yet. Create <code class="font-mono">index.html</code> to get started.</p>
+        {{end}}
+    </div>
+</section>

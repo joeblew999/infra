@@ -20,9 +20,11 @@ import (
 	logsweb "github.com/joeblew999/infra/pkg/log/web"
 	"github.com/joeblew999/infra/pkg/metrics"
 	metricsweb "github.com/joeblew999/infra/pkg/metrics/web"
+	natsweb "github.com/joeblew999/infra/pkg/nats/web"
 	statusweb "github.com/joeblew999/infra/pkg/status/web"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
+	xtemplateweb "github.com/joeblew999/infra/pkg/xtemplate/web"
 	"github.com/joeblew999/infra/web/demo"
-	"github.com/joeblew999/infra/web/templates"
 )
 
 type App struct {
@@ -86,8 +88,16 @@ func (app *App) setupRoutes(devDocs bool) {
 	})
 
 	// Navigation routes
-	app.router.Get("/bento-playground", app.handleBentoPlayground)
-	app.router.Get(config.LogsHTTPPath, app.handleLogs)
+	app.router.Get("/bento-playground", func(w http.ResponseWriter, r *http.Request) {
+		page, err := bentoweb.RenderPlaygroundPage()
+		if err != nil {
+			log.Error("Failed to render Bento playground", "error", err)
+			http.Error(w, "Failed to render page", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(page))
+	})
 
 	// Docs handler - using sub-router pattern
 	docsWebService := docsweb.NewDocsWebService(devDocs)
@@ -114,11 +124,21 @@ func (app *App) setupRoutes(devDocs bool) {
 
 	// Status routes - using sub-router pattern
 	statusWebService := statusweb.NewStatusWebService()
+	xtemplateWebService := xtemplateweb.NewWebService()
 
 	// Logs routes - using sub-router pattern
 	logsWebService := logsweb.NewLogsWebService()
-	app.router.Route("/logs", func(r chi.Router) {
+	app.router.Route(config.LogsHTTPPath, func(r chi.Router) {
 		logsWebService.RegisterRoutes(r)
+	})
+
+	natsWebService := natsweb.NewWebService()
+	app.router.Route("/nats", func(r chi.Router) {
+		natsWebService.RegisterRoutes(r)
+	})
+
+	app.router.Route("/xtemplate", func(r chi.Router) {
+		xtemplateWebService.RegisterRoutes(r)
 	})
 
 	// System monitoring routes - share handlers between /status and /system

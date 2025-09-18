@@ -12,10 +12,21 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/metrics"
-	"github.com/joeblew999/infra/web/templates"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
 )
+
+func init() {
+	templates.RegisterNavItem(templates.NavItem{
+		Href:  config.MetricsHTTPPath,
+		Text:  "Metrics",
+		Icon:  "📊",
+		Color: "purple",
+		Order: 30,
+	})
+}
 
 //go:embed templates/metrics-cards.html
 var metricsCardsTemplate string
@@ -61,14 +72,14 @@ func (s *MetricsWebService) RegisterRoutes(r chi.Router) {
 func HandleMetricsAPI(w http.ResponseWriter, r *http.Request) {
 	collector := metrics.GetCollector()
 	latest := collector.GetLatest()
-	
+
 	if latest == nil {
 		// Return empty metrics if none collected yet
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte("{}"))
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(latest)
 }
@@ -77,7 +88,7 @@ func HandleMetricsAPI(w http.ResponseWriter, r *http.Request) {
 func HandleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 	collector := metrics.GetCollector()
 	history := collector.GetHistory()
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(history)
 }
@@ -86,10 +97,10 @@ func HandleMetricsHistory(w http.ResponseWriter, r *http.Request) {
 func HandleMetricsStream(w http.ResponseWriter, r *http.Request) {
 	collector := metrics.GetCollector()
 	sse := datastar.NewSSE(w, r)
-	
+
 	// Subscribe to metrics updates
 	metricsCh := collector.Subscribe()
-	
+
 	// Send initial metrics
 	if latest := collector.GetLatest(); latest != nil {
 		if err := sendMetricsUpdate(sse, latest); err != nil {
@@ -97,7 +108,7 @@ func HandleMetricsStream(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	
+
 	// Stream updates
 	for {
 		select {
@@ -162,18 +173,18 @@ func sendMetricsUpdate(sse *datastar.ServerSentEventGenerator, m *metrics.System
 		NextGC:         metrics.FormatBytes(m.GCStats.NextGC),
 		Timestamp:      m.Timestamp.Unix(),
 	}
-	
+
 	// Parse and execute template
 	tmpl, err := template.New("metrics-cards").Parse(metricsCardsTemplate)
 	if err != nil {
 		return fmt.Errorf("error parsing metrics template: %w", err)
 	}
-	
+
 	var result strings.Builder
 	if err := tmpl.Execute(&result, data); err != nil {
 		return fmt.Errorf("error executing metrics template: %w", err)
 	}
-	
+
 	// Send the rendered template via SSE
 	return sse.PatchElements(result.String())
 }

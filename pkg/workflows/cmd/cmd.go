@@ -30,6 +30,7 @@ func GetRootWorkflowCmds() []*cobra.Command {
 		deployCmd,
 		statusCmd,
 		initCmd,
+		preCommitCmd,
 	}
 }
 
@@ -92,7 +93,7 @@ var buildCmd = &cobra.Command{
 			Tag:      tag,
 			DryRun:   false,
 		})
-		
+
 		_, err := workflow.Execute()
 		return err
 	},
@@ -113,9 +114,9 @@ var statusCmd = &cobra.Command{
 		logs, _ := cmd.Flags().GetInt("logs")
 
 		// TODO: Implement status workflow
-		fmt.Printf("Checking status for: app=%s, verbose=%v, logs=%d\n", 
+		fmt.Printf("Checking status for: app=%s, verbose=%v, logs=%d\n",
 			appName, verbose, logs)
-		
+
 		return fmt.Errorf("status workflow not implemented yet")
 	},
 }
@@ -135,9 +136,9 @@ var initCmd = &cobra.Command{
 		force, _ := cmd.Flags().GetBool("force")
 
 		// TODO: Implement init workflow
-		fmt.Printf("Initializing project: name=%s, template=%s, force=%v\n", 
+		fmt.Printf("Initializing project: name=%s, template=%s, force=%v\n",
 			name, template, force)
-		
+
 		return fmt.Errorf("init workflow not implemented yet")
 	},
 }
@@ -300,7 +301,7 @@ func init() {
 
 	// Dev command flags
 	devCmd.Flags().Bool("watch", true, "Enable file watching")
-	
+
 	// Litestream command flags
 	litestreamStartCmd.Flags().String("db", "./pb_data/data.db", "Database file path")
 	litestreamStartCmd.Flags().String("backup", "./backups/data.db", "Backup file path")
@@ -332,23 +333,23 @@ func init() {
 // runPreCommitChecks implements the pre-commit workflow logic
 func runPreCommitChecks() error {
 	fmt.Println("🔍 Running pre-commit checks...")
-	
+
 	// Note: These functions are defined in pkg/cmd/common.go
 	// In a complete refactor, these would be moved to a workflow package
 	// For now, we'll return an error indicating they need to be implemented
-	
+
 	fmt.Println("✅ Pre-commit checks placeholder - implementation needed")
 	return nil
 }
 
-// runCIChecks implements the CI workflow logic  
+// runCIChecks implements the CI workflow logic
 func runCIChecks() error {
 	fmt.Println("🔍 Running CI checks...")
-	
+
 	// Note: These functions are defined in pkg/cmd/common.go
 	// In a complete refactor, these would be moved to a workflow package
 	// For now, we'll return an error indicating they need to be implemented
-	
+
 	fmt.Println("✅ CI checks placeholder - implementation needed")
 	return nil
 }
@@ -356,11 +357,11 @@ func runCIChecks() error {
 // runDevMode starts development mode
 func runDevMode(watch bool) error {
 	fmt.Printf("🚀 Starting development mode (watch: %v)...\n", watch)
-	
+
 	if watch {
 		fmt.Println("📁 File watching enabled - changes will trigger rebuilds")
 	}
-	
+
 	// TODO: Implement file watching and hot reload
 	return fmt.Errorf("development mode not fully implemented yet")
 }
@@ -368,7 +369,7 @@ func runDevMode(watch bool) error {
 // runLitestreamStart starts Litestream replication
 func runLitestreamStart(dbPath, backupPath, configPath string, verbose bool) error {
 	fmt.Println("🔄 Starting Litestream replication...")
-	
+
 	// Default paths if not provided
 	if dbPath == "" {
 		dbPath = "./pb_data/data.db"
@@ -376,7 +377,7 @@ func runLitestreamStart(dbPath, backupPath, configPath string, verbose bool) err
 	if backupPath == "" {
 		backupPath = "./backups/data.db"
 	}
-	
+
 	// Ensure directories exist
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
 		return fmt.Errorf("failed to create db directory: %w", err)
@@ -384,7 +385,7 @@ func runLitestreamStart(dbPath, backupPath, configPath string, verbose bool) err
 	if err := os.MkdirAll(filepath.Dir(backupPath), 0755); err != nil {
 		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
-	
+
 	// Create default config if not provided
 	if configPath == "" {
 		configPath = "./pkg/litestream/litestream.yml"
@@ -399,41 +400,41 @@ dbs:
         sync-interval: 1s
         retention: 24h
 `, dbPath, backupPath)
-			
+
 			if err := os.WriteFile(configPath, []byte(config), 0644); err != nil {
 				return fmt.Errorf("failed to create config: %w", err)
 			}
 			fmt.Printf("📄 Created config: %s\n", configPath)
 		}
 	}
-	
+
 	fmt.Printf("📊 Database: %s\n", dbPath)
 	fmt.Printf("💾 Backup: %s\n", backupPath)
 	fmt.Printf("⚙️  Config: %s\n", configPath)
-	
+
 	// Execute litestream
 	cmd := exec.Command(config.Get(config.BinaryLitestream), "replicate", "-config", configPath)
 	if verbose {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
-	
+
 	return cmd.Run()
 }
 
 // runLitestreamRestore restores database from backup
 func runLitestreamRestore(dbPath, backupPath, configPath, timestamp string) error {
 	fmt.Println("🔄 Restoring database from Litestream backup...")
-	
+
 	if dbPath == "" {
 		dbPath = "./pb_data/data.db"
 	}
-	
+
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(dbPath), 0755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	// Build restore command
 	cmdArgs := []string{"restore"}
 	if configPath != "" {
@@ -442,23 +443,23 @@ func runLitestreamRestore(dbPath, backupPath, configPath, timestamp string) erro
 	if timestamp != "" {
 		cmdArgs = append(cmdArgs, "-timestamp", timestamp)
 	}
-	
+
 	// Add backup path as source
 	if backupPath != "" {
 		cmdArgs = append(cmdArgs, backupPath)
 	} else {
 		cmdArgs = append(cmdArgs, "-config", "./pkg/litestream/litestream.yml")
 	}
-	
+
 	// Execute restore
 	cmd := exec.Command(config.Get(config.BinaryLitestream), cmdArgs...)
 	cmd.Dir = filepath.Dir(dbPath)
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("restore failed: %w\nOutput: %s", err, string(output))
 	}
-	
+
 	fmt.Printf("✅ Database restored to: %s\n", dbPath)
 	return nil
 }
@@ -466,18 +467,18 @@ func runLitestreamRestore(dbPath, backupPath, configPath, timestamp string) erro
 // runLitestreamStatus shows replication status
 func runLitestreamStatus(configPath string) error {
 	fmt.Println("📊 Checking Litestream replication status...")
-	
+
 	if configPath == "" {
 		configPath = "./pkg/litestream/litestream.yml"
 	}
-	
+
 	// Check if litestream is running
 	cmd := exec.Command(config.Get(config.BinaryLitestream), "dbs", "-config", configPath)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("status check failed: %w\nOutput: %s", err, string(output))
 	}
-	
+
 	fmt.Printf("📋 Status:\n%s", string(output))
 	return nil
 }

@@ -14,8 +14,18 @@ import (
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/web/templates"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
 )
+
+func init() {
+	templates.RegisterNavItem(templates.NavItem{
+		Href:  config.ConfigHTTPPath,
+		Text:  "Config",
+		Icon:  "🛠️",
+		Color: "cyan",
+		Order: 70,
+	})
+}
 
 //go:embed templates/config-page.html
 var configPageTemplate string
@@ -62,14 +72,14 @@ func (s *ConfigWebService) Mount(mainRouter chi.Router, path string) {
 
 // PageData holds the template data for rendering config pages
 type PageData struct {
-	Navigation    template.HTML
-	Footer        template.HTML
-	DataStar      template.HTML
-	Header        template.HTML
-	ConfigSubNav  template.HTML
-	Config        any
-	EnvStatus     map[string]string
-	MissingVars   []string
+	Navigation   template.HTML
+	Footer       template.HTML
+	DataStar     template.HTML
+	Header       template.HTML
+	ConfigSubNav template.HTML
+	Config       any
+	EnvStatus    map[string]string
+	MissingVars  []string
 }
 
 // renderTemplate is a helper for rendering config templates with nav/footer
@@ -84,20 +94,20 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 	if err != nil {
 		footerHTML = ""
 	}
-	
+
 	// Parse and execute template
 	tmpl, err := template.New(templateName).Parse(string(templateHTML))
 	if err != nil {
 		w.Write(templateHTML) // Fallback to static HTML
 		return
 	}
-	
+
 	// Render config sub-navigation
 	configSubNavHTML, err := s.renderConfigSubNav(currentPath)
 	if err != nil {
 		configSubNavHTML = ""
 	}
-	
+
 	pageData := PageData{
 		Navigation:   template.HTML(navHTML),
 		Footer:       template.HTML(footerHTML),
@@ -105,7 +115,7 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 		Header:       templates.GetHeaderHTML(),
 		ConfigSubNav: template.HTML(configSubNavHTML),
 	}
-	
+
 	// Set specific data based on template
 	switch v := data.(type) {
 	case *config.Config:
@@ -118,7 +128,7 @@ func (s *ConfigWebService) renderTemplate(w http.ResponseWriter, templateHTML []
 			pageData.MissingVars = missingVars
 		}
 	}
-	
+
 	if err := tmpl.Execute(w, pageData); err != nil {
 		w.Write(templateHTML) // Fallback to static HTML
 	}
@@ -196,11 +206,11 @@ func HandleConfigAPI(w http.ResponseWriter, r *http.Request) {
 	missingVars := config.GetMissingEnvVars()
 
 	response := map[string]any{
-		"config":      cfg,
-		"env_status":  envStatus,
-		"missing":     missingVars,
-		"all_set":     len(missingVars) == 0,
-		"timestamp":   time.Now().UTC(),
+		"config":     cfg,
+		"env_status": envStatus,
+		"missing":    missingVars,
+		"all_set":    len(missingVars) == 0,
+		"timestamp":  time.Now().UTC(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -222,13 +232,13 @@ func (s *ConfigWebService) handleConfigAPI(w http.ResponseWriter, r *http.Reques
 func (s *ConfigWebService) handleEnvStatusAPI(w http.ResponseWriter, r *http.Request) {
 	envStatus := config.GetEnvStatus()
 	missing := config.GetMissingEnvVars()
-	
+
 	response := map[string]any{
 		"env_status": envStatus,
 		"missing":    missing,
 		"all_set":    len(missing) == 0,
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
@@ -239,23 +249,23 @@ func (s *ConfigWebService) handleSetSecret(w http.ResponseWriter, r *http.Reques
 		Key   string `json:"key"`
 		Value string `json:"value"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	
+
 	if req.Key == "" || req.Value == "" {
 		http.Error(w, "Key and value are required", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Use the secrets functionality we created
 	if err := config.SetEnvSecret(req.Key, req.Value); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to store secret: %v", err), http.StatusInternalServerError)
 		return
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "success", "message": "Secret stored successfully"})
 }
@@ -276,14 +286,14 @@ func (s *ConfigWebService) renderConfigSubNav(currentPath string) (string, error
 		{Href: "/config/status", Text: "ENV Status", Icon: "🔍"},
 		{Href: "/config/secrets", Text: "Secrets", Icon: "🔐"},
 	}
-	
+
 	// Mark current item as active
 	for i := range items {
 		if items[i].Href == currentPath {
 			items[i].Active = true
 		}
 	}
-	
+
 	// Sub-navigation template
 	const subNavHTML = `
 <div class="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -295,18 +305,18 @@ func (s *ConfigWebService) renderConfigSubNav(currentPath string) (string, error
         {{end}}
     </div>
 </div>`
-	
+
 	tmpl, err := template.New("configSubNav").Parse(subNavHTML)
 	if err != nil {
 		return "", err
 	}
-	
+
 	var result strings.Builder
 	err = tmpl.Execute(&result, items)
 	if err != nil {
 		return "", err
 	}
-	
+
 	return result.String(), nil
 }
 
@@ -320,11 +330,11 @@ func (s *ConfigWebService) HandleBuildInfo(w http.ResponseWriter, r *http.Reques
 		Timestamp   string `json:"timestamp"`
 		Environment string `json:"environment"`
 	}{
-		Version:     config.GetVersion(),
-		GitHash:     config.GitHash,
-		ShortHash:   config.GetShortHash(),
-		BuildTime:   config.BuildTime,
-		Timestamp:   time.Now().UTC().Format(time.RFC3339),
+		Version:   config.GetVersion(),
+		GitHash:   config.GitHash,
+		ShortHash: config.GetShortHash(),
+		BuildTime: config.BuildTime,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Environment: func() string {
 			if config.IsProduction() {
 				return "production"

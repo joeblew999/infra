@@ -1,0 +1,66 @@
+<div id="nats-cluster" class="space-y-6" data-last-updated="{{.LastUpdatedISO}}">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+            <h2 class="text-xl sm:text-2xl font-semibold flex items-center gap-2">
+                🚀 {{.ClusterName}}
+            </h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+                Environment: <span class="font-medium">{{.Environment}}</span>
+            </p>
+        </div>
+        <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400" id="nats-last-updated">
+            Last updated: {{.LastUpdatedDisplay}}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="p-4 bg-white/70 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Nodes</div>
+            <div class="text-2xl font-semibold">{{.Summary.Total}}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{.Summary.Running}} running · {{.Summary.Stopped}} offline</div>
+        </div>
+        <div class="p-4 bg-white/70 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">Cluster Health</div>
+            <div class="flex items-center gap-2">
+                <div class="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-500 {{.Summary.HealthBarClass}}" style="width: {{.Summary.HealthPercent}}%"></div>
+                </div>
+                <span class="text-sm font-mono">{{.Summary.HealthPercent}}%</span>
+            </div>
+            <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">{{.Summary.HealthHeadline}}</div>
+        </div>
+        <div class="p-4 bg-white/70 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">NATS URLs</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400 space-y-1 font-mono">
+                {{range .ClientURLs}}
+                <div>{{.}}</div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+
+    <div class="space-y-3">
+        <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-200">Nodes</h3>
+            <span class="text-xs text-gray-500 dark:text-gray-400">Probed via cluster status command</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" id="nats-nodes">
+            {{range .Nodes}}
+            <div class="p-3 rounded-lg border {{.Border}} bg-white/60 dark:bg-gray-800/40">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm font-semibold text-gray-900 dark:text-gray-100">{{.Name}}</div>
+                        <div class="text-xs text-gray-500 dark:text-gray-400">{{.Region}}</div>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-semibold rounded-full {{.StatusBadge}}">{{.Status}}</span>
+                </div>
+                <dl class="mt-2 text-xs text-gray-600 dark:text-gray-400 space-y-1 font-mono">
+                    <div class="flex justify-between"><dt>Client</dt><dd>{{.ClientPort}}</dd></div>
+                    <div class="flex justify-between"><dt>Cluster</dt><dd>{{.ClusterPort}}</dd></div>
+                    <div class="flex justify-between"><dt>HTTP</dt><dd>{{.HTTPPort}}</dd></div>
+                </dl>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>

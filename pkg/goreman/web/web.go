@@ -15,11 +15,20 @@ import (
 	datastarlib "github.com/starfederation/datastar-go/datastar"
 
 	"github.com/joeblew999/infra/pkg/config"
-	infodatastar "github.com/joeblew999/infra/pkg/datastar"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/web/templates"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
 )
+
+func init() {
+	templates.RegisterNavItem(templates.NavItem{
+		Href:  config.ProcessesHTTPPath,
+		Text:  "Processes",
+		Icon:  "🔍",
+		Color: "indigo",
+		Order: 60,
+	})
+}
 
 const processesStreamInterval = 3 * time.Second
 
@@ -112,7 +121,7 @@ func (w *WebHandler) ProcessesStreamHandler(rw http.ResponseWriter, r *http.Requ
 func (w *WebHandler) sendProcessSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
 	snapshot := collectProcessSnapshot()
 
-	html, err := infodatastar.RenderProcessCards(mapProcessSnapshot(snapshot))
+	html, err := RenderProcessCards(mapProcessSnapshot(snapshot))
 	if err != nil {
 		return fmt.Errorf("render process cards: %w", err)
 	}
@@ -265,15 +274,15 @@ func collectProcessSnapshot() processSnapshot {
 	}
 }
 
-func mapProcessSnapshot(snapshot processSnapshot) infodatastar.ProcessTemplateData {
-	processes := make([]infodatastar.ProcessCard, len(snapshot.Processes))
+func mapProcessSnapshot(snapshot processSnapshot) ProcessTemplateData {
+	processes := make([]ProcessCard, len(snapshot.Processes))
 	base := strings.TrimSuffix(config.ProcessesHTTPPath, "/")
 
 	for i, proc := range snapshot.Processes {
 		border, badge := processCardClasses(proc.Status)
 		encoded := url.PathEscape(proc.Name)
 
-		processes[i] = infodatastar.ProcessCard{
+		processes[i] = ProcessCard{
 			Name:             proc.Name,
 			StatusLabel:      strings.ToUpper(proc.Status),
 			Indicator:        proc.Indicator,
@@ -289,10 +298,10 @@ func mapProcessSnapshot(snapshot processSnapshot) infodatastar.ProcessTemplateDa
 		}
 	}
 
-	return infodatastar.ProcessTemplateData{
+	return ProcessTemplateData{
 		LastUpdatedDisplay: snapshot.Timestamp.Format("15:04:05"),
 		LastUpdatedISO:     snapshot.Timestamp.Format(time.RFC3339),
-		Summary: infodatastar.ProcessSummary{
+		Summary: ProcessSummary{
 			Total:   snapshot.Summary.Total,
 			Running: snapshot.Summary.Running,
 			Stopped: snapshot.Summary.Stopped,

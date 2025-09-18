@@ -9,11 +9,21 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/webapp/templates"
 	"github.com/nats-io/nkeys"
 	"github.com/starfederation/datastar-go/datastar"
-	"github.com/joeblew999/infra/web/templates"
-	"github.com/joeblew999/infra/pkg/log"
 )
+
+func init() {
+	templates.RegisterNavItem(templates.NavItem{
+		Href:  "/auth",
+		Text:  "Auth",
+		Icon:  "🔐",
+		Color: "emerald",
+		Order: 80,
+	})
+}
 
 // Store holds Datastar signals for auth flows
 type Store struct {
@@ -40,7 +50,7 @@ func NewDatastarHandlers(authService *WebAuthnService, webDir string) *DatastarH
 	templates.Funcs(template.FuncMap{
 		"add": func(a, b int) int { return a + b },
 	})
-	
+
 	// Load fragment templates if webDir is provided
 	if webDir != "" {
 		globPattern := webDir + "/fragments/*.html"
@@ -58,7 +68,7 @@ func NewDatastarHandlers(authService *WebAuthnService, webDir string) *DatastarH
 			log.Debug("Loaded auth fragment templates", "templates", templateNames)
 		}
 	}
-	
+
 	return &DatastarHandlers{
 		authService: authService,
 		templates:   templates,
@@ -72,15 +82,15 @@ func (h *DatastarHandlers) RegisterRoutes(r chi.Router) {
 	r.Post("/register/finish", h.RegisterFinish)
 	r.Post("/login/start", h.LoginStart)
 	r.Post("/login/finish", h.LoginFinish)
-	
+
 	// Credential management routes
 	r.Get("/credentials", h.ShowCredentials)
 	r.Get("/credentials/list", h.ListCredentials)
 	r.Delete("/credentials/{index}", h.DeleteCredential)
-	
+
 	// Session status routes
 	r.Get("/session/status", h.CheckSessionStatus)
-	
+
 	// Serve static files if webDir is configured
 	if h.webDir != "" {
 		r.Get("/", h.ServeIndex)
@@ -103,13 +113,13 @@ func (h *DatastarHandlers) renderTemplate(w http.ResponseWriter, currentPath, te
 		http.Error(w, "Failed to render navigation", http.StatusInternalServerError)
 		return
 	}
-	
+
 	footerHTML, err := templates.RenderFooter()
 	if err != nil {
 		log.Error("Error rendering footer", "error", err)
 		footerHTML = ""
 	}
-	
+
 	// Load template from filesystem
 	templatePath := h.webDir + "/" + templateName + ".html"
 	tmpl, err := template.ParseFiles(templatePath)
@@ -118,12 +128,12 @@ func (h *DatastarHandlers) renderTemplate(w http.ResponseWriter, currentPath, te
 		http.Error(w, "Template not found", http.StatusInternalServerError)
 		return
 	}
-	
+
 	data := PageData{
 		Navigation: template.HTML(navHTML),
 		Footer:     template.HTML(footerHTML),
 	}
-	
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	err = tmpl.Execute(w, data)
 	if err != nil {
@@ -162,7 +172,7 @@ func (h *DatastarHandlers) RegisterStart(w http.ResponseWriter, r *http.Request)
 	// Detect browser for optimal WebAuthn settings
 	userAgent := r.Header.Get("User-Agent")
 	usePlatform := strings.Contains(userAgent, "Safari") && !strings.Contains(userAgent, "Chrome")
-	
+
 	options, token, err := h.authService.BeginRegistrationWithPlatform(store.Username, usePlatform)
 	if err != nil {
 		sse := datastar.NewSSE(w, r)
@@ -172,10 +182,10 @@ func (h *DatastarHandlers) RegisterStart(w http.ResponseWriter, r *http.Request)
 
 	// Create SSE connection
 	sse := datastar.NewSSE(w, r)
-	
+
 	// Update log with progress
 	sse.PatchElements(`<div id="log">Starting registration...</div>`)
-	
+
 	// Convert options to JSON and execute WebAuthn
 	optionsJSON, _ := json.Marshal(options)
 	script := fmt.Sprintf(`
@@ -196,7 +206,7 @@ func (h *DatastarHandlers) RegisterStart(w http.ResponseWriter, r *http.Request)
 			}
 		})();
 	`, string(optionsJSON), token, token)
-	
+
 	sse.ExecuteScript(script)
 }
 
@@ -224,10 +234,10 @@ func (h *DatastarHandlers) LoginStart(w http.ResponseWriter, r *http.Request) {
 
 	// Create SSE connection
 	sse := datastar.NewSSE(w, r)
-	
+
 	// Update log with progress
 	sse.PatchElements(`<div id="log">Starting login...</div>`)
-	
+
 	// Convert options to JSON and execute WebAuthn
 	optionsJSON, _ := json.Marshal(options)
 	script := fmt.Sprintf(`
@@ -248,17 +258,17 @@ func (h *DatastarHandlers) LoginStart(w http.ResponseWriter, r *http.Request) {
 			}
 		})();
 	`, string(optionsJSON), token, token)
-	
+
 	sse.ExecuteScript(script)
 }
 
 // RegisterFinish handles /register/finish (called from WebAuthn JS)
 func (h *DatastarHandlers) RegisterFinish(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Token    string      `json:"token"`
-		Response any `json:"response"`
+		Token    string `json:"token"`
+		Response any    `json:"response"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sse := datastar.NewSSE(w, r)
 		sse.PatchElements(`<div id="log">Invalid request</div>`)
@@ -289,10 +299,10 @@ func (h *DatastarHandlers) RegisterFinish(w http.ResponseWriter, r *http.Request
 // LoginFinish handles /login/finish (called from WebAuthn JS)
 func (h *DatastarHandlers) LoginFinish(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Token    string      `json:"token"`
-		Response any `json:"response"`
+		Token    string `json:"token"`
+		Response any    `json:"response"`
 	}
-	
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sse := datastar.NewSSE(w, r)
 		sse.PatchElements(`<div id="log">Invalid request</div>`)
@@ -335,7 +345,7 @@ func (h *DatastarHandlers) ShowCredentials(w http.ResponseWriter, r *http.Reques
 	}
 
 	sse := datastar.NewSSE(w, r)
-	
+
 	// Show credentials section with JavaScript to make it visible
 	credentialsHTML := fmt.Sprintf(`
 		<div id="credentials-section" style="margin-top: 1rem; padding: 1rem; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px;">
@@ -352,7 +362,7 @@ func (h *DatastarHandlers) ShowCredentials(w http.ResponseWriter, r *http.Reques
 			</div>
 		</div>
 	`, store.Username, store.Username)
-	
+
 	sse.PatchElements(credentialsHTML)
 }
 
@@ -377,7 +387,7 @@ func (h *DatastarHandlers) ListCredentials(w http.ResponseWriter, r *http.Reques
 	}
 
 	sse := datastar.NewSSE(w, r)
-	
+
 	if len(user.Credentials) == 0 {
 		sse.PatchElements(`
 			<div id="credentials-list">
@@ -388,7 +398,7 @@ func (h *DatastarHandlers) ListCredentials(w http.ResponseWriter, r *http.Reques
 		`)
 		return
 	}
-	
+
 	// Simple credentials list HTML without templates
 	credentialsHTML := `<div id="credentials-list">`
 	for i, cred := range user.Credentials {
@@ -408,7 +418,7 @@ func (h *DatastarHandlers) ListCredentials(w http.ResponseWriter, r *http.Reques
 		`, i+1, string(cred.ID), cred.Authenticator.SignCount, i, store.Username)
 	}
 	credentialsHTML += `</div>`
-	
+
 	sse.PatchElements(credentialsHTML)
 }
 
@@ -443,7 +453,7 @@ func (h *DatastarHandlers) DeleteCredential(w http.ResponseWriter, r *http.Reque
 
 	sse := datastar.NewSSE(w, r)
 	sse.PatchElements(`<div id="log">Passkey deleted successfully!</div>`)
-	
+
 	// Refresh the credentials list
 	h.ListCredentials(w, r)
 }
@@ -464,21 +474,21 @@ func (h *DatastarHandlers) CheckSessionStatus(w http.ResponseWriter, r *http.Req
 
 	// User is logged in, show logged-in fragments
 	sse := datastar.NewSSE(w, r)
-	
+
 	// Load and render the logged-in header fragment
 	if tmpl := h.templates.Lookup("logged-in-header.html"); tmpl != nil {
 		var headerHTML strings.Builder
 		tmpl.Execute(&headerHTML, map[string]string{"UserID": userID})
 		sse.PatchElements(fmt.Sprintf(`<div id="session-status">%s</div>`, headerHTML.String()))
 	}
-	
+
 	// Load and render the logged-in actions fragment
 	if tmpl := h.templates.Lookup("logged-in-actions.html"); tmpl != nil {
 		var actionsHTML strings.Builder
 		tmpl.Execute(&actionsHTML, map[string]string{"UserID": userID})
 		sse.PatchElements(fmt.Sprintf(`<div id="user-actions">%s</div>`, actionsHTML.String()))
 	}
-	
+
 	// Hide the auth section
 	sse.ExecuteScript(`document.getElementById('auth-section').style.display = 'none';`)
 }
