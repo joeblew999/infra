@@ -89,14 +89,7 @@ func (app *App) setupRoutes(devDocs bool) {
 
 	// Navigation routes
 	app.router.Get("/bento-playground", func(w http.ResponseWriter, r *http.Request) {
-		page, err := bentoweb.RenderPlaygroundPage()
-		if err != nil {
-			log.Error("Failed to render Bento playground", "error", err)
-			http.Error(w, "Failed to render page", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(page))
+		http.Redirect(w, r, "/bento/playground", http.StatusTemporaryRedirect)
 	})
 
 	// Docs handler - using sub-router pattern
