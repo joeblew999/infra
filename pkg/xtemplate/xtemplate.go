@@ -3,13 +3,18 @@ package xtemplate
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/service"
 )
 
 func init() {
@@ -19,19 +24,111 @@ func init() {
 	})
 }
 
-// Service manages the xtemplate web server for template-based web development
+// Runner constructs the *exec.Cmd used to launch xtemplate.
+type Runner func(context.Context, string, []string) *exec.Cmd
+
+// Option configures a Service instance.
+type Option func(*Service)
+
+// Service manages the xtemplate web server for template-based web development.
 type Service struct {
-	templateDir string
-	port        string
-	debug       bool
+	templateDir    string
+	port           string
+	debug          bool
+	minify         bool
+	watchTemplates bool
+	binaryPath     string
+	runner         Runner
 }
 
-// NewService creates a new xtemplate service instance
-func NewService() *Service {
-	return &Service{
-		templateDir: config.GetXTemplatePath(),
-		port:        config.GetXTemplatePort(),
-		debug:       config.IsDevelopment(),
+// NewService creates a new xtemplate service instance.
+func NewService(opts ...Option) *Service {
+	svc := &Service{
+		templateDir:    config.GetXTemplatePath(),
+		port:           config.GetXTemplatePort(),
+		debug:          config.IsDevelopment(),
+		minify:         true,
+		watchTemplates: true,
+		runner: func(ctx context.Context, bin string, args []string) *exec.Cmd {
+			return exec.CommandContext(ctx, bin, args...)
+		},
+	}
+
+	for _, opt := range opts {
+		if opt != nil {
+			opt(svc)
+		}
+	}
+
+	return svc
+}
+
+// WithTemplateDir sets the template directory used by the service.
+func WithTemplateDir(dir string) Option {
+	return func(s *Service) {
+		if dir != "" {
+			s.templateDir = dir
+		}
+	}
+}
+
+// WithPort sets the listening port before startup.
+func WithPort(port string) Option {
+	return func(s *Service) {
+		if port != "" {
+			s.port = port
+		}
+	}
+}
+
+// WithBinaryPath overrides the xtemplate binary path (useful for tests).
+func WithBinaryPath(path string) Option {
+	return func(s *Service) {
+		s.binaryPath = path
+	}
+}
+
+// WithRunner overrides the command runner used to launch xtemplate.
+func WithRunner(r Runner) Option {
+	return func(s *Service) {
+		if r != nil {
+			s.runner = r
+		}
+	}
+}
+
+// WithDebug toggles debug logging.
+func WithDebug(enabled bool) Option {
+	return func(s *Service) {
+		s.debug = enabled
+	}
+}
+
+// WithMinify toggles HTML minification.
+func WithMinify(enabled bool) Option {
+	return func(s *Service) {
+		s.minify = enabled
+	}
+}
+
+// WithWatchTemplates toggles template watching.
+func WithWatchTemplates(enabled bool) Option {
+	return func(s *Service) {
+		s.watchTemplates = enabled
+	}
+}
+
+// SetPort overrides the listening port before Start is invoked (legacy helper).
+func (s *Service) SetPort(port string) {
+	if port != "" {
+		s.port = port
+	}
+}
+
+// SetTemplateDir overrides the template directory before Start is invoked (legacy helper).
+func (s *Service) SetTemplateDir(dir string) {
+	if dir != "" {
+		s.templateDir = dir
 	}
 }
 
@@ -44,20 +141,23 @@ func (s *Service) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to create template directory: %w", err)
 	}
 
+	// Resolve xtemplate binary path
+	binPath, err := s.resolveBinary()
+	if err != nil {
+		return err
+	}
+
 	// Create a basic index.html if templates directory is empty
 	if err := s.ensureBasicTemplates(); err != nil {
 		return fmt.Errorf("failed to setup basic templates: %w", err)
 	}
 
-	// Get xtemplate binary path
-	binPath := config.GetXTemplateBinPath()
-
 	// Build xtemplate command arguments
 	args := []string{
 		"--template-dir", s.templateDir,
 		"--listen", "0.0.0.0:" + s.port,
-		"--minify=true",
-		"--watchtemplates=true", // Enable live reload for development
+		"--minify=" + strconv.FormatBool(s.minify),
+		"--watchtemplates=" + strconv.FormatBool(s.watchTemplates),
 	}
 
 	if s.debug {
@@ -65,7 +165,7 @@ func (s *Service) Start(ctx context.Context) error {
 	}
 
 	// Start xtemplate server
-	cmd := exec.CommandContext(ctx, binPath, args...)
+	cmd := s.runner(ctx, binPath, args)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
@@ -73,92 +173,133 @@ func (s *Service) Start(ctx context.Context) error {
 	return cmd.Run()
 }
 
-// ensureBasicTemplates creates basic template files if the templates directory is empty
 func (s *Service) ensureBasicTemplates() error {
-	// Check if index.html exists
-	indexPath := filepath.Join(s.templateDir, "index.html")
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		// Create a basic index.html template
-		indexContent := `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XTemplate Development Server</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
-               margin: 2rem; background: #f5f5f5; }
-        .container { max-width: 800px; margin: 0 auto; background: white; 
-                     padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #333; margin-top: 0; }
-        .feature { margin: 1rem 0; padding: 1rem; background: #f8f9fa; 
-                   border-left: 4px solid #007bff; border-radius: 4px; }
-        code { background: #e9ecef; padding: 0.2rem 0.4rem; border-radius: 3px; 
-               font-family: 'Monaco', 'Consolas', monospace; }
-        .reload-script { margin-top: 2rem; padding: 1rem; background: #fff3cd; 
-                         border: 1px solid #ffeaa7; border-radius: 4px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 XTemplate Development Server</h1>
-        
-        <p>Welcome to your xtemplate development environment! This server provides 
-        rapid web development with HTML/template-based preprocessing.</p>
-        
-        <div class="feature">
-            <h3>✨ Live Reload Enabled</h3>
-            <p>Templates automatically reload when you modify files. No need to restart the server!</p>
-        </div>
-        
-        <div class="feature">
-            <h3>📁 Template Directory</h3>
-            <p>Templates are served from: <code>{{.X.TemplateDir}}</code></p>
-        </div>
-        
-        <div class="feature">
-            <h3>🎯 Getting Started</h3>
-            <ul>
-                <li>Edit this file: <code>{{.X.TemplateDir}}/index.html</code></li>
-                <li>Create new templates like <code>about.html</code> → accessible at <code>/about</code></li>
-                <li>Use Go template syntax with context data: <code>{{.Req.URL.Path}}</code></li>
-            </ul>
-        </div>
-        
-        <div class="feature">
-            <h3>📚 Documentation</h3>
-            <p>Learn more at <a href="https://github.com/infogulch/xtemplate">github.com/infogulch/xtemplate</a></p>
-        </div>
-        
-        <div class="reload-script">
-            <h4>🔄 Auto-Reload Script (Development Only)</h4>
-            <p>This script automatically reloads the page when templates change:</p>
-        </div>
-    </div>
-
-    <!-- Auto-reload script for development -->
-    {{- if .X.DevMode}}
-    <script>
-        new EventSource('/reload').onmessage = () => location.reload();
-        console.log('🔄 Auto-reload enabled - page will refresh when templates change');
-    </script>
-    {{- end}}
-    
-    <!-- Server-sent events endpoint for auto-reload -->
-    {{- define "SSE /reload"}}
-    {{.WaitForServerStop}}data: reload{{printf "\n\n"}}
-    {{- end}}
-</body>
-</html>`
-
-		if err := os.WriteFile(indexPath, []byte(indexContent), 0644); err != nil {
-			return fmt.Errorf("failed to create index.html: %w", err)
-		}
-
-		log.Info("Created basic index.html template", "path", indexPath)
+	empty, err := isDirEffectivelyEmpty(s.templateDir)
+	if err != nil {
+		return err
+	}
+	if !empty {
+		return nil
 	}
 
+	if err := s.copyEmbeddedDir("templates/upstream"); err == nil {
+		if hasRenderableTemplates(s.templateDir) {
+			log.Info("Seeded xtemplate templates from upstream bundle", "dir", s.templateDir)
+			return nil
+		}
+		// No usable templates found; clear and fall back to local seeds.
+		if err := removeDirContents(s.templateDir); err != nil {
+			return err
+		}
+	}
+
+	if err := s.copyEmbeddedDir("templates/seed"); err != nil {
+		return err
+	}
+	log.Info("Seeded xtemplate templates from local bundle", "dir", s.templateDir)
 	return nil
+}
+
+func (s *Service) copyEmbeddedDir(root string) error {
+	if _, err := fs.Stat(assetsFS, root); err != nil {
+		return err
+	}
+
+	return fs.WalkDir(assetsFS, root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+
+		if path == root {
+			return nil
+		}
+
+		relPath := strings.TrimPrefix(path, root)
+		relPath = strings.TrimPrefix(relPath, "/")
+		if relPath == "" {
+			return nil
+		}
+
+		targetPath := filepath.Join(s.templateDir, relPath)
+
+		if d.IsDir() {
+			return os.MkdirAll(targetPath, 0755)
+		}
+
+		if filepath.Base(path) == ".keep" {
+			return nil
+		}
+
+		data, err := assetsFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(targetPath, data, 0644)
+	})
+}
+
+func isDirEffectivelyEmpty(dir string) (bool, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, entry := range entries {
+		if entry.Name() == ".keep" {
+			continue
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func hasRenderableTemplates(dir string) bool {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			if hasRenderableTemplates(filepath.Join(dir, entry.Name())) {
+				return true
+			}
+			continue
+		}
+		ext := strings.ToLower(filepath.Ext(entry.Name()))
+		if ext == ".html" || ext == ".templ" {
+			return true
+		}
+	}
+	return false
+}
+
+func removeDirContents(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if name == ".keep" {
+			continue
+		}
+		path := filepath.Join(dir, name)
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) resolveBinary() (string, error) {
+	if s.binaryPath != "" {
+		return s.binaryPath, nil
+	}
+
+	if err := dep.InstallBinary(config.BinaryXtemplate, false); err != nil {
+		return "", fmt.Errorf("failed to ensure xtemplate binary: %w", err)
+	}
+
+	return config.GetXTemplateBinPath(), nil
 }
 
 // Stop stops the xtemplate server (handled by context cancellation)
@@ -169,7 +310,7 @@ func (s *Service) Stop() error {
 
 // GetURL returns the local URL where xtemplate server is accessible
 func (s *Service) GetURL() string {
-	return fmt.Sprintf("http://localhost:%s", s.port)
+	return config.FormatLocalHTTP(s.port)
 }
 
 // GetTemplateDir returns the templates directory path
@@ -177,7 +318,7 @@ func (s *Service) GetTemplateDir() string {
 	return s.templateDir
 }
 
-// StartSupervised starts xtemplate under goreman supervision (idempotent)  
+// StartSupervised starts xtemplate under goreman supervision (idempotent)
 func StartSupervised() error {
 	// Ensure template directory exists
 	templateDir := config.GetXTemplatePath()
@@ -185,10 +326,18 @@ func StartSupervised() error {
 		return fmt.Errorf("failed to create template directory: %w", err)
 	}
 
-	// Get xtemplate binary path using config
-	binPath := config.GetXTemplateBinPath()
+	svc := NewService()
+	svc.SetTemplateDir(templateDir)
+	if err := svc.ensureBasicTemplates(); err != nil {
+		return fmt.Errorf("failed to seed xtemplate templates: %w", err)
+	}
 
-	// Build xtemplate command arguments using config  
+	binPath, err := svc.resolveBinary()
+	if err != nil {
+		return err
+	}
+
+	// Build xtemplate command arguments using config
 	args := []string{
 		"--template-dir", templateDir,
 		"--listen", "0.0.0.0:" + config.GetXTemplatePort(),
@@ -201,10 +350,6 @@ func StartSupervised() error {
 	}
 
 	// Register and start with goreman supervision
-	return goreman.RegisterAndStart("xtemplate", &goreman.ProcessConfig{
-		Command:    binPath,
-		Args:       args,
-		WorkingDir: ".",
-		Env:        os.Environ(),
-	})
+	processCfg := service.NewConfig(binPath, args)
+	return service.Start("xtemplate", processCfg)
 }

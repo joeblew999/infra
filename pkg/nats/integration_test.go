@@ -14,6 +14,7 @@ import (
 	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/nats"
+	"github.com/joeblew999/infra/pkg/nats/gateway"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,17 +23,17 @@ import (
 func setupS3IntegrationTest(t *testing.T) (string, string, func()) {
 	t.Helper()
 
-	// Start embedded NATS server
-	natsAddr, _, natsCleanup, err := nats.StartEmbeddedNATS(context.Background())
+	// Start embedded NATS server (no remotes needed for isolated test)
+	natsAddr, _, natsCleanup, err := nats.StartEmbeddedNATS(context.Background(), nil, "")
 	require.NoError(t, err)
 
 	// Start the nats-s3 gateway
-	nats.StartS3GatewaySupervised(natsAddr)
+	gateway.StartS3Gateway(natsAddr)
 
 	// Give the gateway a moment to start
 	time.Sleep(1 * time.Second)
 
-	endpoint := fmt.Sprintf("http://localhost:%s", config.GetNatsS3Port())
+	endpoint := config.GetNATSS3Endpoint()
 
 	cleanup := func() {
 		goreman.StopAll()

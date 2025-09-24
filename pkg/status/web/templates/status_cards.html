@@ -121,9 +121,17 @@
                     <span class="px-2 py-1 text-xs font-semibold rounded-full {{.Pill}}
                         ">{{.Status}}</span>
                 </div>
-                {{if .Detail}}
-                <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                    {{.Detail}}
+                {{if or .Description .LastAction .Message}}
+                <div class="mt-2 space-y-1">
+                    {{if .Description}}
+                    <div class="text-xs text-gray-500 dark:text-gray-400">{{.Description}}</div>
+                    {{end}}
+                    {{if .LastAction}}
+                    <div class="text-xs text-gray-600 dark:text-gray-300 font-medium">Last: {{.LastAction}}</div>
+                    {{end}}
+                    {{if .Message}}
+                    <div class="{{.MessageClass}}">{{.Message}}</div>
+                    {{end}}
                 </div>
                 {{end}}
             </div>

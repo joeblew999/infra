@@ -8,8 +8,8 @@ import (
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
-	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/service"
 )
 
 // Server represents a mox mail server instance
@@ -229,12 +229,8 @@ func StartSupervised(domain, adminEmail string) error {
 	}
 	
 	// Register and start with goreman supervision
-	return goreman.RegisterAndStart("mox", &goreman.ProcessConfig{
-		Command:    config.GetMoxBinPath(),
-		Args:       []string{"-config", server.configPath, "serve"},
-		WorkingDir: ".",
-		Env:        os.Environ(),
-	})
+	processCfg := service.NewConfig(config.GetMoxBinPath(), []string{"-config", server.configPath, "serve"})
+	return service.Start("mox", processCfg)
 }
 
 // GetDataPath returns the mox data directory

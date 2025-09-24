@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/spf13/cobra"
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/spf13/cobra"
 )
 
 // AddCommands adds all Fly.io commands to the root command
@@ -56,7 +56,7 @@ func AddCommands(rootCmd *cobra.Command) {
 	var scaleCmd = &cobra.Command{
 		Use:   "scale",
 		Short: "Scale Fly.io resources",
-		Long:  `Scale the Fly.io application resources:
+		Long: `Scale the Fly.io application resources:
   - Scale machine count: --count 2
   - Scale memory: --memory 1024
   - Scale CPU: --cpu 2
@@ -69,11 +69,11 @@ If no flags are provided, shows current scaling configuration.`,
 			cpu, _ := cmd.Flags().GetInt("cpu")
 			vm, _ := cmd.Flags().GetString("vm")
 			app, _ := cmd.Flags().GetString("app")
-			
+
 			return Scale(count, memory, cpu, vm, app)
 		},
 	}
-	
+
 	// Add flags for scaling options
 	scaleCmd.Flags().Int("count", 0, "Number of machines to scale to")
 	scaleCmd.Flags().Int("memory", 0, "Memory in MB (e.g., 512, 1024, 2048)")
@@ -93,45 +93,45 @@ If no flags are provided, shows current scaling configuration.`,
 // Deploy deploys the application to Fly.io
 func Deploy() error {
 	fmt.Println("🚀 Deploying to Fly.io...")
-	
+
 	cmd := exec.Command(config.GetFlyctlBinPath(), "deploy")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	return cmd.Run()
 }
 
 // Status shows Fly.io app status
 func Status() error {
 	fmt.Println("📊 Checking Fly.io status...")
-	
+
 	cmd := exec.Command(config.GetFlyctlBinPath(), "status")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	return cmd.Run()
 }
 
 // Logs shows Fly.io app logs
 func Logs() error {
 	fmt.Println("📋 Showing Fly.io logs...")
-	
+
 	cmd := exec.Command(config.GetFlyctlBinPath(), "logs")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	return cmd.Run()
 }
 
 // SSH connects to Fly.io machine
 func SSH() error {
 	fmt.Println("🔧 Connecting to Fly.io machine...")
-	
+
 	cmd := exec.Command(config.GetFlyctlBinPath(), "ssh", "console")
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	return cmd.Run()
 }
 
@@ -145,12 +145,12 @@ func Scale(count, memory, cpu int, vm, app string) error {
 		cmd.Stderr = os.Stderr
 		return cmd.Run()
 	}
-	
+
 	fmt.Println("⚖️  Scaling Fly.io resources...")
-	
+
 	// Build scaling commands based on provided flags
 	var commands []*exec.Cmd
-	
+
 	// Scale machine count
 	if count > 0 {
 		fmt.Printf("📊 Scaling machine count to %d...\n", count)
@@ -160,7 +160,7 @@ func Scale(count, memory, cpu int, vm, app string) error {
 		}
 		commands = append(commands, exec.Command(config.GetFlyctlBinPath(), args...))
 	}
-	
+
 	// Scale memory
 	if memory > 0 {
 		fmt.Printf("💾 Scaling memory to %dMB...\n", memory)
@@ -170,7 +170,7 @@ func Scale(count, memory, cpu int, vm, app string) error {
 		}
 		commands = append(commands, exec.Command(config.GetFlyctlBinPath(), args...))
 	}
-	
+
 	// Scale CPU
 	if cpu > 0 {
 		fmt.Printf("🔧 Scaling CPU to %d cores...\n", cpu)
@@ -180,7 +180,7 @@ func Scale(count, memory, cpu int, vm, app string) error {
 		}
 		commands = append(commands, exec.Command(config.GetFlyctlBinPath(), args...))
 	}
-	
+
 	// Scale VM type
 	if vm != "" {
 		fmt.Printf("🖥️  Scaling to VM type: %s...\n", vm)
@@ -190,21 +190,21 @@ func Scale(count, memory, cpu int, vm, app string) error {
 		}
 		commands = append(commands, exec.Command(config.GetFlyctlBinPath(), args...))
 	}
-	
+
 	// Execute all scaling commands
 	for i, cmd := range commands {
 		if i > 0 {
 			fmt.Println() // Add spacing between commands
 		}
-		
+
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		
+
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("scaling command failed: %w", err)
 		}
 	}
-	
+
 	fmt.Println("\n✅ Scaling operations completed successfully!")
 	return nil
 }

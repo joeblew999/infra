@@ -2,9 +2,15 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/joeblew999/infra/pkg/utm"
 	"github.com/spf13/cobra"
 )
+
+// Register mounts the UTM command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetUTMCmd())
+}
 
 func GetUTMCmd() *cobra.Command {
 	utmCmd := &cobra.Command{

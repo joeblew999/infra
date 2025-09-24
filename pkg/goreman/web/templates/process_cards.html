@@ -1,11 +1,11 @@
-<div id="processes-dashboard" class="space-y-6" data-last-updated="{{.LastUpdatedISO}}">
+<div id="runtime-dashboard" class="space-y-6" data-last-updated="{{.LastUpdatedISO}}">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
             <h2 class="text-xl sm:text-2xl font-semibold flex items-center gap-2">
-                🔍 Process Monitor
+                🛠️ Runtime Services
             </h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                Supervised tasks managed by Goreman. Actions apply instantly; updates stream live.
+                Supervised runtime services managed by Goreman. Actions apply instantly; updates stream live.
             </p>
         </div>
         <div class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
@@ -71,8 +71,8 @@
     {{else}}
     <div class="rounded-lg border border-dashed border-gray-300 dark:border-gray-700 bg-white/60 dark:bg-gray-800/40 p-10 text-center">
         <div class="text-2xl mb-2">📭</div>
-        <div class="text-sm text-gray-600 dark:text-gray-400">No supervised processes detected.</div>
-        <div class="text-xs text-gray-500 dark:text-gray-500 mt-2">Use the CLI or start services to populate this list.</div>
+        <div class="text-sm text-gray-600 dark:text-gray-400">No runtime services registered.</div>
+        <div class="text-xs text-gray-500 dark:text-gray-500 mt-2">Use the CLI to start services or run `infra runtime up` to populate this list.</div>
     </div>
     {{end}}
 </div>

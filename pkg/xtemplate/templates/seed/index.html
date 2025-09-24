@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XTemplate Project</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    {{template "/shared/header.html" .}}
+
+    <main>
+        <h1>Welcome to XTemplate! 🚀</h1>
+        <p>This is your homepage. Edit <code>index.html</code> to customize it.</p>
+
+        <div class="features">
+            <div class="feature">
+                <h3>✨ Live Reload</h3>
+                <p>Changes to templates are automatically reflected in the browser.</p>
+            </div>
+            <div class="feature">
+                <h3>🎯 File-based Routing</h3>
+                <p>Create <code>about.html</code> and visit <code>/about</code> to see it.</p>
+            </div>
+            <div class="feature">
+                <h3>🎨 Template Context</h3>
+                <p>Access request data: <strong>{{.Req.URL.Path}}</strong></p>
+            </div>
+        </div>
+    </main>
+
+    {{template "/shared/footer.html" .}}
+    <script src="/assets/js/app.js"></script>
+
+    <script>new EventSource('/reload').onmessage = () => location.reload()</script>
+</body>
+</html>

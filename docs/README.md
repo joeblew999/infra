@@ -136,7 +136,7 @@ When reporting issues, please include:
 Beta testers can check system health:
 
 ```bash
-go run . status             # Overall deployment status
+go run . workflows status   # Overall deployment status
 ```
 
 **Health Endpoints:**

@@ -1,8 +1,11 @@
 package caddy
 
 import (
+	"fmt"
 	"strings"
 	"testing"
+
+	infraConfig "github.com/joeblew999/infra/pkg/config"
 )
 
 func TestPresetConfigurations(t *testing.T) {
@@ -21,44 +24,44 @@ func TestPresetConfigurations(t *testing.T) {
 			requiredPaths:  nil,
 		},
 		{
-			name:           "Development preset includes bento playground and xtemplate",
+			name:           "Development preset includes core developer services",
 			preset:         PresetDevelopment,
 			port:           8080,
-			expectedRoutes: 2,
-			requiredPaths:  []string{"/bento-playground/*", "/xtemplate/*"},
+			expectedRoutes: 4,
+			requiredPaths:  []string{"/bento-playground/*", "/xtemplate/*", "/docs-hugo/*", "/docs/*"},
 		},
 		{
-			name:           "Full preset includes bento and MCP",
+			name:           "Full preset includes bento, MCP and docs",
 			preset:         PresetFull,
 			port:           8080,
-			expectedRoutes: 2,
-			requiredPaths:  []string{"/bento-playground/*", "/mcp/*"},
+			expectedRoutes: 3,
+			requiredPaths:  []string{"/bento-playground/*", "/mcp/*", "/docs/*"},
 		},
 		{
-			name:           "Microservices preset has 4 routes",
+			name:           "Microservices preset has base microservice routes plus infrastructure",
 			preset:         PresetMicroservices,
 			port:           8080,
-			expectedRoutes: 4,
-			requiredPaths:  []string{"/api/*", "/auth/*", "/static/*", "/ws/*"},
+			expectedRoutes: 8,
+			requiredPaths:  []string{"/api/*", "/auth/*", "/static/*", "/ws/*", "/docs/*", "/docs-hugo/*", "/bento-playground/*", "/mcp/*"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			config := NewPresetConfig(tt.preset, tt.port)
+			cfg := NewPresetConfig(tt.preset, tt.port)
 
-			if config.Port != tt.port {
-				t.Errorf("Expected port %d, got %d", tt.port, config.Port)
+			if cfg.Port != tt.port {
+				t.Errorf("Expected port %d, got %d", tt.port, cfg.Port)
 			}
 
-			if len(config.Routes) != tt.expectedRoutes {
-				t.Errorf("Expected %d routes, got %d", tt.expectedRoutes, len(config.Routes))
+			if len(cfg.Routes) != tt.expectedRoutes {
+				t.Errorf("Expected %d routes, got %d", tt.expectedRoutes, len(cfg.Routes))
 			}
 
 			if len(tt.requiredPaths) > 0 {
 				for _, required := range tt.requiredPaths {
 					found := false
-					for _, route := range config.Routes {
+					for _, route := range cfg.Routes {
 						if route.Path == required {
 							found = true
 							break
@@ -74,32 +77,28 @@ func TestPresetConfigurations(t *testing.T) {
 }
 
 func TestFluentAPI(t *testing.T) {
-	config := NewPresetConfig(PresetSimple, 8080).
+	cfg := NewPresetConfig(PresetSimple, 8080).
 		WithMainTarget("localhost:3000").
 		AddBentoPlayground().
 		AddMCPServer().
 		AddService("/custom/*", "localhost:9000")
 
-	// Check port
-	if config.Port != 8080 {
-		t.Errorf("Expected port 8080, got %d", config.Port)
+	if cfg.Port != 8080 {
+		t.Errorf("Expected port 8080, got %d", cfg.Port)
 	}
 
-	// Check main target
-	if config.Target != "localhost:3000" {
-		t.Errorf("Expected target localhost:3000, got %s", config.Target)
+	if cfg.Target != "localhost:3000" {
+		t.Errorf("Expected target localhost:3000, got %s", cfg.Target)
 	}
 
-	// Check routes were added (simple + bento + MCP + custom = 3)
-	if len(config.Routes) != 3 {
-		t.Errorf("Expected 3 routes, got %d", len(config.Routes))
+	if len(cfg.Routes) != 3 {
+		t.Errorf("Expected 3 routes, got %d", len(cfg.Routes))
 	}
 
-	// Check specific routes exist
 	expectedRoutes := []string{"/bento-playground/*", "/mcp/*", "/custom/*"}
 	for _, expectedPath := range expectedRoutes {
 		found := false
-		for _, route := range config.Routes {
+		for _, route := range cfg.Routes {
 			if route.Path == expectedPath {
 				found = true
 				break
@@ -112,27 +111,25 @@ func TestFluentAPI(t *testing.T) {
 }
 
 func TestCaddyfileGeneration(t *testing.T) {
-	config := CaddyConfig{
+	cfg := CaddyConfig{
 		Port:   8080,
-		Target: "localhost:1337",
+		Target: defaultMainTarget(),
 		Routes: []ProxyRoute{
 			{Path: "/api/*", Target: "localhost:4000"},
 			{Path: "/auth/*", Target: "localhost:5000"},
 		},
 	}
 
-	caddyfile := GenerateCaddyfile(config)
+	caddyfile := GenerateCaddyfile(cfg)
 
-	// Check basic structure
 	if !strings.Contains(caddyfile, "8080") {
 		t.Error("Caddyfile should contain port 8080")
 	}
 
-	if !strings.Contains(caddyfile, "reverse_proxy localhost:1337") {
+	if !strings.Contains(caddyfile, "reverse_proxy "+defaultMainTarget()) {
 		t.Error("Caddyfile should contain main target")
 	}
 
-	// Check routes
 	if !strings.Contains(caddyfile, "handle /api/*") {
 		t.Error("Caddyfile should contain API route")
 	}
@@ -147,33 +144,30 @@ func TestCaddyfileGeneration(t *testing.T) {
 }
 
 func TestInfrastructureConstants(t *testing.T) {
-	// Test that infrastructure services use consistent ports/paths
-	config := NewPresetConfig(PresetFull, 8080)
+	cfg := NewPresetConfig(PresetFull, 8080)
 
-	// Check bento playground
 	bentoFound := false
 	mcpFound := false
 
-	for _, route := range config.Routes {
-		if route.Path == "/bento-playground/*" && route.Target == "localhost:4195" {
+	for _, route := range cfg.Routes {
+		if route.Path == "/bento-playground/*" && route.Target == "localhost:"+infraConfig.GetBentoPort() {
 			bentoFound = true
 		}
-		if route.Path == "/mcp/*" && route.Target == "localhost:8080" {
+		if route.Path == "/mcp/*" && route.Target == "localhost:"+infraConfig.GetMCPPort() {
 			mcpFound = true
 		}
 	}
 
 	if !bentoFound {
-		t.Error("Bento playground should be at /bento-playground/* -> localhost:4195")
+		t.Errorf("Bento playground should be at /bento-playground/* -> localhost:%s", infraConfig.GetBentoPort())
 	}
 
 	if !mcpFound {
-		t.Error("MCP server should be at /mcp/* -> localhost:8080")
+		t.Errorf("MCP server should be at /mcp/* -> localhost:%s", infraConfig.GetMCPPort())
 	}
 
-	// Check main target default
-	if config.Target != "localhost:1337" {
-		t.Errorf("Default main target should be localhost:1337, got %s", config.Target)
+	if cfg.Target != "localhost:"+infraConfig.GetWebServerPort() {
+		t.Errorf("Default main target should be localhost:%s, got %s", infraConfig.GetWebServerPort(), cfg.Target)
 	}
 }
 
@@ -185,7 +179,7 @@ func TestBackwardCompatibility(t *testing.T) {
 		t.Error("Legacy function should work with port 8080")
 	}
 
-	if !strings.Contains(caddyfile, "reverse_proxy localhost:1337") {
+	if !strings.Contains(caddyfile, fmt.Sprintf("reverse_proxy localhost:%d", 1337)) {
 		t.Error("Legacy function should work with target 1337")
 	}
 

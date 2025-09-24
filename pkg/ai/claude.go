@@ -452,7 +452,7 @@ func (r *ClaudeRunner) PresetList() error {
 		}
 	}
 
-	fmt.Printf("\n💡 Install with: go run . cli ai claude mcp preset-install [server-name]\n")
+	fmt.Printf("\n💡 Install with: go run . tools ai claude mcp preset-install [server-name]\n")
 	return nil
 }
 

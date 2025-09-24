@@ -15,7 +15,7 @@ The infrastructure supports three types of scaling:
 ### Show Current Configuration
 
 ```bash
-go run . cli fly scale
+go run . tools fly scale
 ```
 
 Output shows:
@@ -31,13 +31,13 @@ Add or remove machines for increased capacity and redundancy:
 
 ```bash
 # Scale to 2 machines
-go run . cli fly scale --count 2
+go run . tools fly scale --count 2
 
 # Scale to 3 machines  
-go run . cli fly scale --count 3
+go run . tools fly scale --count 3
 
 # Scale back to 1 machine
-go run . cli fly scale --count 1
+go run . tools fly scale --count 1
 ```
 
 **Benefits:**
@@ -56,16 +56,16 @@ Increase resources per machine for CPU/memory-intensive workloads:
 
 ```bash
 # Scale memory to 1GB
-go run . cli fly scale --memory 1024
+go run . tools fly scale --memory 1024
 
 # Scale memory to 2GB  
-go run . cli fly scale --memory 2048
+go run . tools fly scale --memory 2048
 
 # Scale to 2 CPU cores
-go run . cli fly scale --cpu 2
+go run . tools fly scale --cpu 2
 
 # Scale to 4 CPU cores
-go run . cli fly scale --cpu 4
+go run . tools fly scale --cpu 4
 ```
 
 **Memory Options:**
@@ -80,16 +80,16 @@ Switch between different machine performance tiers:
 
 ```bash
 # Shared CPU machines (burstable)
-go run . cli fly scale --vm shared-cpu-1x    # 1 shared CPU
-go run . cli fly scale --vm shared-cpu-2x    # 2 shared CPUs  
-go run . cli fly scale --vm shared-cpu-4x    # 4 shared CPUs
-go run . cli fly scale --vm shared-cpu-8x    # 8 shared CPUs
+go run . tools fly scale --vm shared-cpu-1x    # 1 shared CPU
+go run . tools fly scale --vm shared-cpu-2x    # 2 shared CPUs  
+go run . tools fly scale --vm shared-cpu-4x    # 4 shared CPUs
+go run . tools fly scale --vm shared-cpu-8x    # 8 shared CPUs
 
 # Dedicated CPU machines (consistent performance)
-go run . cli fly scale --vm performance-1x   # 1 dedicated CPU
-go run . cli fly scale --vm performance-2x   # 2 dedicated CPUs
-go run . cli fly scale --vm performance-4x   # 4 dedicated CPUs
-go run . cli fly scale --vm performance-8x   # 8 dedicated CPUs
+go run . tools fly scale --vm performance-1x   # 1 dedicated CPU
+go run . tools fly scale --vm performance-2x   # 2 dedicated CPUs
+go run . tools fly scale --vm performance-4x   # 4 dedicated CPUs
+go run . tools fly scale --vm performance-8x   # 8 dedicated CPUs
 ```
 
 **Shared CPUs**: 
@@ -108,10 +108,10 @@ Perform multiple scaling operations in one command:
 
 ```bash
 # Scale to 2 machines with 2GB RAM and 2 CPUs each
-go run . cli fly scale --count 2 --memory 2048 --cpu 2
+go run . tools fly scale --count 2 --memory 2048 --cpu 2
 
 # Scale to high-performance setup
-go run . cli fly scale --count 3 --vm performance-4x --memory 4096
+go run . tools fly scale --count 3 --vm performance-4x --memory 4096
 ```
 
 ## Scaling Strategies
@@ -119,37 +119,37 @@ go run . cli fly scale --count 3 --vm performance-4x --memory 4096
 ### Development/Testing
 ```bash
 # Start small for development
-go run . cli fly scale --count 1 --memory 512 --vm shared-cpu-1x
+go run . tools fly scale --count 1 --memory 512 --vm shared-cpu-1x
 ```
 
 ### Production - Low Traffic
 ```bash  
 # Single machine with decent resources
-go run . cli fly scale --count 1 --memory 1024 --cpu 2
+go run . tools fly scale --count 1 --memory 1024 --cpu 2
 ```
 
 ### Production - Medium Traffic
 ```bash
 # Multiple machines for redundancy
-go run . cli fly scale --count 2 --memory 2048 --vm shared-cpu-2x
+go run . tools fly scale --count 2 --memory 2048 --vm shared-cpu-2x
 ```
 
 ### Production - High Traffic
 ```bash
 # High-performance cluster
-go run . cli fly scale --count 3 --memory 4096 --vm performance-2x
+go run . tools fly scale --count 3 --memory 4096 --vm performance-2x
 ```
 
 ### CPU-Intensive Workloads
 ```bash
 # More CPUs for processing
-go run . cli fly scale --count 2 --cpu 4 --vm performance-4x
+go run . tools fly scale --count 2 --cpu 4 --vm performance-4x
 ```
 
 ### Memory-Intensive Workloads  
 ```bash
 # More RAM for data processing
-go run . cli fly scale --count 1 --memory 8192 --vm performance-2x
+go run . tools fly scale --count 1 --memory 8192 --vm performance-2x
 ```
 
 ## Monitoring and Scaling Decisions
@@ -158,13 +158,13 @@ go run . cli fly scale --count 1 --memory 8192 --vm performance-2x
 
 ```bash
 # Check application status
-go run . cli fly status
+go run . tools fly status
 
 # View logs for performance issues
-go run . cli fly logs
+go run . tools fly logs
 
 # SSH in to check resource usage
-go run . cli fly ssh
+go run . tools fly ssh
 # Inside machine: htop, df -h, free -m
 ```
 
@@ -213,13 +213,13 @@ curl https://your-app.fly.dev/metrics  # Application metrics
 ### Scaling Command Fails
 ```bash
 # Check machine status
-go run . cli fly status
+go run . tools fly status
 
 # View recent logs
-go run . cli fly logs
+go run . tools fly logs
 
 # Verify sufficient resources available
-go run . cli fly scale  # Check current allocation
+go run . tools fly scale  # Check current allocation
 ```
 
 ### Application Not Responding After Scale
@@ -228,7 +228,7 @@ go run . cli fly scale  # Check current allocation
 curl https://your-app.fly.dev/status
 
 # SSH into machine to debug
-go run . cli fly ssh
+go run . tools fly ssh
 
 # Check goreman process status
 ps aux | grep goreman
@@ -263,9 +263,9 @@ Consider implementing scheduled scaling for predictable traffic patterns:
 ### Multi-region Deployment
 ```bash  
 # Deploy to multiple regions
-go run . deploy --region syd   # Sydney
-go run . deploy --region dfw   # Dallas  
-go run . deploy --region ams   # Amsterdam
+go run . workflows deploy --region syd   # Sydney
+go run . workflows deploy --region dfw   # Dallas  
+go run . workflows deploy --region ams   # Amsterdam
 ```
 
 ### Volume Management

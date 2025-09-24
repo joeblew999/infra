@@ -310,6 +310,41 @@
     ]
   },
   {
+    "name": "nsc",
+    "description": "NATS account and credentials management CLI",
+    "source": "github-release",
+    "repo": "nats-io/nsc",
+    "version": "v2.11.1",
+    "release_url": "https://github.com/nats-io/nsc/releases",
+    "assets": [
+      {
+        "match": "nsc-darwin-arm64\\.zip$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "nsc-darwin-amd64\\.zip$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "nsc-linux-amd64\\.zip$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "nsc-linux-arm64\\.zip$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "nsc-windows-amd64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      }
+    ]
+  },
+  {
     "name": "nats-server",
     "description": "NATS Server is a simple, high performance open source messaging system.",
     "source": "github-release",
@@ -424,8 +459,6 @@
       }
     ]
   },
-  
-  
   {
     "name": "toki",
     "description": "Multi-language translation tool with pluralization support",
@@ -696,38 +729,118 @@
     "description": "Code generation tool for go-zero microservices framework",
     "source": "go-build",
     "repo": "zeromicro/go-zero",
-    "package": "tools/goctl", 
+    "package": "tools/goctl",
     "version": "v1.9.0"
   },
   {
-   "name": "nats-s3",
-   "description": "S3 gateway for NATS JetStream Object Store",
-   "source": "go-build",
-   "repo": "wpnpeiris/nats-s3",
-   "package": "cmd/nats-s3",
-   "version": "main"
-   },
+    "name": "nats-s3",
+    "description": "S3 gateway for NATS JetStream Object Store",
+    "source": "go-build",
+    "repo": "wpnpeiris/nats-s3",
+    "package": "cmd/nats-s3",
+    "version": "main"
+  },
   {
-   "name": "mox",
-   "description": "Modern secure mail server with automatic HTTPS, DMARC, and webmail",
-   "source": "go-build",
-   "repo": "mjl-/mox",
-   "package": ".",
-   "version": "v0.0.15"
-   },
+    "name": "mox",
+    "description": "Modern secure mail server with automatic HTTPS, DMARC, and webmail",
+    "source": "go-build",
+    "repo": "mjl-/mox",
+    "package": ".",
+    "version": "v0.0.15"
+  },
   {
-   "name": "utm",
-   "description": "Full-featured system emulator and virtual machine host for macOS",
-   "source": "macos-app",
-   "repo": "utmapp/UTM",
-   "version": "v4.7.4",
-   "release_url": "https://github.com/utmapp/UTM/releases",
-   "assets": [
-     {
-       "match": "UTM.dmg$",
-       "os": "darwin",
-       "arch": "universal"
-     }
-   ]
-   }
+    "name": "pocketbase",
+    "description": "Realtime backend and admin dashboard for your apps",
+    "source": "github-release",
+    "repo": "pocketbase/pocketbase",
+    "version": "v0.30.0",
+    "release_url": "https://github.com/pocketbase/pocketbase/releases",
+    "assets": [
+      {
+        "match": "pocketbase_.*_darwin_amd64\\.zip$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "pocketbase_.*_darwin_arm64\\.zip$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "pocketbase_.*_linux_amd64\\.zip$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "pocketbase_.*_linux_arm64\\.zip$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "pocketbase_.*_windows_amd64\\.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      },
+      {
+        "match": "pocketbase_.*_windows_arm64\\.zip$",
+        "os": "windows",
+        "arch": "arm64"
+      }
+    ]
+  },
+  {
+    "name": "utm",
+    "description": "Full-featured system emulator and virtual machine host for macOS",
+    "source": "macos-app",
+    "repo": "utmapp/UTM",
+    "version": "v4.7.4",
+    "release_url": "https://github.com/utmapp/UTM/releases",
+    "assets": [
+      {
+        "match": "UTM.dmg$",
+        "os": "darwin",
+        "arch": "universal"
+      }
+    ]
+  },
+  {
+    "name": "hugo",
+    "description": "Fast and flexible static site generator with modern theming support",
+    "source": "github-release",
+    "repo": "gohugoio/hugo",
+    "version": "v0.150.0",
+    "release_url": "https://github.com/gohugoio/hugo/releases",
+    "assets": [
+      {
+        "match": "hugo_extended_.*_darwin-universal.tar.gz$",
+        "os": "darwin",
+        "arch": "arm64"
+      },
+      {
+        "match": "hugo_extended_.*_darwin-universal.tar.gz$",
+        "os": "darwin",
+        "arch": "amd64"
+      },
+      {
+        "match": "hugo_extended_.*_linux-amd64.tar.gz$",
+        "os": "linux",
+        "arch": "amd64"
+      },
+      {
+        "match": "hugo_extended_.*_linux-arm64.tar.gz$",
+        "os": "linux",
+        "arch": "arm64"
+      },
+      {
+        "match": "hugo_extended_.*_windows-amd64.zip$",
+        "os": "windows",
+        "arch": "amd64"
+      },
+      {
+        "match": "hugo_extended_.*_windows-arm64.zip$",
+        "os": "windows",
+        "arch": "arm64"
+      }
+    ]
+  }
 ]

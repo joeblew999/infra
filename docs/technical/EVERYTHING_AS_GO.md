@@ -169,7 +169,7 @@ kubectl rollout status deployment/myapp
 # Hope everything works...
 
 # Our approach  
-go run . deploy
+go run . workflows deploy
 # Idempotent deployment, automatically handles everything
 ```
 
@@ -184,7 +184,7 @@ kubectl apply -f updated-k8s/   # Infrastructure updates
 
 # Our approach
 go get -u github.com/joeblew999/infra
-go run . deploy
+go run . workflows deploy
 # Everything updated and deployed together
 ```
 

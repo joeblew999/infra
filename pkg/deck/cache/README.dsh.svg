@@ -166,7 +166,7 @@
 <text x="396.00" y="2408.28" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" ></text>
 <text x="396.00" y="2421.59" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >### Installation</text>
 <text x="396.00" y="2434.90" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >1. **Download the binary** or build from source</text>
-<text x="396.00" y="2448.20" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >2. **Run `./infra service`** to start all services</text>
+<text x="396.00" y="2448.20" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >2. **Run `./infra runtime up`** to start all services</text>
 <text x="396.00" y="2461.51" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >3. **Access web interface** at http://localhost:1337</text>
 <text x="396.00" y="2474.81" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" >4. **Check service status** at http://localhost:1337/status</text>
 <text x="396.00" y="2488.12" xml:space="preserve" style="fill:black;font-size:9.50px;font-family:Helvetica;text-anchor:start" ></text>

@@ -38,7 +38,7 @@ func Start(name string) error {
 	return manager.StartProcess(name)
 }
 
-// Stop stops a process by name (idempotent) 
+// Stop stops a process by name (idempotent)
 // If not running, this is a no-op
 func Stop(name string) error {
 	manager := GetManager()
@@ -63,7 +63,7 @@ func IsRunning(name string) bool {
 
 // RegisterAndStart is a convenience function for idempotent process management
 // This is the main function packages should use:
-// 1. Register the process configuration (updates if exists)  
+// 1. Register the process configuration (updates if exists)
 // 2. Start the process if not already running
 func RegisterAndStart(name string, config *ProcessConfig) error {
 	Register(name, config)
@@ -74,6 +74,12 @@ func RegisterAndStart(name string, config *ProcessConfig) error {
 func StopAll() error {
 	manager := GetManager()
 	return manager.Stop()
+}
+
+// GetProcessPID returns the PID for a registered process when available.
+func GetProcessPID(name string) (int, bool) {
+	manager := GetManager()
+	return manager.GetProcessPID(name)
 }
 
 // GetAllStatus returns status of all registered processes
@@ -113,11 +119,11 @@ func StartService(name string) error {
 	registryMutex.RLock()
 	factory, exists := serviceRegistry[name]
 	registryMutex.RUnlock()
-	
+
 	if !exists {
 		return fmt.Errorf("service %s not registered. Available services: %v", name, GetAvailableServices())
 	}
-	
+
 	return factory()
 }
 
@@ -125,7 +131,7 @@ func StartService(name string) error {
 func GetAvailableServices() []string {
 	registryMutex.RLock()
 	defer registryMutex.RUnlock()
-	
+
 	services := make([]string, 0, len(serviceRegistry))
 	for name := range serviceRegistry {
 		services = append(services, name)

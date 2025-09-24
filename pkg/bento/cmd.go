@@ -79,7 +79,12 @@ func newStartCmd() *cobra.Command {
 				return fmt.Errorf("failed to ensure default config: %w", err)
 			}
 
-			service, err := NewService(4195) // Default bento port
+			port, err := strconv.Atoi(config.GetBentoPort())
+			if err != nil {
+				return fmt.Errorf("invalid bento port: %w", err)
+			}
+
+			service, err := NewService(port)
 			if err != nil {
 				return fmt.Errorf("failed to create bento service: %w", err)
 			}
@@ -132,7 +137,7 @@ func newStatusCmd() *cobra.Command {
 
 			fmt.Printf("✅ Bento config: %s\n", configFile)
 			fmt.Printf("📁 Config directory: %s\n", configDir)
-			fmt.Printf("🌐 HTTP endpoint: http://localhost:4195\n")
+			fmt.Printf("🌐 HTTP endpoint: http://localhost:%s\n", config.GetBentoPort())
 			return nil
 		},
 	}

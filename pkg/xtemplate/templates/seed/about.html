@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - XTemplate Project</title>
+    <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+<body>
+    {{template "/shared/header.html" .}}
+
+    <main>
+        <h1>About This Project</h1>
+        <p>This is a sample about page created with XTemplate.</p>
+
+        <h2>Template Features</h2>
+        <ul>
+            <li>HTML/template syntax with Go functions</li>
+            <li>Built-in context providers (database, filesystem, etc.)</li>
+            <li>Custom route definitions using ServeMux patterns</li>
+            <li>Server-sent events for real-time updates</li>
+        </ul>
+    </main>
+
+    {{template "/shared/footer.html" .}}
+    <script src="/assets/js/app.js"></script>
+</body>
+</html>

@@ -15,10 +15,10 @@ Use pkg/log to tell us it has started !
 
 ```sh
 
-go run . service
+go run . runtime up --only pocketbase
 
 # Or disable it:
-go run . service --no-pocketbase
+go run . runtime up --skip pocketbase
 
 ``` 
 
@@ -60,4 +60,3 @@ github.com/stripe/stripe-go/v76
 ## sms
 
 github.com/pocketbase/pocketbase/tools/sms is proposed.
-

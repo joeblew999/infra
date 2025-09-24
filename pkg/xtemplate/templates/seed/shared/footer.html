@@ -1,0 +1,7 @@
+<footer>
+    <p>&copy; 2024 XTemplate Project. Built with ❤️ using XTemplate.</p>
+</footer>
+
+{{- define "SSE /reload"}}
+{{.WaitForServerStop}}data: reload{{printf "\n\n"}}
+{{- end}}

@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/nats"
+	"github.com/spf13/cobra"
 )
 
-// GetClusterCmd returns the cluster management commands
-func GetClusterCmd() *cobra.Command {
+// NewClusterCmd returns the cluster management commands.
+func NewClusterCmd() *cobra.Command {
 	var clusterCmd = &cobra.Command{
 		Use:   "cluster",
 		Short: "NATS cluster management commands",
@@ -22,13 +22,13 @@ func GetClusterCmd() *cobra.Command {
 	var localCmd = &cobra.Command{
 		Use:   "local",
 		Short: "Local NATS cluster management",
-		Long:  `Manage local Docker-based NATS cluster for development`,
+		Long:  `Manage the goreman-supervised local NATS cluster used in development`,
 	}
 
 	var localStartCmd = &cobra.Command{
 		Use:   "start",
 		Short: "Start local NATS cluster",
-		Long:  `Start a local 6-node NATS cluster using Docker containers with JetStream enabled`,
+		Long:  `Start or ensure the local 6-node NATS cluster using goreman-managed processes with JetStream enabled`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			return nats.StartLocalCluster(ctx)
@@ -38,7 +38,7 @@ func GetClusterCmd() *cobra.Command {
 	var localStopCmd = &cobra.Command{
 		Use:   "stop",
 		Short: "Stop local NATS cluster",
-		Long:  `Stop all local NATS cluster nodes and clean up Docker resources`,
+		Long:  `Stop all local NATS cluster processes supervised by goreman`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return nats.StopLocalCluster()
 		},
@@ -55,8 +55,8 @@ func GetClusterCmd() *cobra.Command {
 
 	var localUpgradeCmd = &cobra.Command{
 		Use:   "upgrade",
-		Short: "Upgrade local NATS cluster with lame duck mode",
-		Long:  `Perform rolling upgrade of local NATS cluster using lame duck mode for zero downtime`,
+		Short: "Upgrade local NATS cluster",
+		Long:  `Placeholder for rolling upgrades of the goreman-managed local NATS cluster (not yet implemented)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 			return nats.UpgradeCluster(ctx, true)
@@ -75,7 +75,7 @@ func GetClusterCmd() *cobra.Command {
 	}
 
 	var prodStatusCmd = &cobra.Command{
-		Use:   "prod-status", 
+		Use:   "prod-status",
 		Short: "Show production NATS cluster status",
 		Long:  `Display the status of all production NATS cluster nodes on Fly.io`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -85,7 +85,7 @@ func GetClusterCmd() *cobra.Command {
 
 	var prodUpgradeCmd = &cobra.Command{
 		Use:   "prod-upgrade",
-		Short: "Upgrade production NATS cluster with lame duck mode", 
+		Short: "Upgrade production NATS cluster with lame duck mode",
 		Long:  `Perform rolling upgrade of production NATS cluster using lame duck mode for zero downtime`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -109,18 +109,18 @@ func GetClusterCmd() *cobra.Command {
 		Use:   "bootstrap",
 		Short: "Bootstrap NATS cluster infrastructure",
 		Long: `Bootstrap complete NATS cluster infrastructure:
-- Local: Start 6-node Docker cluster for development
+- Local: Ensure goreman-managed 6-node cluster for development
 - Production: Deploy 6-node cluster across Fly.io regions
 
 This command is idempotent and safe to run multiple times.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			
+
 			if config.IsProduction() {
 				fmt.Println("🚀 Bootstrapping production NATS cluster on Fly.io...")
 				return nats.DeployFlyCluster(ctx)
 			} else {
-				fmt.Println("🐳 Bootstrapping local NATS cluster with Docker...")
+				fmt.Println("🐳 Bootstrapping local NATS cluster with goreman...")
 				return nats.StartLocalCluster(ctx)
 			}
 		},
@@ -153,9 +153,9 @@ func showClusterStatus(isLocal bool) error {
 	// Display cluster overview
 	environment := "Production (Fly.io)"
 	if isLocal {
-		environment = "Local (Docker)"
+		environment = "Local (goreman)"
 	}
-	
+
 	fmt.Printf("📊 NATS Cluster Status - %s\n", environment)
 	fmt.Printf("Cluster Name: %s\n", clusterConfig.ClusterName)
 	fmt.Printf("Environment: %s\n", clusterConfig.Environment)
@@ -167,7 +167,7 @@ func showClusterStatus(isLocal bool) error {
 	fmt.Println("Node Details:")
 	fmt.Printf("%-12s %-8s %-12s %-14s %-12s %-10s\n", "NAME", "REGION", "CLIENT_PORT", "CLUSTER_PORT", "HTTP_PORT", "STATUS")
 	fmt.Println(strings.Repeat("-", 80))
-	
+
 	for _, node := range clusterConfig.Nodes {
 		status := node.Status
 		statusEmoji := "❓"
@@ -179,8 +179,8 @@ func showClusterStatus(isLocal bool) error {
 		case "error":
 			statusEmoji = "❌"
 		}
-		
-		fmt.Printf("%-12s %-8s %-12d %-14d %-12d %s %s\n", 
+
+		fmt.Printf("%-12s %-8s %-12d %-14d %-12d %s %s\n",
 			node.Name, node.Region, node.Port, node.ClusterPort, node.HTTPPort, statusEmoji, status)
 	}
 
@@ -189,7 +189,7 @@ func showClusterStatus(isLocal bool) error {
 		fmt.Println("\n🌐 Web GUI URLs (HTTP Monitoring):")
 		for _, node := range clusterConfig.Nodes {
 			if node.Status == "running" {
-				fmt.Printf("  %s: http://localhost:%d/\n", node.Name, node.HTTPPort)
+				fmt.Printf("  %s: %s/\n", node.Name, config.FormatLocalHTTP(fmt.Sprintf("%d", node.HTTPPort)))
 			}
 		}
 	}

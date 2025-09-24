@@ -13,6 +13,7 @@ import (
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
+	runtimeevents "github.com/joeblew999/infra/pkg/runtime/events"
 	"github.com/joeblew999/infra/pkg/status"
 	"github.com/joeblew999/infra/pkg/webapp/templates"
 )
@@ -45,6 +46,7 @@ func (s *StatusWebService) RegisterRoutes(r chi.Router) {
 	// Status page routes
 	r.Get("/", HandleStatusPage)
 	r.Get("/api/stream", HandleStatusStream)
+	r.Get("/api/events", HandleServiceEvents)
 	r.Get("/api/system-status", HandleSystemStatus)
 }
 
@@ -88,16 +90,60 @@ func HandleStatusStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ticker := time.NewTicker(statusStreamInterval)
-	defer ticker.Stop()
+	eventsCh, cancel := runtimeevents.Subscribe(128)
+	defer cancel()
+
+	keepAlive := time.NewTicker(statusStreamInterval)
+	defer keepAlive.Stop()
+
+	var lastUpdate time.Time
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case evt := <-eventsCh:
+			if evt == nil {
+				continue
+			}
+			if !lastUpdate.IsZero() && time.Since(lastUpdate) < 75*time.Millisecond {
+				continue
+			}
+			if err := sendStatusSnapshot(sse); err != nil {
+				log.Error("error streaming status snapshot", "error", err)
+				return
+			}
+			lastUpdate = time.Now()
+		case <-keepAlive.C:
+			if err := sendStatusSnapshot(sse); err != nil {
+				log.Error("error streaming keepalive snapshot", "error", err)
+				return
+			}
+			lastUpdate = time.Now()
+		}
+	}
+}
+
+func HandleServiceEvents(w http.ResponseWriter, r *http.Request) {
+	sse := datastarlib.NewSSE(w, r)
+
+	if err := sendInitialStateEvent(sse); err != nil {
+		log.Error("error sending initial state event", "error", err)
+		return
+	}
+
+	eventsCh, cancel := runtimeevents.Subscribe(256)
+	defer cancel()
 
 	for {
 		select {
 		case <-r.Context().Done():
 			return
-		case <-ticker.C:
-			if err := sendStatusSnapshot(sse); err != nil {
-				log.Error("error streaming status snapshot", "error", err)
+		case evt := <-eventsCh:
+			if evt == nil {
+				continue
+			}
+			if err := sendRuntimeEvent(sse, evt); err != nil {
+				log.Error("error streaming runtime event", "error", err)
 				return
 			}
 		}
@@ -139,6 +185,61 @@ func sendStatusSnapshot(sse *datastarlib.ServerSentEventGenerator) error {
 	return sse.PatchElements(html)
 }
 
+func sendInitialStateEvent(sse *datastarlib.ServerSentEventGenerator) error {
+	systemStatus, err := status.GetCurrentStatus()
+	if err != nil {
+		return err
+	}
+
+	envelope := map[string]any{
+		"type":      "initial-state",
+		"timestamp": systemStatus.Timestamp,
+		"services":  systemStatus.Services,
+	}
+
+	data, err := json.Marshal(envelope)
+	if err != nil {
+		return err
+	}
+
+	return sse.Send("infra-service-event", []string{string(data)})
+}
+
+func sendRuntimeEvent(sse *datastarlib.ServerSentEventGenerator, evt runtimeevents.Event) error {
+	envelope := map[string]any{
+		"type":      evt.Type(),
+		"timestamp": evt.Timestamp(),
+	}
+
+	switch e := evt.(type) {
+	case runtimeevents.ServiceStatus:
+		envelope["service_id"] = e.ServiceID
+		envelope["running"] = e.Running
+		envelope["pid"] = e.PID
+		envelope["port"] = e.Port
+		envelope["ownership"] = e.Ownership
+		envelope["state"] = e.State
+		envelope["message"] = e.Message
+	case runtimeevents.ServiceAction:
+		envelope["service_id"] = e.ServiceID
+		envelope["message"] = e.Message
+		envelope["kind"] = e.Kind
+	case runtimeevents.ServiceRegistered:
+		envelope["service_id"] = e.ServiceID
+		envelope["name"] = e.Name
+		envelope["description"] = e.Description
+		envelope["required"] = e.Required
+		envelope["port"] = e.Port
+	}
+
+	data, err := json.Marshal(envelope)
+	if err != nil {
+		return err
+	}
+
+	return sse.Send("infra-service-event", []string{string(data)})
+}
+
 func mapStatusToTemplate(systemStatus status.SystemStatus) StatusTemplateData {
 	runtimeData := StatusRuntime{
 		Goroutines:     systemStatus.Runtime.NumGoroutines,
@@ -160,13 +261,18 @@ func mapStatusToTemplate(systemStatus status.SystemStatus) StatusTemplateData {
 	for i, svc := range systemStatus.Services {
 		border, pill := serviceStyles(svc.Level)
 		services[i] = StatusService{
-			Name:   svc.Name,
-			Status: svc.Status,
-			Detail: svc.Detail,
-			Icon:   svc.Icon,
-			Border: border,
-			Pill:   pill,
-			Port:   svc.Port,
+			Name:         svc.Name,
+			State:        svc.State,
+			Status:       svc.Status,
+			Description:  svc.Description,
+			LastAction:   svc.LastAction,
+			Message:      svc.Message,
+			Icon:         svc.Icon,
+			Border:       border,
+			Pill:         pill,
+			Port:         svc.Port,
+			Ownership:    svc.Ownership,
+			MessageClass: messageClassForOwnership(svc.Ownership),
 		}
 	}
 
@@ -184,6 +290,19 @@ func mapStatusToTemplate(systemStatus status.SystemStatus) StatusTemplateData {
 		LoadAverage:        systemStatus.Load,
 		Runtime:            runtimeData,
 		Services:           services,
+	}
+}
+
+func messageClassForOwnership(ownership string) string {
+	switch ownership {
+	case "external":
+		return "text-xs text-rose-600 dark:text-rose-300"
+	case "infra":
+		return "text-xs text-amber-600 dark:text-amber-300"
+	case "this":
+		return "text-xs text-emerald-600 dark:text-emerald-300"
+	default:
+		return "text-xs text-gray-500 dark:text-gray-400"
 	}
 }
 

@@ -32,7 +32,7 @@ Ensure you have:
 
 ### Deployment Process
 
-1. **Setup**: `go run . dep install flyctl`
+1. **Setup**: `go run . tools dep install flyctl`
 2. **Deploy**: `go run . fly deploy`
 3. **Monitor**: `go run . fly status`
 4. **Debug**: `go run . fly logs` or `go run . fly ssh`

@@ -58,10 +58,10 @@ go run .                    # Start one more time
 Test various CLI operations:
 ```bash
 go run . -h                 # Help should show organized categories
-go run . status             # Should show deployment status
-go run . config             # Should print current configuration
-go run . cli -h             # Should show CLI tools
-go run . cli deck -h        # Should show deck commands
+go run . workflows status   # Should show deployment status
+go run . tools config       # Should print current configuration
+go run . tools -h           # Should show tooling namespace
+go run . tools deck -h      # Should show deck commands
 ```
 
 ### Scenario 3: Web Interface Test
@@ -84,14 +84,14 @@ Navigate through the web interface:
 Test with multiple terminal windows:
 ```bash
 # Terminal 1: Start services
-go run .
+go run . runtime up
 
 # Terminal 2: Check status while running
-go run . status
+go run . runtime status
 
 # Terminal 3: Try other commands
-go run . config
-go run . cli deck list
+go run . tools config
+go run . tools deck list
 ```
 
 ## 📝 What to Report
@@ -133,7 +133,7 @@ Copy this checklist and mark ✅/❌ as you test:
 
 ### CLI Testing
 - [ ] `go run . -h` shows organized help
-- [ ] `go run . status` works
+- [ ] `go run . runtime status` works
 - [ ] `go run . config` displays configuration
 - [ ] `go run . shutdown` stops all services
 - [ ] No hanging processes after shutdown

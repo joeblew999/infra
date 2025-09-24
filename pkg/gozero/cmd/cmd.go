@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the go-zero command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetGoZeroCmd())
+}
+
 // GetGoZeroCmd returns the gozero command for CLI integration
 func GetGoZeroCmd() *cobra.Command {
 	return goZeroCmd

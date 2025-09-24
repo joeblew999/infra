@@ -12,23 +12,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joeblew999/infra/pkg/log"
 	"github.com/joeblew999/infra/pkg/config"
-	"github.com/joeblew999/infra/pkg/goreman"
+	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/service"
 )
 
 // Watcher monitors filesystem for .dsh file changes
 type Watcher struct {
-	Builder      *Builder
-	WatchPaths   []string
-	OutputDir    string
-	CacheDir     string
-	Processing   map[string]bool
-	Formats      []string // Output formats to generate (svg, png, pdf)
-	mu           sync.RWMutex
-	ctx          context.Context
-	cancel       context.CancelFunc
-	wg           sync.WaitGroup
+	Builder    *Builder
+	WatchPaths []string
+	OutputDir  string
+	CacheDir   string
+	Processing map[string]bool
+	Formats    []string // Output formats to generate (svg, png, pdf)
+	mu         sync.RWMutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
 }
 
 // NewWatcher creates a new file watcher
@@ -62,17 +62,17 @@ func (w *Watcher) Start() error {
 	}
 
 	log.Info("Starting .dsh file watcher", "paths", w.WatchPaths)
-	
+
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-	
+
 	// Initial scan
 	w.scanFiles()
-	
+
 	// Start watch loop in goroutine
 	go w.watchLoop()
-	
+
 	// Wait for shutdown signal
 	<-sigChan
 	log.Info("Shutting down file watcher...")
@@ -83,7 +83,7 @@ func (w *Watcher) Start() error {
 func (w *Watcher) watchLoop() {
 	ticker := time.NewTicker(time.Duration(WatcherPollInterval) * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-w.ctx.Done():
@@ -98,24 +98,24 @@ func (w *Watcher) watchLoop() {
 // Stop gracefully shuts down the watcher
 func (w *Watcher) Stop() error {
 	log.Info("Stopping file watcher and waiting for active tasks...")
-	
+
 	// Cancel context to stop new work
 	w.cancel()
-	
+
 	// Wait for all goroutines to finish with timeout
 	done := make(chan struct{})
 	go func() {
 		w.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		log.Info("All file processing tasks completed")
 	case <-time.After(30 * time.Second):
 		log.Warn("Timeout waiting for tasks to complete, forcing shutdown")
 	}
-	
+
 	return nil
 }
 
@@ -133,15 +133,15 @@ func (w *Watcher) processFile(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		return err
 	}
-	
+
 	if info.IsDir() {
 		return nil
 	}
-	
+
 	if !strings.HasSuffix(path, ".dsh") {
 		return nil
 	}
-	
+
 	// Skip if already processing (thread-safe check)
 	w.mu.RLock()
 	if w.Processing[path] {
@@ -149,20 +149,20 @@ func (w *Watcher) processFile(path string, info os.FileInfo, err error) error {
 		return nil
 	}
 	w.mu.RUnlock()
-	
+
 	// Check if file has been modified recently
 	if time.Since(info.ModTime()) > time.Duration(FileModificationTimeout)*time.Second {
 		return nil
 	}
-	
+
 	// Mark as processing (thread-safe)
 	w.mu.Lock()
 	w.Processing[path] = true
 	w.mu.Unlock()
-	
+
 	// Start processing in goroutine with proper cleanup
 	w.ProcessDSHFileAsync(path)
-	
+
 	return nil
 }
 
@@ -188,7 +188,7 @@ func (w *Watcher) processDSHFileInternal(dshPath string, useWaitGroup bool) {
 			w.wg.Done()
 		}
 	}()
-	
+
 	// Check if context is cancelled before starting
 	select {
 	case <-w.ctx.Done():
@@ -196,23 +196,23 @@ func (w *Watcher) processDSHFileInternal(dshPath string, useWaitGroup bool) {
 		return
 	default:
 	}
-	
+
 	log.Info("Processing .dsh file", "path", dshPath)
-	
+
 	// Step 1: .dsh -> XML
 	xmlPath := filepath.Join(w.OutputDir, filepath.Base(dshPath)+".xml")
 	if err := w.runDecksh(dshPath, xmlPath); err != nil {
 		log.Error("Failed to compile .dsh to XML", "error", err)
 		return
 	}
-	
+
 	// Step 2: XML -> Multiple formats
 	var outputPaths []string
 	baseName := filepath.Base(dshPath)
-	
+
 	for _, format := range w.Formats {
 		outputPath := filepath.Join(w.OutputDir, baseName+"."+format)
-		
+
 		var err error
 		switch format {
 		case "svg":
@@ -225,39 +225,39 @@ func (w *Watcher) processDSHFileInternal(dshPath string, useWaitGroup bool) {
 			log.Warn("Unsupported format", "format", format, "file", dshPath)
 			continue
 		}
-		
+
 		if err != nil {
 			log.Error("Failed to convert XML to format", "format", format, "error", err)
 			continue
 		}
-		
+
 		outputPaths = append(outputPaths, outputPath)
 	}
-	
+
 	log.Info("Pipeline completed", "dsh", dshPath, "xml", xmlPath, "outputs", outputPaths)
 }
 
 // runDecksh runs decksh to compile .dsh to XML
 func (w *Watcher) runDecksh(inputPath, outputPath string) error {
 	deckshPath := filepath.Join(GetBuildRoot(), "bin", DeckshBinary)
-	
+
 	// Check if tool exists
 	if _, err := os.Stat(deckshPath); os.IsNotExist(err) {
 		return fmt.Errorf("decksh not built: %s", deckshPath)
 	}
-	
+
 	cmd := exec.Command(deckshPath, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("decksh failed: %w, output: %s", err, string(output))
 	}
-	
+
 	// Fix XML attributes - add quotes around color values
 	fixedXML := strings.ReplaceAll(string(output), `color=red`, `color="red"`)
 	fixedXML = strings.ReplaceAll(fixedXML, `color=gray`, `color="gray"`)
-	
+
 	// Write XML output
 	return os.WriteFile(outputPath, []byte(fixedXML), 0644)
 }
@@ -270,31 +270,31 @@ func (w *Watcher) runSvgdeck(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 	svgdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DecksvgBinary)
-	
+
 	// Check if tool exists
 	if _, err := os.Stat(svgdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("decksvg not built: %s", svgdeckPath)
 	}
-	
+
 	// Use decksvg with -outdir flag
 	outputDir := filepath.Dir(outputPath)
 	cmd := exec.Command(svgdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("decksvg failed: %w, output: %s", err, string(output))
 	}
-	
+
 	// decksvg creates files with pattern: basename-00001.svg
 	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	expectedSVG := filepath.Join(outputDir, xmlBaseName+"-00001.svg")
-	
+
 	// Check if the expected SVG file was created
 	if _, err := os.Stat(expectedSVG); os.IsNotExist(err) {
 		return fmt.Errorf("expected SVG file not created: %s", expectedSVG)
 	}
-	
+
 	// Rename to the desired output path
 	return os.Rename(expectedSVG, outputPath)
 }
@@ -307,31 +307,31 @@ func (w *Watcher) runPngdeck(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 	pngdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DeckpngBinary)
-	
+
 	// Check if tool exists
 	if _, err := os.Stat(pngdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("deckpng not built: %s", pngdeckPath)
 	}
-	
+
 	// Use deckpng with -outdir flag
 	outputDir := filepath.Dir(outputPath)
 	cmd := exec.Command(pngdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("deckpng failed: %w, output: %s", err, string(output))
 	}
-	
+
 	// deckpng creates files with pattern: basename-00001.png
 	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	expectedPNG := filepath.Join(outputDir, xmlBaseName+"-00001.png")
-	
+
 	// Check if the expected PNG file was created
 	if _, err := os.Stat(expectedPNG); os.IsNotExist(err) {
 		return fmt.Errorf("expected PNG file not created: %s", expectedPNG)
 	}
-	
+
 	// Rename to the desired output path
 	return os.Rename(expectedPNG, outputPath)
 }
@@ -344,31 +344,31 @@ func (w *Watcher) runPdfdeck(inputPath, outputPath string) error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 	pdfdeckPath := filepath.Join(wd, GetBuildRoot(), "bin", DeckpdfBinary)
-	
+
 	// Check if tool exists
 	if _, err := os.Stat(pdfdeckPath); os.IsNotExist(err) {
 		return fmt.Errorf("deckpdf not built: %s", pdfdeckPath)
 	}
-	
+
 	// Use deckpdf with -outdir flag
 	outputDir := filepath.Dir(outputPath)
 	cmd := exec.Command(pdfdeckPath, "-outdir", outputDir, inputPath)
 	cmd.Env = append(os.Environ(), "DECKFONTS="+config.GetFontPath())
-	
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("deckpdf failed: %w, output: %s", err, string(output))
 	}
-	
+
 	// deckpdf creates files with pattern: basename-00001.pdf
 	xmlBaseName := strings.TrimSuffix(filepath.Base(inputPath), filepath.Ext(inputPath))
 	expectedPDF := filepath.Join(outputDir, xmlBaseName+"-00001.pdf")
-	
+
 	// Check if the expected PDF file was created
 	if _, err := os.Stat(expectedPDF); os.IsNotExist(err) {
 		return fmt.Errorf("expected PDF file not created: %s", expectedPDF)
 	}
-	
+
 	// Rename to the desired output path
 	return os.Rename(expectedPDF, outputPath)
 }
@@ -379,34 +379,34 @@ func StartAPISupervised(port int) error {
 	if port == 0 {
 		port = 8888 // Default deck API port
 	}
-	
+
 	// Ensure config directory exists for deck API
 	configDir := filepath.Join(config.GetDataPath(), "deck-api")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create deck API config directory: %w", err)
 	}
-	
+
 	// Create deck API config file
 	configPath := filepath.Join(configDir, "deck-api.yaml")
 	configContent := fmt.Sprintf(`Name: deck-api
 Host: 0.0.0.0
 Port: %d
 `, port)
-	
+
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		return fmt.Errorf("failed to create deck API config: %w", err)
 	}
-	
-	// Register and start with goreman supervision
-	return goreman.RegisterAndStart("deck-api", &goreman.ProcessConfig{
-		Command:    "go",
-		Args:       []string{"run", "api/deck/deck.go", "-f", configPath},
-		WorkingDir: ".",
-		Env:        os.Environ(),
-	})
+
+	// Supervise deck API via shared service helpers
+	processCfg := service.NewConfig(
+		"go",
+		[]string{"run", "api/deck/deck.go", "-f", configPath},
+	)
+
+	return service.Start("deck-api", processCfg)
 }
 
-// StartWatcherSupervised starts the deck file watcher service under goreman supervision (idempotent)  
+// StartWatcherSupervised starts the deck file watcher service under goreman supervision (idempotent)
 // This starts the background .dsh file processing service
 func StartWatcherSupervised(watchPaths []string, formats []string) error {
 	if len(watchPaths) == 0 {
@@ -415,28 +415,24 @@ func StartWatcherSupervised(watchPaths []string, formats []string) error {
 	if len(formats) == 0 {
 		formats = []string{"svg", "png", "pdf"} // Default to all formats
 	}
-	
+
 	// Create a simple config file for the watcher
 	configDir := filepath.Join(config.GetDataPath(), "deck-watcher")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create deck watcher config directory: %w", err)
 	}
-	
+
 	// We'll use environment variables to configure the watcher
-	env := append(os.Environ(),
+	env := []string{
 		fmt.Sprintf("DECK_WATCH_PATHS=%s", filepath.Join(watchPaths...)),
 		fmt.Sprintf("DECK_FORMATS=%s", filepath.Join(formats...)),
-	)
-	
-	// Register and start with goreman supervision  
+	}
+
+	// Supervise deck watcher with shared helpers
 	args := append([]string{"run", ".", "cli", "deck", "watch"}, watchPaths...)
 	args = append(args, "--formats", strings.Join(formats, ","))
-	
-	return goreman.RegisterAndStart("deck-watcher", &goreman.ProcessConfig{
-		Command:    "go", 
-		Args:       args,
-		WorkingDir: ".",
-		Env:        env,
-	})
-}
 
+	processCfg := service.NewConfig("go", args, service.WithEnv(env...))
+
+	return service.Start("deck-watcher", processCfg)
+}

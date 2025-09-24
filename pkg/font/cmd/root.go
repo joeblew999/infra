@@ -7,6 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the font command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetFontCmd())
+}
+
 var fontCmd = &cobra.Command{
 	Use:   "font",
 	Short: "Font management tools",

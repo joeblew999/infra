@@ -1,0 +1,1 @@
+This directory will be populated by `infra cli xtemplate upstream sync` with upstream xtemplate test templates.

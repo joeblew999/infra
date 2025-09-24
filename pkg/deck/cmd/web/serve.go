@@ -9,9 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/deck/web"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -52,7 +53,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	// Start server in goroutine
 	go func() {
-		log.Info("Deck web server started", "url", fmt.Sprintf("http://localhost:%s", port))
+		log.Info("Deck web server started", "url", config.FormatLocalHTTP(port))
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Error("Server failed", "error", err)
 		}

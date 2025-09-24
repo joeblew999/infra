@@ -93,37 +93,37 @@ Runtime Request → Managed Release → Fast Download → Local Cache
 ### Collection Commands
 ```bash
 # Collect a specific binary for all platforms
-go run . dep collect flyctl v0.3.162
+go run . tools dep collect flyctl v0.3.162
 
 # Collect all configured binaries
-go run . dep collect-all
+go run . tools dep collect-all
 
 # Collect only missing platforms
-go run . dep collect flyctl --missing-only
+go run . tools dep collect flyctl --missing-only
 ```
 
 ### Release Management Commands  
 ```bash
 # Upload collected binaries to managed release
-go run . dep release flyctl v0.3.162
+go run . tools dep release flyctl v0.3.162
 
 # Release all collected binaries
-go run . dep release-all
+go run . tools dep release-all
 
 # Check release status
-go run . dep release-status
+go run . tools dep release-status
 ```
 
 ### Runtime Commands (Enhanced)
 ```bash
 # Install from managed releases (default)
-go run . dep install flyctl
+go run . tools dep install flyctl
 
 # Force install from original source
-go run . dep install flyctl --source=original
+go run . tools dep install flyctl --source=original
 
 # Show source preference
-go run . dep install flyctl --dry-run
+go run . tools dep install flyctl --dry-run
 ```
 
 ## Implementation Plan

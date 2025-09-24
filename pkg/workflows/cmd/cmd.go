@@ -12,6 +12,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// RegisterCLI mounts workflow-related commands under the CLI namespace.
+func RegisterCLI(parent *cobra.Command) {
+	for _, cmd := range GetWorkflowCmds() {
+		parent.AddCommand(cmd)
+	}
+	AddFlyCommands(parent)
+}
+
+// RegisterRoot mounts workflow commands that belong on the root command.
+func RegisterRoot(parent *cobra.Command) {
+	for _, cmd := range GetRootWorkflowCmds() {
+		parent.AddCommand(cmd)
+	}
+}
+
 // GetWorkflowCmds returns the workflow commands for CLI integration
 func GetWorkflowCmds() []*cobra.Command {
 	return []*cobra.Command{
@@ -85,7 +100,6 @@ var buildCmd = &cobra.Command{
 		repo, _ := cmd.Flags().GetString("repo")
 		tag, _ := cmd.Flags().GetString("tag")
 
-		// TODO: Implement container build workflow
 		workflow := workflows.NewContainerBuildWorkflow(workflows.ContainerBuildOptions{
 			Push:     push,
 			Platform: platform,
@@ -113,11 +127,11 @@ var statusCmd = &cobra.Command{
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		logs, _ := cmd.Flags().GetInt("logs")
 
-		// TODO: Implement status workflow
-		fmt.Printf("Checking status for: app=%s, verbose=%v, logs=%d\n",
-			appName, verbose, logs)
-
-		return fmt.Errorf("status workflow not implemented yet")
+		return workflows.CheckDeploymentStatus(workflows.StatusOptions{
+			AppName: appName,
+			Verbose: verbose,
+			Logs:    logs,
+		})
 	},
 }
 
@@ -135,11 +149,11 @@ var initCmd = &cobra.Command{
 		template, _ := cmd.Flags().GetString("template")
 		force, _ := cmd.Flags().GetBool("force")
 
-		// TODO: Implement init workflow
-		fmt.Printf("Initializing project: name=%s, template=%s, force=%v\n",
-			name, template, force)
-
-		return fmt.Errorf("init workflow not implemented yet")
+		return workflows.InitializeProject(workflows.InitOptions{
+			Name:     name,
+			Template: template,
+			Force:    force,
+		})
 	},
 }
 
@@ -152,7 +166,7 @@ var preCommitCmd = &cobra.Command{
 - Documentation quality validation
 - Go file formatting and linting`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runPreCommitChecks()
+		return workflows.RunPreCommitChecks()
 	},
 }
 
@@ -165,7 +179,7 @@ var ciCmd = &cobra.Command{
 - Documentation quality check
 - Full test suite`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return runCIChecks()
+		return workflows.RunCIChecks()
 	},
 }
 
@@ -232,7 +246,7 @@ var litestreamStartCmd = &cobra.Command{
 	Long: `Start continuous replication of SQLite databases using Litestream.
 
 Uses local filesystem by default (no S3 required). Example:
-  go run . cli litestream start --db ./pb_data/data.db --backup ./backups/data.db`,
+  go run . tools litestream start --db ./pb_data/data.db --backup ./backups/data.db`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dbPath, _ := cmd.Flags().GetString("db")
 		backupPath, _ := cmd.Flags().GetString("backup")
@@ -250,7 +264,7 @@ var litestreamRestoreCmd = &cobra.Command{
 	Long: `Restore SQLite database from Litestream backup.
 
 Example:
-  go run . cli litestream restore --db ./pb_data/data.db --backup ./backups/data.db`,
+  go run . tools litestream restore --db ./pb_data/data.db --backup ./backups/data.db`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dbPath, _ := cmd.Flags().GetString("db")
 		backupPath, _ := cmd.Flags().GetString("backup")
@@ -268,7 +282,7 @@ var litestreamStatusCmd = &cobra.Command{
 	Long: `Show current replication status and backup information.
 
 Example:
-  go run . cli litestream status --config ./litestream.yml`,
+  go run . tools litestream status --config ./litestream.yml`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		config, _ := cmd.Flags().GetString("config")
 		return runLitestreamStatus(config)
@@ -330,30 +344,6 @@ func init() {
 	binaryCmd.Flags().BoolP("verbose", "v", false, "Verbose output")
 }
 
-// runPreCommitChecks implements the pre-commit workflow logic
-func runPreCommitChecks() error {
-	fmt.Println("🔍 Running pre-commit checks...")
-
-	// Note: These functions are defined in pkg/cmd/common.go
-	// In a complete refactor, these would be moved to a workflow package
-	// For now, we'll return an error indicating they need to be implemented
-
-	fmt.Println("✅ Pre-commit checks placeholder - implementation needed")
-	return nil
-}
-
-// runCIChecks implements the CI workflow logic
-func runCIChecks() error {
-	fmt.Println("🔍 Running CI checks...")
-
-	// Note: These functions are defined in pkg/cmd/common.go
-	// In a complete refactor, these would be moved to a workflow package
-	// For now, we'll return an error indicating they need to be implemented
-
-	fmt.Println("✅ CI checks placeholder - implementation needed")
-	return nil
-}
-
 // runDevMode starts development mode
 func runDevMode(watch bool) error {
 	fmt.Printf("🚀 Starting development mode (watch: %v)...\n", watch)
@@ -362,8 +352,8 @@ func runDevMode(watch bool) error {
 		fmt.Println("📁 File watching enabled - changes will trigger rebuilds")
 	}
 
-	// TODO: Implement file watching and hot reload
-	return fmt.Errorf("development mode not fully implemented yet")
+	fmt.Println("ℹ️  Development mode helper is pending; use `go run .` for the full supervised stack.")
+	return nil
 }
 
 // runLitestreamStart starts Litestream replication

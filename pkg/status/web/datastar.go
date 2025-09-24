@@ -42,13 +42,18 @@ type StatusRuntime struct {
 
 // StatusService represents a service badge in the dashboard.
 type StatusService struct {
-	Name   string
-	Status string
-	Detail string
-	Icon   string
-	Border string
-	Pill   string
-	Port   int
+	Name         string
+	State        string
+	Status       string
+	Description  string
+	LastAction   string
+	Message      string
+	Icon         string
+	Border       string
+	Pill         string
+	Port         int
+	Ownership    string
+	MessageClass string
 }
 
 var (

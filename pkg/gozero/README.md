@@ -21,7 +21,7 @@ The `goctl` binary must be installed via the infra dependency system:
 
 ```bash
 # Install goctl
-go run . dep local install goctl --env development
+go run . tools dep local install goctl --env development
 
 # Verify installation
 .dep/goctl --version

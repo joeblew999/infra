@@ -97,11 +97,11 @@ func ShowStatus() error {
 		upToDateCount, len(binaries))
 
 	if installedCount < len(binaries) {
-		fmt.Printf("\nTo install missing binaries: go run . dep install\n")
+		fmt.Printf("\nTo install missing binaries: go run . tools dep install\n")
 	}
 
 	if upToDateCount < installedCount {
-		fmt.Printf("To upgrade outdated binaries: go run . dep upgrade\n")
+		fmt.Printf("To upgrade outdated binaries: go run . tools dep upgrade\n")
 	}
 
 	return nil
@@ -157,11 +157,11 @@ func ShowBinaryStatus(name string) error {
 		} else {
 			fmt.Printf("Up-to-date: ⚠️  No (configured: %s, installed: %s)\n", 
 				status.ConfiguredVersion, status.InstalledVersion)
-			fmt.Printf("\nTo upgrade: go run . dep upgrade %s\n", name)
+			fmt.Printf("\nTo upgrade: go run . tools dep upgrade %s\n", name)
 		}
 	} else {
 		fmt.Printf("Status: ❌ Not installed\n")
-		fmt.Printf("\nTo install: go run . dep install %s\n", name)
+		fmt.Printf("\nTo install: go run . tools dep install %s\n", name)
 	}
 
 	return nil

@@ -1,29 +1,18 @@
 # nats
 
-Nats Jetstream
+We run a few different nats setups from here.
 
-- an Embedded Leaf node. 
-- Currently using github.com/delaneyj/toolbelt/embeddednats
+This is one of the things we starup early, because everything else needs it.
 
+NATS Leaf node that is embedded.
 
-NATS S3
+NATS Cluster that we need for the global system for Fault tolerance.
 
-- a binary that looks like S3, but its actualyl NATS Object Store.
-- Currentl using https://github.com/wpnpeiris/nats-s3
+NATS cli
 
-NATS CLI
+NATS NSC
 
-- a binary that is the standard NATS CLI. 
+NATS S3 is kind of an experiment. Not sure its a smart thing yet because it will use a ton of disk space. 
 
----
-
-NATS Secrets
-
-- I need a Secrets store that uses NATS. 
-
-
-
-
-
-
+- I am thinking of a S3 agnsotic system where the Users can pick an S3 cloud, and we do the setup of it for them.  
 

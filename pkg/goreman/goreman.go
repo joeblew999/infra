@@ -292,6 +292,30 @@ func (m *Manager) StopProcess(name string) error {
 	return nil
 }
 
+// GetProcessPID returns the PID for a named process if it is known.
+func (m *Manager) GetProcessPID(name string) (int, bool) {
+	m.mu.RLock()
+	proc, exists := m.processes[name]
+	m.mu.RUnlock()
+
+	if !exists {
+		return 0, false
+	}
+
+	proc.mu.RLock()
+	defer proc.mu.RUnlock()
+
+	if proc.Cmd != nil && proc.Cmd.Process != nil {
+		return proc.Cmd.Process.Pid, true
+	}
+
+	if proc.PID != 0 {
+		return proc.PID, true
+	}
+
+	return 0, false
+}
+
 // Stop stops all processes gracefully
 func (m *Manager) Stop() error {
 	m.mu.RLock()

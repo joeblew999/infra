@@ -3,7 +3,9 @@ package docs
 import (
 	"bytes"
 	"embed"
+	"html"
 	"html/template"
+	"path"
 	"sort"
 	"strings"
 
@@ -122,12 +124,67 @@ func (r *Renderer) buildNavTree(nav []NavItem) *NavNode {
 }
 
 func (r *Renderer) renderNavigation(node *NavNode, currentPath string) string {
+	ancestors := r.navAncestors(currentPath)
+	return r.renderNavigationLevel(node.Children, currentPath, ancestors, 0)
+}
+
+func (r *Renderer) renderNavigationLevel(children []*NavNode, currentPath string, ancestors map[string]struct{}, depth int) string {
+	if len(children) == 0 {
+		return ""
+	}
+
 	var sb strings.Builder
-	sb.WriteString("<ul>")
-	for _, child := range node.Children {
-		activeClass := ""
-		if child.Path == currentPath {
-			activeClass = " class=\"active\""
+	ulClass := "docs-nav__list"
+	if depth > 0 {
+		ulClass += " docs-nav__list--nested"
+	}
+	sb.WriteString(`<ul class="` + ulClass + `">`)
+
+	for _, child := range children {
+		if child == nil {
+			continue
+		}
+
+		pathKey := strings.TrimPrefix(child.Path, "/")
+		url := "/docs/"
+		switch {
+		case pathKey == "":
+			// already set to /docs/
+		case len(child.Children) > 0 && !strings.HasSuffix(pathKey, ".md"):
+			url += pathKey + "/"
+		default:
+			url += pathKey
+		}
+
+		normalizedChildKey := strings.TrimSuffix(pathKey, "/")
+		isCurrent := child.Path == currentPath
+
+		isAncestor := false
+		if !isCurrent && len(child.Children) > 0 {
+			candidate := normalizedChildKey
+			if candidate == "" && pathKey != "" {
+				candidate = pathKey
+			}
+			if currentPath == candidate+"/README.md" {
+				isAncestor = true
+			}
+			if !isAncestor {
+				if _, ok := ancestors[candidate]; ok {
+					isAncestor = true
+				}
+			}
+		}
+
+		liClass := "docs-nav__item"
+		if isCurrent {
+			liClass += " docs-nav__item--current"
+		} else if isAncestor {
+			liClass += " docs-nav__item--ancestor"
+		}
+
+		linkClass := "docs-nav__link"
+		if isCurrent {
+			linkClass += " docs-nav__link--current"
 		}
 
 		icon := "📄"
@@ -135,86 +192,127 @@ func (r *Renderer) renderNavigation(node *NavNode, currentPath string) string {
 			icon = "📁"
 		}
 
-		sb.WriteString("<li><a href=\"/docs/")
-		sb.WriteString(child.Path)
-		sb.WriteString("\"" + activeClass + ">" + icon + " ")
-		sb.WriteString(child.Title)
-		sb.WriteString("</a>")
-
-		if len(child.Children) > 0 {
-			sb.WriteString(r.renderNavigation(child, currentPath))
-		}
-		sb.WriteString("</li>")
+		sb.WriteString(`<li class="` + liClass + `">`)
+		sb.WriteString(`<a href="` + url + `" class="` + linkClass + `">`)
+		sb.WriteString(`<span class="docs-nav__icon">` + icon + `</span>`)
+		sb.WriteString(`<span>` + html.EscapeString(child.Title) + `</span>`)
+		sb.WriteString(`</a>`)
+		sb.WriteString(r.renderNavigationLevel(child.Children, currentPath, ancestors, depth+1))
+		sb.WriteString(`</li>`)
 	}
-	sb.WriteString("</ul>")
+
+	sb.WriteString(`</ul>`)
 	return sb.String()
 }
 
 // renderBreadcrumbs renders breadcrumb navigation
 func (r *Renderer) renderBreadcrumbs(currentPath string) string {
+	const separator = `<span class="breadcrumbs-sep">/</span>`
+
 	if currentPath == "" || currentPath == "README.md" {
-		return "Documentation"
+		return `<span class="breadcrumbs-current">Documentation</span>`
 	}
-	
+
 	var sb strings.Builder
-	parts := strings.Split(currentPath, "/")
-	
-	sb.WriteString("<a href=\"/docs/\">Documentation</a>")
-	
-	// Build path incrementally
-	currentUrlPath := ""
-	for i, part := range parts {
-		currentUrlPath += part
-		
-		if i == len(parts)-1 {
-			// Last part (current file) - don't make it a link, but show friendly name
-			if part == "README.md" {
-				// Don't show README.md in breadcrumbs for folders
-				continue
-			}
-			sb.WriteString(" / ")
-			sb.WriteString(r.fileNameToReadable(part))
+	sb.WriteString(`<a href="/docs/">Documentation</a>`)
+
+	segments := strings.Split(strings.TrimPrefix(currentPath, "/"), "/")
+	var currentURL strings.Builder
+
+	for i, part := range segments {
+		isLast := i == len(segments)-1
+		name := part
+		currentURL.WriteString(part)
+
+		if part == "README.md" {
+			continue
+		}
+
+		sb.WriteString(separator)
+
+		if isLast {
+			sb.WriteString(`<span class="breadcrumbs-current">` + html.EscapeString(r.fileNameToReadable(name)) + `</span>`)
+			continue
+		}
+
+		friendly := r.folderNameToReadable(part)
+		sb.WriteString(`<a href="/docs/` + currentURL.String() + `/">` + html.EscapeString(friendly) + `</a>`)
+		currentURL.WriteString("/")
+	}
+
+	return sb.String()
+}
+
+func (r *Renderer) navAncestors(currentPath string) map[string]struct{} {
+	ancestors := make(map[string]struct{})
+	clean := strings.TrimPrefix(currentPath, "/")
+
+	if clean == "" {
+		return ancestors
+	}
+
+	if strings.HasSuffix(clean, "README.md") {
+		clean = strings.TrimSuffix(clean, "README.md")
+		clean = strings.TrimSuffix(clean, "/")
+	} else if strings.HasSuffix(clean, ".md") {
+		dir := path.Dir(clean)
+		if dir != "." {
+			clean = dir
 		} else {
-			// Folder part - make it a link
-			sb.WriteString(" / ")
-			sb.WriteString("<a href=\"/docs/")
-			sb.WriteString(currentUrlPath)
-			sb.WriteString("/")
-					
-			// Use friendly folder names
-			switch part {
-			case "business":
-				sb.WriteString("Business")
-			case "technical":
-				sb.WriteString("Technical") 
-			case "examples":
-				sb.WriteString("Examples")
-			default:
-				sb.WriteString(strings.ToUpper(part[:1]) + part[1:])
-			}
-				
-			sb.WriteString("</a>")
-			currentUrlPath += "/"
+			clean = ""
 		}
 	}
-	
-	return sb.String()
+
+	if clean == "" {
+		return ancestors
+	}
+
+	parts := strings.Split(clean, "/")
+	var current strings.Builder
+	for i, part := range parts {
+		if part == "" || part == "." {
+			continue
+		}
+		if i > 0 && current.Len() > 0 {
+			current.WriteString("/")
+		}
+		current.WriteString(part)
+		ancestors[current.String()] = struct{}{}
+	}
+
+	return ancestors
+}
+
+func (r *Renderer) folderNameToReadable(name string) string {
+	switch name {
+	case "business":
+		return "Business"
+	case "technical":
+		return "Technical"
+	case "examples":
+		return "Examples"
+	default:
+		if len(name) == 0 {
+			return name
+		}
+		return strings.ToUpper(name[:1]) + name[1:]
+	}
 }
 
 // fileNameToReadable converts a filename to readable format
 func (r *Renderer) fileNameToReadable(filename string) string {
 	// Remove extension
 	name := strings.TrimSuffix(filename, ".md")
-	
+
 	// Convert common patterns
 	name = strings.ReplaceAll(name, "_", " ")
 	name = strings.ReplaceAll(name, "-", " ")
-	
+
 	// Handle specific filenames
 	switch name {
 	case "AI_POWERED":
 		return "AI-Powered Features"
-	case "AI_MCP_INTEGRATION": 
+	case "AI_MCP_INTEGRATION":
 		return "AI MCP Integration"
 	case "MOBILE_AI_STRATEGY":
 		return "Mobile AI Strategy"

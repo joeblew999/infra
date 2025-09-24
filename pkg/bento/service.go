@@ -11,8 +11,8 @@ import (
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
-	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/service"
 )
 
 type Service struct {
@@ -40,7 +40,7 @@ func (s *Service) Start() error {
 	if err != nil {
 		return fmt.Errorf("bento binary not found: %w", err)
 	}
-	
+
 	// Ensure absolute path for reliability
 	bentoPath, err = filepath.Abs(bentoPath)
 	if err != nil {
@@ -48,12 +48,12 @@ func (s *Service) Start() error {
 	}
 
 	configFile := filepath.Join(s.configDir, "bento.yaml")
-	
+
 	// Ensure config directory exists
 	if err := os.MkdirAll(s.configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create bento config directory: %w", err)
 	}
-	
+
 	// Check if config file exists, create if missing
 	if _, err := os.Stat(configFile); os.IsNotExist(err) {
 		log.Info("Bento config not found, creating default", "path", configFile)
@@ -125,33 +125,32 @@ func StartSupervised(port int) error {
 	if port == 0 {
 		port = 4195 // Default port
 	}
-	
-	// Ensure bento binary is installed 
+
+	// Ensure bento binary is installed
 	// Note: In production, binaries should already be installed via dep system
-	
+	if err := dep.InstallBinary(config.BinaryBento, false); err != nil {
+		return fmt.Errorf("failed to ensure bento binary: %w", err)
+	}
+
 	// Ensure config directory exists
 	configDir := config.GetBentoPath()
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return fmt.Errorf("failed to create bento config directory: %w", err)
 	}
-	
+
 	// Ensure default config exists
 	if err := CreateDefaultConfig(); err != nil {
 		return fmt.Errorf("failed to create bento config: %w", err)
 	}
-	
+
 	configPath := filepath.Join(configDir, "bento.yaml")
-	
-	// Register and start with goreman supervision
-	return goreman.RegisterAndStart("bento", &goreman.ProcessConfig{
-		Command: config.Get(config.BinaryBento),
-		Args: []string{
-			"--set", fmt.Sprintf("http.address=0.0.0.0:%d", port),
-			"run", configPath,
-		},
-		WorkingDir: ".",
-		Env:        os.Environ(),
-	})
+
+	// Supervise Bento via service helpers
+	processCfg := service.NewConfig(
+		config.Get(config.BinaryBento),
+		[]string{"--set", fmt.Sprintf("http.address=0.0.0.0:%d", port), "run", configPath},
+	)
+	return service.Start("bento", processCfg)
 }
 
 func (s *Service) createDefaultConfig(configPath string) error {

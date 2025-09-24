@@ -9,6 +9,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the debug command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetDebugCmd())
+}
+
 // GetDebugCmd returns the debug command for CLI integration
 func GetDebugCmd() *cobra.Command {
 	return debugCmd

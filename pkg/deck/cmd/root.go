@@ -6,6 +6,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the deck command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetDeckCmd())
+}
+
 var deckCmd = &cobra.Command{
 	Use:   "deck",
 	Short: "Deck visualization tools",

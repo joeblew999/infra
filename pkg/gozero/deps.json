@@ -1,0 +1,42 @@
+[
+  {
+    "name": "goctl-openapi",
+    "description": "OpenAPI 3.0 specification generator for goctl",
+    "source": "go-build",
+    "repo": "jayvynl/goctl-openapi",
+    "package": ".",
+    "version": "latest"
+  },
+  {
+    "name": "goctl-go-compact",
+    "description": "goctl plugin that merges handler files",
+    "source": "go-build",
+    "repo": "zeromicro/goctl-go-compact",
+    "package": ".",
+    "version": "latest"
+  },
+  {
+    "name": "goctl-php",
+    "description": "PHP client/server code generator for goctl",
+    "source": "go-build",
+    "repo": "zeromicro/goctl-php",
+    "package": ".",
+    "version": "latest"
+  },
+  {
+    "name": "goctl-swag",
+    "description": "Alternative swagger documentation generator for goctl",
+    "source": "go-build",
+    "repo": "CloverOS/goctl-swag",
+    "package": ".",
+    "version": "latest"
+  },
+  {
+    "name": "gengin",
+    "description": "Gin framework adapter for goctl",
+    "source": "go-build",
+    "repo": "MasterJoyHunan/gengin",
+    "package": ".",
+    "version": "latest"
+  }
+]

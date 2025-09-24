@@ -195,7 +195,7 @@ pkg/litestream/
 
 1. **Install Litestream**
    ```bash
-   go run . dep install litestream
+   go run . tools dep install litestream
    ```
 
 2. **Start replication (no setup required)**

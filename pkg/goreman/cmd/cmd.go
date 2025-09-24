@@ -15,6 +15,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the goreman command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetGoremanCmd())
+}
+
 // PsCmd shows running processes
 var PsCmd = &cobra.Command{
 	Use:     "ps",

@@ -36,7 +36,7 @@ func main() {
 npm install && docker-compose up && kubectl apply -f k8s/ && ...
 
 # Our approach  
-go run .                    # Everything starts, production-ready
+go run . runtime up          # Everything starts, production-ready
 ```
 
 **No external dependencies**:
@@ -55,6 +55,7 @@ go run .                    # Everything starts, production-ready
 ## 📚 Technical Documentation
 
 ### Core Concepts
+- **[System Specification](SYSTEM_SPEC.md)** - High-level architecture, goals, and operating model
 - **[Everything-as-Go-Import](EVERYTHING_AS_GO.md)** - Revolutionary embedded infrastructure approach
 - **[Beta Testing Guide](BETA_TESTING.md)** - Testing procedures and requirements  
 - **[CLI Reference](CLI.md)** - Complete command-line interface documentation
@@ -96,22 +97,22 @@ go run .                    # Everything starts, production-ready
 ### Complete Development Workflow (Embedded)
 ```bash
 # Development (embedded servers, hot reload)
-go run . --env development
+go run . runtime up --env development
 
 # Testing (embedded test infrastructure)  
 go test ./...
 
 # API compatibility checking (embedded tooling)
-go run . api-check
+go run . dev api-check
 
 # Container building (embedded Ko builder)
-go run . build
+go run . workflows build
 
 # Production deployment (embedded Fly.io integration)  
-go run . deploy
+go run . workflows deploy
 
 # Scaling (embedded scaling commands)
-go run . cli fly scale --count 3
+go run . tools flyctl scale --count 3
 ```
 
 ### Why Everything is Embedded Go Code
@@ -148,14 +149,14 @@ infra.Scale(3)
 ### CLI Development
 ```bash
 # CLI tools and wrappers
-go run . cli -h
+go run . tools -h
 
 # Dependency management
-go run . dep list
-go run . dep install <binary>
+go run . tools dep list
+go run . tools dep install <binary>
 
 # Go-zero microservices
-go run . cli gozero api create myservice
+go run . tools gozero api create myservice
 ```
 
 ## 🧪 Testing & Quality
@@ -211,18 +212,18 @@ pkg/
 ### Local Development
 ```bash
 go run .                    # All services on localhost
-go run . --env development  # Development mode with debug features
+go run . runtime up --env development  # Development mode with debug features
 ```
 
 ### Production Deployment
 ```bash
-go run . deploy             # Idempotent Fly.io deployment
-go run . status             # Check deployment health
+go run . workflows deploy         # Idempotent Fly.io deployment
+go run . workflows status         # Check deployment health
 ```
 
 ### Container Deployment  
 ```bash
-go run . build              # Build container with Ko
+go run . workflows build    # Build container with Ko
 docker run -p 1337:1337 infra
 ```
 
@@ -231,7 +232,7 @@ docker run -p 1337:1337 infra
 ### Health Checks
 - **System Health**: http://localhost:1337/status
 - **Service Health**: Individual service health endpoints
-- **Process Status**: `go run . status`
+- **Process Status**: `go run . runtime status`
 
 ### Logging
 - **Structured Logging**: JSON format with correlation IDs

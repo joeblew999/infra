@@ -1,6 +1,7 @@
 package workflows
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,8 +47,20 @@ func NewDeployWorkflow(opts DeployOptions) *DeployWorkflow {
 
 // Execute runs the complete idempotent deployment workflow
 func (d *DeployWorkflow) Execute() error {
-	log.Info("Starting idempotent deployment workflow", 
-		"app", d.opts.AppName, 
+	ctx := context.Background()
+
+	leafURL, cleanup, err := StartNATSStackWithEnvironment(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start NATS stack: %w", err)
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	log.Info("NATS orchestrator online for deployment", "leaf_url", leafURL)
+
+	log.Info("Starting idempotent deployment workflow",
+		"app", d.opts.AppName,
 		"region", d.opts.Region,
 		"environment", d.opts.Environment,
 		"dry_run", d.opts.DryRun)
@@ -87,7 +100,7 @@ func (d *DeployWorkflow) Execute() error {
 		return fmt.Errorf("deployment verification failed: %w", err)
 	}
 
-	log.Info("Deployment workflow completed successfully", 
+	log.Info("Deployment workflow completed successfully",
 		"app_url", fmt.Sprintf("https://%s.fly.dev", d.opts.AppName))
 
 	return nil
@@ -96,7 +109,7 @@ func (d *DeployWorkflow) Execute() error {
 // ensureFlyctl ensures flyctl is available
 func (d *DeployWorkflow) ensureFlyctl() error {
 	log.Info("Ensuring flyctl is available...")
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would check flyctl availability")
 		return nil
@@ -109,7 +122,7 @@ func (d *DeployWorkflow) ensureFlyctl() error {
 // checkAuth checks if user is authenticated with Fly.io
 func (d *DeployWorkflow) checkAuth() error {
 	log.Info("Checking Fly.io authentication...")
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would check authentication")
 		return nil
@@ -117,22 +130,22 @@ func (d *DeployWorkflow) checkAuth() error {
 
 	// Try to get token using helper function
 	token := d.getFlyToken()
-	
+
 	if token == "" {
 		log.Info("No Fly.io token found, attempting to authenticate with flyctl...")
-		
+
 		// Try to authenticate with flyctl
 		log.Info("Starting flyctl authentication (this will open a browser)...")
 		authErr := runBinary(config.GetFlyctlBinPath(), "auth", "login")
 		if authErr != nil {
 			return fmt.Errorf("authentication failed: %w. Please set FLY_API_TOKEN or FLY_ACCESS_TOKEN environment variable", authErr)
 		}
-		
+
 		log.Info("Successfully authenticated with flyctl")
 		// Try to get token again after authentication
 		token = d.getFlyToken()
 	}
-	
+
 	if token != "" {
 		log.Info("Using Fly.io token for authentication")
 	} else {
@@ -144,7 +157,7 @@ func (d *DeployWorkflow) checkAuth() error {
 // ensureApp ensures the Fly.io app exists
 func (d *DeployWorkflow) ensureApp() error {
 	log.Info("Ensuring Fly.io app exists", "app", d.opts.AppName)
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would ensure app exists")
 		return nil
@@ -163,10 +176,10 @@ func (d *DeployWorkflow) ensureApp() error {
 		// Successfully listed apps, check if our app exists
 		if !strings.Contains(output, d.opts.AppName) {
 			log.Info("App doesn't exist, creating...", "app", d.opts.AppName)
-			
+
 			args := []string{"apps", "create", d.opts.AppName}
 			args = append(args, "--org", "personal") // Default org
-			
+
 			createErr := runBinary(config.GetFlyctlBinPath(), args...)
 			if createErr != nil && strings.Contains(createErr.Error(), "already been taken") {
 				log.Info("App already exists, continuing...", "app", d.opts.AppName)
@@ -189,7 +202,7 @@ func (d *DeployWorkflow) ensureApp() error {
 // setSecrets sets required environment variables
 func (d *DeployWorkflow) setSecrets() error {
 	log.Info("Setting secrets for new app")
-	
+
 	secrets := map[string]string{
 		"ENVIRONMENT": d.opts.Environment,
 	}
@@ -207,7 +220,7 @@ func (d *DeployWorkflow) setSecrets() error {
 // ensureVolume ensures persistent volume exists
 func (d *DeployWorkflow) ensureVolume() error {
 	log.Info("Ensuring persistent volume exists")
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would ensure volume exists")
 		return nil
@@ -243,38 +256,38 @@ func (d *DeployWorkflow) ensureVolume() error {
 // buildMultiRegistryImages builds and pushes images to multiple registries
 func (d *DeployWorkflow) buildMultiRegistryImages() error {
 	log.Info("Building multi-registry container images")
-	
+
 	// Create multi-registry workflow with intelligent fallback
 	opts := MultiRegistryBuildOptions{
 		GitHash:           config.GetRuntimeGitHash(),
 		Environment:       d.opts.Environment,
-		PushToGHCR:        true,  // Try GHCR first
-		PushToFlyRegistry: true,  // Fallback to Fly registry
+		PushToGHCR:        true, // Try GHCR first
+		PushToFlyRegistry: true, // Fallback to Fly registry
 		DryRun:            d.opts.DryRun,
 		AppName:           d.opts.AppName,
 	}
-	
+
 	// Check GHCR credentials and fallback if needed
 	if os.Getenv("GITHUB_TOKEN") == "" {
 		log.Info("GITHUB_TOKEN not available, using Fly registry only")
 		opts.PushToGHCR = false
 	}
-	
+
 	multiRegistry := NewMultiRegistryBuildWorkflow(opts)
-	
+
 	// Check credentials before attempting build
 	if err := multiRegistry.CheckCredentials(); err != nil {
 		log.Warn("Credential check failed, will attempt build anyway", "error", err)
 	}
-	
+
 	// Execute multi-registry build
 	return multiRegistry.Execute()
 }
 
-// buildAndDeploy builds container to Fly registry and deploys immediately  
+// buildAndDeploy builds container to Fly registry and deploys immediately
 func (d *DeployWorkflow) buildAndDeploy() error {
 	log.Info("Building and deploying container")
-	
+
 	// Create multi-registry workflow for Fly registry only
 	opts := MultiRegistryBuildOptions{
 		GitHash:           config.GetRuntimeGitHash(),
@@ -284,18 +297,18 @@ func (d *DeployWorkflow) buildAndDeploy() error {
 		DryRun:            d.opts.DryRun,
 		AppName:           d.opts.AppName,
 	}
-	
+
 	multiRegistry := NewMultiRegistryBuildWorkflow(opts)
-	
+
 	// Build and push to Fly registry
 	if err := multiRegistry.Execute(); err != nil {
 		return fmt.Errorf("fly registry build failed: %w", err)
 	}
-	
+
 	// Deploy immediately using the Fly registry image
 	image := fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
 	log.Info("Deploying using Fly.io registry image", "image", image)
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would deploy with image", "image", image)
 		return nil
@@ -316,7 +329,7 @@ func (d *DeployWorkflow) deploy() error {
 		image = fmt.Sprintf("registry.fly.io/%s:latest", d.opts.AppName)
 		log.Info("Deploying using Fly.io registry image", "image", image)
 	}
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would deploy with image", "image", image)
 		return nil
@@ -331,7 +344,7 @@ func (d *DeployWorkflow) deploy() error {
 // verifyDeployment verifies the deployment was successful
 func (d *DeployWorkflow) verifyDeployment() error {
 	log.Info("Verifying deployment")
-	
+
 	if d.opts.DryRun {
 		log.Info("[DRY RUN] Would verify deployment")
 		return nil
@@ -352,11 +365,11 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 func runBinary(path string, args ...string) error {
 	log.Debug("Running command", "binary", path, "args", args)
-	
+
 	cmd := exec.Command(path, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	// Ensure FLY_API_TOKEN or FLY_ACCESS_TOKEN is passed through environment
 	token := os.Getenv("FLY_API_TOKEN")
 	if token == "" {
@@ -376,14 +389,14 @@ func runBinary(path string, args ...string) error {
 			args = append(args, "--access-token", token)
 		}
 	}
-	
+
 	cmd.Args = append([]string{path}, args...)
 	return cmd.Run()
 }
 
 func runBinaryWithOutput(path string, args ...string) (string, error) {
 	log.Debug("Running command with output", "binary", path, "args", args)
-	
+
 	cmd := exec.Command(path, args...)
 	// Ensure FLY_API_TOKEN or FLY_ACCESS_TOKEN is passed through environment
 	token := os.Getenv("FLY_API_TOKEN")
@@ -404,14 +417,14 @@ func runBinaryWithOutput(path string, args ...string) (string, error) {
 			args = append(args, "--access-token", token)
 		}
 	}
-	
+
 	cmd.Args = append([]string{path}, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Debug("Command failed", "error", err, "output", string(output))
 		return string(output), fmt.Errorf("command failed: %w", err)
 	}
-	
+
 	return string(output), nil
 }
 
@@ -422,7 +435,7 @@ func (d *DeployWorkflow) getFlyToken() string {
 	if token == "" {
 		token = os.Getenv("FLY_ACCESS_TOKEN")
 	}
-	
+
 	// If no env token, try to get from flyctl
 	if token == "" {
 		cmd := exec.Command(config.GetFlyctlBinPath(), "auth", "whoami")
@@ -437,6 +450,6 @@ func (d *DeployWorkflow) getFlyToken() string {
 			}
 		}
 	}
-	
+
 	return token
 }

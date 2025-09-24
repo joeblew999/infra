@@ -3,7 +3,7 @@ package caddy
 import (
 	"os"
 	"path/filepath"
-	
+
 	"github.com/joeblew999/infra/pkg/config"
 )
 
@@ -13,13 +13,13 @@ type Preset int
 const (
 	// PresetSimple serves a single application
 	PresetSimple Preset = iota
-	
+
 	// PresetDevelopment includes main app + bento playground
 	PresetDevelopment
-	
+
 	// PresetFull includes main app + bento + MCP server
 	PresetFull
-	
+
 	// PresetMicroservices provides a base for custom microservice routing
 	PresetMicroservices
 )
@@ -29,16 +29,16 @@ func NewPresetConfig(preset Preset, port int) CaddyConfig {
 	switch preset {
 	case PresetSimple:
 		return SimpleConfig(port)
-		
+
 	case PresetDevelopment:
 		return DevelopmentConfig(port)
-		
+
 	case PresetFull:
 		return FullConfig(port)
-		
+
 	case PresetMicroservices:
 		return MicroservicesConfig(port)
-		
+
 	default:
 		return DefaultConfig()
 	}
@@ -48,8 +48,8 @@ func NewPresetConfig(preset Preset, port int) CaddyConfig {
 func SimpleConfig(port int) CaddyConfig {
 	return CaddyConfig{
 		Port:   port,
-		Target: "localhost:1337", // Standard web server port
-		Routes: []ProxyRoute{},   // No additional routes
+		Target: defaultMainTarget(),
+		Routes: []ProxyRoute{}, // No additional routes
 	}
 }
 
@@ -57,11 +57,8 @@ func SimpleConfig(port int) CaddyConfig {
 func DevelopmentConfig(port int) CaddyConfig {
 	return CaddyConfig{
 		Port:   port,
-		Target: "localhost:1337", // Main web server
-		Routes: []ProxyRoute{
-			{Path: "/bento-playground/*", Target: "localhost:4195"}, // Bento playground
-			{Path: "/xtemplate/*", Target: "localhost:" + config.GetXTemplatePort()}, // XTemplate development server
-		},
+		Target: defaultMainTarget(),
+		Routes: developmentSupportRoutes(),
 	}
 }
 
@@ -69,52 +66,48 @@ func DevelopmentConfig(port int) CaddyConfig {
 func FullConfig(port int) CaddyConfig {
 	return CaddyConfig{
 		Port:   port,
-		Target: "localhost:1337", // Main web server
-		Routes: []ProxyRoute{
-			{Path: "/bento-playground/*", Target: "localhost:4195"}, // Bento playground
-			{Path: "/mcp/*", Target: "localhost:8080"},              // MCP server
-		},
+		Target: defaultMainTarget(),
+		Routes: fullSupportRoutes(),
 	}
 }
 
 // MicroservicesConfig returns a base configuration for microservices
 func MicroservicesConfig(port int) CaddyConfig {
+	routes := []ProxyRoute{
+		{Path: "/api/*", Target: "localhost:4000"},
+		{Path: "/auth/*", Target: "localhost:5000"},
+		{Path: "/static/*", Target: "localhost:6000"},
+		{Path: "/ws/*", Target: "localhost:7000"},
+	}
+	routes = append(routes, infrastructureRoutes()...)
 	return CaddyConfig{
 		Port:   port,
-		Target: "localhost:1337", // Main web server (fallback)
-		Routes: []ProxyRoute{
-			{Path: "/api/*", Target: "localhost:4000"},     // API service
-			{Path: "/auth/*", Target: "localhost:5000"},    // Auth service
-			{Path: "/static/*", Target: "localhost:6000"},  // Static files
-			{Path: "/ws/*", Target: "localhost:7000"},      // WebSocket service
-		},
+		Target: defaultMainTarget(),
+		Routes: routes,
 	}
 }
 
 // AddCommonInfrastructure adds standard infrastructure routes to an existing config
 func (cfg CaddyConfig) AddCommonInfrastructure() CaddyConfig {
-	cfg.Routes = append(cfg.Routes,
-		ProxyRoute{Path: "/bento-playground/*", Target: "localhost:4195"},
-		ProxyRoute{Path: "/mcp/*", Target: "localhost:8080"},
-	)
+	cfg.Routes = append(cfg.Routes, infrastructureRoutes()...)
 	return cfg
 }
 
 // AddBentoPlayground adds bento playground to an existing config
 func (cfg CaddyConfig) AddBentoPlayground() CaddyConfig {
-	cfg.Routes = append(cfg.Routes, ProxyRoute{
-		Path:   "/bento-playground/*", 
-		Target: "localhost:4195",
-	})
+	cfg.Routes = append(cfg.Routes, ProxyRoute{Path: "/bento-playground/*", Target: defaultBentoTarget()})
 	return cfg
 }
 
-// AddMCPServer adds MCP server to an existing config  
+// AddMCPServer adds MCP server to an existing config
 func (cfg CaddyConfig) AddMCPServer() CaddyConfig {
-	cfg.Routes = append(cfg.Routes, ProxyRoute{
-		Path:   "/mcp/*",
-		Target: "localhost:8080", 
-	})
+	cfg.Routes = append(cfg.Routes, ProxyRoute{Path: "/mcp/*", Target: defaultMCPProcTarget()})
+	return cfg
+}
+
+// AddHugoDocs adds Hugo documentation to an existing config
+func (cfg CaddyConfig) AddHugoDocs() CaddyConfig {
+	cfg.Routes = append(cfg.Routes, docRoutes()...)
 	return cfg
 }
 
@@ -144,7 +137,7 @@ func (cfg CaddyConfig) WithMainTarget(target string) CaddyConfig {
 // Use explicit paths like "./Caddyfile" only for custom locations
 func (cfg CaddyConfig) GenerateAndSave(filePath string) error {
 	caddyfile := GenerateCaddyfile(cfg)
-	
+
 	fullPath := filePath
 	if filePath == "Caddyfile" {
 		// Standard pattern: use .data/caddy/ directory (Docker-ready)
@@ -154,10 +147,9 @@ func (cfg CaddyConfig) GenerateAndSave(filePath string) error {
 		}
 		fullPath = filepath.Join(caddyDir, "Caddyfile")
 	}
-	
+
 	return os.WriteFile(fullPath, []byte(caddyfile), 0644)
 }
-
 
 // Quick convenience functions for common patterns
 
@@ -165,11 +157,11 @@ func (cfg CaddyConfig) GenerateAndSave(filePath string) error {
 func StartDevelopmentServer(port int) error {
 	cfg := DevelopmentConfig(port)
 	runner := New()
-	
+
 	if err := cfg.GenerateAndSave("Caddyfile"); err != nil {
 		return err
 	}
-	
+
 	return runner.Run("run", "--config", ".data/caddy/Caddyfile")
 }
 
@@ -177,10 +169,10 @@ func StartDevelopmentServer(port int) error {
 func StartFullServer(port int) error {
 	cfg := FullConfig(port)
 	runner := New()
-	
+
 	if err := cfg.GenerateAndSave("Caddyfile"); err != nil {
 		return err
 	}
-	
+
 	return runner.Run("run", "--config", ".data/caddy/Caddyfile")
 }

@@ -6,7 +6,7 @@ This document covers the repeatable deployment process for the infrastructure ma
 
 All the manual steps from the successful deployment have been encoded into automated Go workflows:
 
-### 1. `go run . deploy-auto` - Fully Automated Deployment
+### 1. `go run . workflows deploy-auto` - Fully Automated Deployment
 
 **Encodes these manual steps:**
 ```bash
@@ -20,13 +20,13 @@ FLY_API_TOKEN=$FLY_API_TOKEN ./.dep/flyctl deploy --image registry.fly.io/infra-
 **Usage:**
 ```bash
 # Deploy to production (requires FLY_API_TOKEN)
-FLY_API_TOKEN=your_token go run . deploy-auto --env production
+FLY_API_TOKEN=your_token go run . workflows deploy-auto --env production
 
 # Deploy to development  
-FLY_API_TOKEN=your_token go run . deploy-auto --env development
+FLY_API_TOKEN=your_token go run . workflows deploy-auto --env development
 
 # Dry run to see what would happen
-go run . deploy-auto --dry-run
+go run . workflows deploy-auto --dry-run
 ```
 
 ### 2. `go run . multiregistry` - Multi-Registry Container Builds
@@ -50,7 +50,7 @@ FLY_API_TOKEN=your_token go run . multiregistry --fly
 GITHUB_TOKEN=your_token FLY_API_TOKEN=your_token go run . multiregistry --ghcr --fly
 ```
 
-### 3. `go run . deploy` - Enhanced Deployment Workflow
+### 3. `go run . workflows deploy` - Enhanced Deployment Workflow
 
 **Features:**
 - Idempotent deployment (safe to run multiple times)
@@ -75,7 +75,7 @@ GITHUB_TOKEN=your_token FLY_API_TOKEN=your_token go run . multiregistry --ghcr -
 ## 📋 Prerequisites
 
 1. **Fly.io Account**: Sign up at [fly.io](https://fly.io)
-2. **Dependencies**: Automatically managed via `go run . dep`
+2. **Dependencies**: Automatically managed via `go run . tools dep`
 3. **API Token**: Get from [Fly.io dashboard](https://fly.io/dashboard/personal/access_tokens)
 
 ## Quick Start
@@ -89,7 +89,7 @@ cd infra
 go run .                    # Starts all services locally
 
 # 3. Deploy to Fly.io  
-go run . deploy             # Idempotent deployment workflow
+go run . workflows deploy             # Idempotent deployment workflow
 ```
 
 ## Detailed Setup
@@ -109,18 +109,18 @@ export FLY_REGION="syd"
 
 ```bash
 # Infrastructure management
-go run . deploy              # Idempotent deployment workflow
-go run . status              # Check deployment health
+go run . workflows deploy              # Idempotent deployment workflow
+go run . workflows status    # Check deployment health
 go run . shutdown            # Stop all services
 
 # Fly.io specific commands
-go run . cli fly status      # Fly.io machine status  
-go run . cli fly logs        # View application logs
-go run . cli fly ssh         # SSH into machine
-go run . cli fly deploy      # Direct flyctl deploy
+go run . tools fly status      # Fly.io machine status  
+go run . tools fly logs        # View application logs
+go run . tools fly ssh         # SSH into machine
+go run . tools fly deploy      # Direct flyctl deploy
 
 # Scaling (see scaling section below)
-go run . cli fly scale       # Show current scaling
+go run . tools fly scale       # Show current scaling
 ```
 
 ### 3. Local Development & Testing
@@ -277,36 +277,36 @@ The infrastructure supports comprehensive scaling options:
 
 ```bash
 # Show current scaling configuration
-go run . cli fly scale
+go run . tools fly scale
 
 # Horizontal scaling (add/remove machines)
-go run . cli fly scale --count 2          # Scale to 2 machines
-go run . cli fly scale --count 1          # Scale back to 1 machine
+go run . tools fly scale --count 2          # Scale to 2 machines
+go run . tools fly scale --count 1          # Scale back to 1 machine
 
 # Vertical scaling (resources per machine)  
-go run . cli fly scale --memory 1024      # Scale memory to 1GB
-go run . cli fly scale --memory 2048      # Scale memory to 2GB
-go run . cli fly scale --cpu 2            # Scale to 2 CPU cores
+go run . tools fly scale --memory 1024      # Scale memory to 1GB
+go run . tools fly scale --memory 2048      # Scale memory to 2GB
+go run . tools fly scale --cpu 2            # Scale to 2 CPU cores
 
 # VM type scaling (machine performance)
-go run . cli fly scale --vm shared-cpu-2x      # 2 shared CPUs
-go run . cli fly scale --vm performance-2x     # 2 dedicated CPUs
+go run . tools fly scale --vm shared-cpu-2x      # 2 shared CPUs
+go run . tools fly scale --vm performance-2x     # 2 dedicated CPUs
 
 # Combined scaling operations
-go run . cli fly scale --count 2 --memory 2048 --cpu 2
+go run . tools fly scale --count 2 --memory 2048 --cpu 2
 ```
 
 ### Scale Application
 
 ```bash
 # Scale to multiple instances
-go run . cli fly scale --count 2 -a your-app-name
+go run . tools fly scale --count 2 -a your-app-name
 
 # Scale memory  
-go run . cli fly scale --memory 1024 -a your-app-name
+go run . tools fly scale --memory 1024 -a your-app-name
 
 # Scale CPU
-go run . cli fly scale --vm shared-cpu-2x -a your-app-name
+go run . tools fly scale --vm shared-cpu-2x -a your-app-name
 ```
 
 ### Auto-scaling

@@ -7,30 +7,33 @@ This document covers the infrastructure management CLI, which is organized into 
 The CLI uses a hierarchical structure with organized help output:
 
 ```bash
-go run . -h      # Show organized help with command categories
-go run . cli -h  # Show all available CLI tools organized by purpose
+go run . -h           # Show organized help with command categories
+go run . runtime -h   # Service supervisor commands
+go run . tools -h     # Tooling namespace
+go run . workflows -h # Build & deploy workflows
+go run . dev -h       # Developer utilities
 ```
 
 ### Command Categories
 
-1. **Infrastructure Commands** - Core service management
-2. **Development Commands** - Essential development tools  
-3. **Advanced Commands** - API compatibility and completion
-4. **CLI Tools** - Specialized tools organized by purpose:
-   - **Scaling & Deployment** - Fly.io operations
-   - **Development Tools** - Deck and go-zero 
-   - **Binary Tools** - Direct access to managed binaries
+1. **Runtime** – Core service supervision
+2. **Workflows** – Build, deploy, and maintenance flows
+3. **Tools** – Wrapper commands for installed binaries and UI helpers
+4. **Dev** – Developer-oriented diagnostics (API compatibility, etc.)
+5. **Advanced** – Shell completion and other meta commands
 
-## Infrastructure Commands
+## Runtime Commands
 
-### Service Management
+### Service Supervision
 
-Start and stop all services with goreman supervision:
+Start and stop all services under goreman supervision:
 
 ```bash
-go run .                    # Start all services (default command)
-go run . service             # Same as root command
-go run . shutdown            # Graceful shutdown of all services
+go run . runtime up                    # Start services
+go run . runtime down                  # Graceful shutdown
+go run . runtime status                # Summarize running services
+go run . runtime list                  # Show configured services
+go run . runtime watch --types status  # Stream live lifecycle events
 ```
 
 Services started automatically:
@@ -42,49 +45,33 @@ Services started automatically:
 - **Deck Watcher** - File processing service
 - **Web Server** (1337) - Main dashboard
 
-### Deployment & Status
+### Containerized Runtime
 
 ```bash
-go run . deploy             # Deploy to Fly.io with idempotent workflow
-go run . status             # Check deployment status and health
+go run . runtime container  # Build & run via ko + Docker
 ```
 
-The deploy command provides:
-- Idempotent deployment (safe to run multiple times)
-- Automatic app and volume creation
-- Container image building with ko
-- Health check verification
-
-## Development Commands
-
-### Configuration
+## Workflow Commands
 
 ```bash
-go run . config             # Print current configuration paths and settings
+go run . workflows deploy   # Deploy to Fly.io with idempotent workflow
+go run . workflows status   # Inspect Fly.io deployment health
+go run . workflows build    # Build production container image
 ```
 
-Shows:
-- Binary dependency paths
-- Data directory locations  
-- Service configuration
-- Environment settings
-
-### Dependency Management
+## Tooling Namespace
 
 ```bash
-go run . dep                # Manage binary dependencies
-go run . dep list           # List all configured dependencies
-go run . dep install <name> # Install specific dependency
-go run . dep status         # Show installation status
+go run . tools flyctl status   # Direct flyctl access
+go run . tools deck watch      # Deck visualization helpers
+go run . tools gozero api      # go-zero scaffolding
+go run . tools ko version      # Invoke managed binaries
 ```
 
-Supported dependencies include flyctl, ko, caddy, bento, and more.
-
-
-### Project Initialization
+## Developer Utilities
 
 ```bash
-go run . init               # Initialize new project with standard configuration
+go run . dev api-check --old v1.2.0 --new HEAD   # Compare Go API surfaces
 ```
 
 ## Advanced Commands
@@ -92,24 +79,16 @@ go run . init               # Initialize new project with standard configuration
 ### API Compatibility
 
 ```bash
-go run . api-check          # Check API compatibility between commits
-go run . api-check --old HEAD~2 --new HEAD  # Compare specific commits
+go run . dev api-check --old HEAD~2 --new HEAD  # Compare specific commits
 ```
 
 ### CLI Tool Wrappers
 
 ```bash
-go run . cli                # Access CLI tool wrappers namespace
-go run . cli fly            # Fly.io commands
-go run . cli fly scale      # Scaling operations
-go run . cli fly status     # Fly.io machine status
-go run . cli fly logs       # Application logs
-go run . cli fly ssh        # SSH into machine
-go run . cli deck           # Deck visualization tools
-go run . cli deck watch     # Watch .dsh files and generate outputs
-go run . cli deck build     # Build single deck file
-go run . cli gozero         # Go-zero microservices operations
-go run . cli gozero api create  # Create new go-zero API service
+go run . tools flyctl status   # Fly.io commands
+go run . tools deck watch      # Watch .dsh files and generate outputs
+go run . tools deck build      # Build single deck file
+go run . tools gozero api create  # Create new go-zero API service
 ```
 
 ### Shell Completion
@@ -128,23 +107,23 @@ All scaling operations are under the `cli fly` namespace:
 
 ```bash
 # Show current scaling configuration
-go run . cli fly scale
+go run . tools fly scale
 
 # Horizontal scaling (machines)
-go run . cli fly scale --count 2          # Scale to 2 machines
-go run . cli fly scale --count 1          # Scale back to 1 machine
+go run . tools fly scale --count 2          # Scale to 2 machines
+go run . tools fly scale --count 1          # Scale back to 1 machine
 
 # Vertical scaling (resources per machine)
-go run . cli fly scale --memory 1024      # Scale memory to 1GB
-go run . cli fly scale --memory 2048      # Scale memory to 2GB  
-go run . cli fly scale --cpu 2            # Scale to 2 CPU cores
+go run . tools fly scale --memory 1024      # Scale memory to 1GB
+go run . tools fly scale --memory 2048      # Scale memory to 2GB  
+go run . tools fly scale --cpu 2            # Scale to 2 CPU cores
 
 # VM type scaling (machine performance)
-go run . cli fly scale --vm shared-cpu-2x      # 2 shared CPUs
-go run . cli fly scale --vm performance-2x     # 2 dedicated CPUs
+go run . tools fly scale --vm shared-cpu-2x      # 2 shared CPUs
+go run . tools fly scale --vm performance-2x     # 2 dedicated CPUs
 
 # Combined operations
-go run . cli fly scale --count 2 --memory 2048 --cpu 2
+go run . tools fly scale --count 2 --memory 2048 --cpu 2
 ```
 
 ### Scaling Options
@@ -199,7 +178,7 @@ ADVANCED COMMANDS:
   completion     Generate shell autocompletion
 ```
 
-#### CLI Tools (`go run . cli -h`)
+#### CLI Tools (`go run . tools -h`)
 ```
 SCALING & DEPLOYMENT:
   fly              Fly.io operations and scaling
@@ -223,9 +202,9 @@ BINARY TOOLS:
 Each command provides detailed help:
 
 ```bash
-go run . deploy -h          # Deployment options and flags
-go run . cli fly scale -h   # Scaling options and examples
-go run . dep -h             # Dependency management help
+go run . workflows deploy -h          # Deployment options and flags
+go run . tools fly scale -h   # Scaling options and examples
+go run . tools dep -h             # Dependency management help
 ```
 
 ## Environment Variables
@@ -241,7 +220,7 @@ go run . dep -h             # Dependency management help
 
 **Development Mode:**
 ```bash
-go run . --env development
+go run . runtime up --env development
 ```
 - Enhanced logging
 - Debug endpoints enabled
@@ -249,7 +228,7 @@ go run . --env development
 
 **Production Mode (default):**
 ```bash
-go run . --env production
+go run . runtime up --env production
 ```
 - Optimized performance
 - Production logging levels
@@ -261,7 +240,7 @@ go run . --env production
 
 ```bash
 # Start all services for development
-go run . --env development
+go run . runtime up --env development
 
 # Check service health
 curl http://localhost:1337/status
@@ -270,42 +249,42 @@ curl http://localhost:1337/status
 go run . config
 
 # Stop all services
-go run . shutdown
+go run . runtime down
 ```
 
 ### Production Deployment
 
 ```bash
 # Deploy to production
-go run . deploy
+go run . workflows deploy
 
 # Check deployment status
-go run . status
+go run . workflows status
 
 # Scale if needed
-go run . cli fly scale --count 2 --memory 1024
+go run . tools fly scale --count 2 --memory 1024
 
 # Monitor logs
-go run . cli fly logs
+go run . tools fly logs
 ```
 
 ### Debugging
 
 ```bash
 # Check API compatibility
-go run . api-check
+go run . dev api-check
 
 # SSH into production machine
-go run . cli fly ssh  
+go run . tools fly ssh  
 
 # Check deck service health
 curl http://localhost:8888/api/v1/deck/health
 
 # Build deck visualization
-go run . cli deck build myfile.dsh
+go run . tools deck build myfile.dsh
 
 # Create go-zero service
-go run . cli gozero api create myservice --output ./api/myservice
+go run . tools gozero api create myservice --output ./api/myservice
 ```
 
 ## Command Completion
@@ -329,20 +308,20 @@ go run . completion fish | source
 
 1. **Port Already in Use**
    ```bash
-   go run . shutdown    # Stop existing services
-   go run .             # Restart clean
+   go run . runtime down    # Stop existing services
+   go run . runtime up      # Restart clean
    ```
 
 2. **Deployment Failures**
    ```bash
-   go run . status      # Check deployment status
-   go run . cli fly logs # View error logs
+   go run . workflows status      # Check deployment status
+   go run . tools fly logs # View error logs
    ```
 
 3. **Scaling Issues**
    ```bash
-   go run . cli fly status   # Check machine status
-   go run . cli fly scale    # Verify current scaling
+   go run . tools fly status   # Check machine status
+   go run . tools fly scale    # Verify current scaling
    ```
 
 ### Debug Mode

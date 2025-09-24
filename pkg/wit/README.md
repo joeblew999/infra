@@ -1,5 +1,9 @@
 # quickwit
 
+TODO: Decide if this is right or not.
+
+
+
 Distributed search engine for log analytics and full-text search. Quickwit is a cloud-native, distributed search engine designed for log analytics and full-text search at petabyte scale.
 
 Server:

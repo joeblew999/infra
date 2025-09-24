@@ -37,14 +37,14 @@ func init() {
 // Config represents the complete configuration structure
 // This is used for JSON serialization and CLI display
 type Config struct {
-	Environment EnvironmentConfig `json:"environment"`
-	Platform    PlatformConfig    `json:"platform"`
-	Paths       PathsConfig       `json:"paths"`
-	Ports       PortsConfig       `json:"ports"`
-	Binaries    BinariesConfig    `json:"binaries"`
-	Registry    RegistryConfig    `json:"registry"`
-	Logging     LoggingConfig     `json:"logging"`
-	EnvironmentVars []string       `json:"environment_vars"`
+	Environment       EnvironmentConfig `json:"environment"`
+	Platform          PlatformConfig    `json:"platform"`
+	Paths             PathsConfig       `json:"paths"`
+	Ports             PortsConfig       `json:"ports"`
+	Binaries          BinariesConfig    `json:"binaries"`
+	Registry          RegistryConfig    `json:"registry"`
+	Logging           LoggingConfig     `json:"logging"`
+	EnvironmentVars   []string          `json:"environment_vars"`
 	EnvironmentStatus map[string]string `json:"environment_status"`
 }
 
@@ -83,6 +83,7 @@ type PortsConfig struct {
 	Caddy      string `json:"caddy"`
 	DeckAPI    string `json:"deck_api"`
 	Metrics    string `json:"metrics"`
+	Hugo       string `json:"hugo"`
 }
 
 type BinariesConfig struct {
@@ -91,6 +92,7 @@ type BinariesConfig struct {
 	Caddy  string `json:"caddy"`
 	Task   string `json:"task"`
 	Tofu   string `json:"tofu"`
+	Nsc    string `json:"nsc"`
 }
 
 type RegistryConfig struct {
@@ -131,14 +133,15 @@ func GetConfig() Config {
 			APIServices: GetAPIServices(),
 		},
 		Ports: PortsConfig{
-			WebServer:  "1337",
-			PocketBase: "8090",
-			NATS:       "4222",
-			MCP:        "8080",
-			Bento:      "4195",
-			Caddy:      "80",
-			DeckAPI:    "8888",
-			Metrics:    "9091",
+			WebServer:  GetWebServerPort(),
+			PocketBase: GetPocketBasePort(),
+			NATS:       GetNATSPort(),
+			MCP:        GetMCPPort(),
+			Bento:      GetBentoPort(),
+			Caddy:      GetCaddyPort(),
+			DeckAPI:    GetDeckAPIPort(),
+			Metrics:    GetMetricsPort(),
+			Hugo:       GetHugoPort(),
 		},
 		Binaries: BinariesConfig{
 			Flyctl: GetFlyctlBinPath(),
@@ -146,6 +149,7 @@ func GetConfig() Config {
 			Caddy:  GetCaddyBinPath(),
 			Task:   GetTaskBinPath(),
 			Tofu:   GetTofuBinPath(),
+			Nsc:    GetNscBinPath(),
 		},
 		Registry: RegistryConfig{
 			KoDockerRepo: GetKoDockerRepo(),
@@ -161,6 +165,7 @@ func GetConfig() Config {
 			EnvVarEnvironment,
 			EnvVarFlyAppName,
 			EnvVarKoDockerRepo,
+			EnvVarAppRoot,
 			"FLY_API_TOKEN",
 			"FLY_REGION",
 		},

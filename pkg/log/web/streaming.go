@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/starfederation/datastar-go/datastar"
 
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -44,6 +45,9 @@ func GetDefaultConfig() LogStreamConfig {
 func GetRecentLogs(maxLines int) ([]LogEntry, error) {
 	var logs []LogEntry
 
+	webPort := config.GetWebServerPort()
+	natsURL := config.GetNATSURL()
+
 	// For now, we'll simulate log entries with actual system activity
 	// In a real implementation, this would read from log files or a centralized log store
 
@@ -51,7 +55,7 @@ func GetRecentLogs(maxLines int) ([]LogEntry, error) {
 	logs = append(logs, LogEntry{
 		Timestamp: time.Now().Add(-5 * time.Minute).Format("15:04:05"),
 		Level:     "INFO",
-		Message:   "Web server started on port 1337",
+		Message:   fmt.Sprintf("Web server started on port %s", webPort),
 		Source:    "web",
 		Details:   "HTTP server initialization completed successfully",
 	})
@@ -61,7 +65,7 @@ func GetRecentLogs(maxLines int) ([]LogEntry, error) {
 		Level:     "DEBUG",
 		Message:   "NATS connection established",
 		Source:    "nats",
-		Details:   "Connected to nats://localhost:4222",
+		Details:   fmt.Sprintf("Connected to %s", natsURL),
 	})
 
 	logs = append(logs, LogEntry{

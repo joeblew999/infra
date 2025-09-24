@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/joeblew999/infra/pkg/log"
-	"github.com/joeblew999/infra/pkg/config"
-	"github.com/joeblew999/infra/pkg/goreman"
 	"github.com/pocketbase/pocketbase"
+
+	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
+	"github.com/joeblew999/infra/pkg/log"
+	"github.com/joeblew999/infra/pkg/service"
 )
 
 // Server represents a PocketBase server instance
@@ -53,21 +54,21 @@ func (s *Server) Start(ctx context.Context) error {
 
 	// Start the PocketBase server
 	log.Info("Starting PocketBase server...", "port", s.port, "data_dir", s.dataDir)
-	
+
 	// Use the app's built-in serve functionality with proper context handling
 	app.RootCmd.SetArgs([]string{
 		"serve",
 		"--dir", s.dataDir,
 		"--http", ":" + s.port,
 	})
-	
+
 	// Execute synchronously - this will block, which is expected for a server
 	// This should work for the embedded version
 	if err := app.Execute(); err != nil {
 		log.Error("PocketBase server error", "error", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -77,7 +78,6 @@ func (s *Server) Stop() error {
 	return nil
 }
 
-
 // GetDataDir returns the PocketBase data directory
 func GetDataDir() string {
 	return config.GetPocketBaseDataPath()
@@ -86,9 +86,9 @@ func GetDataDir() string {
 // GetAppURL returns the base URL for the PocketBase app
 func GetAppURL(port string) string {
 	if port == "" {
-		port = "8090"
+		port = config.GetPocketBasePort()
 	}
-	return "http://localhost:" + port
+	return config.FormatLocalHTTP(port)
 }
 
 // GetAPIURL returns the API URL for the PocketBase app
@@ -105,18 +105,24 @@ func StartSupervised(env string, port string) error {
 	if env == "" {
 		env = "production"
 	}
-	
+
 	// Ensure data directory exists
 	dataDir := config.GetPocketBaseDataPath()
 	if err := os.MkdirAll(dataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create PocketBase data directory: %w", err)
 	}
-	
+
+	if err := dep.InstallBinary(config.BinaryPocketbase, false); err != nil {
+		return fmt.Errorf("failed to ensure pocketbase binary: %w", err)
+	}
+
+	binPath := config.Get(config.BinaryPocketbase)
+
 	// Register and start with goreman supervision
-	return goreman.RegisterAndStart("pocketbase", &goreman.ProcessConfig{
-		Command:    filepath.Join(".dep", "pocketbase"),
-		Args:       []string{"serve", "--dir", dataDir, "--http", "localhost:" + port},
-		WorkingDir: ".",
-		Env:        append(os.Environ(), "ENVIRONMENT="+env),
-	})
+	processCfg := service.NewConfig(
+		binPath,
+		[]string{"serve", "--dir", dataDir, "--http", config.FormatLocalHostPort(port)},
+		service.WithEnv("ENVIRONMENT="+env),
+	)
+	return service.Start("pocketbase", processCfg)
 }

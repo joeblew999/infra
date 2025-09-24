@@ -159,9 +159,9 @@ Web interface and API access through Caddy:
 
 ### Installation
 1. **Download the binary** or build from source
-2. **Run `./infra service`** to start all services
+2. **Run `./infra runtime up`** to start all services
 3. **Access web interface** at http://localhost:1337
-4. **Check service status** at http://localhost:1337/status
+4. **Check service status** with `infra runtime status` or visit http://localhost:1337/status
 
 ### Initial Configuration
 - **Brand assets** - Add your logos, colors, fonts to `.data/brand/`

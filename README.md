@@ -1,15 +1,22 @@
 # Infra
 
-Everything here runs with one command:
+Manage the whole stack with the `infra runtime` namespace:
 
 ```bash
-go run .
-```
+# start the supervised stack (web UI, NATS, PocketBase, Bento, Deck API, Caddy, etc.)
+go run . runtime up
 
-That boots the supervised stack (web UI, NATS, PocketBase, Bento, Deck API, Caddy, XTemplate, optional mox). Stop it just as easily:
+# stop everything
+go run . runtime down
 
-```bash
-go run . shutdown
+# see what's running
+go run . runtime status
+
+# stream live lifecycle events
+go run . runtime watch --service web --types status
+
+# https://localhost:1337
+# http://localhost:1337
 ```
 
 ## Quick Start
@@ -17,20 +24,20 @@ go run . shutdown
 ```bash
 git clone https://github.com/joeblew999/infra.git
 cd infra
-go run .              # start services
+go run . runtime up       # start the supervised services
 # ... hack ...
-go run . shutdown     # stop services
+go run . runtime down     # stop the services
 ```
 
 ## Everyday Commands
 
 ```bash
-go run . status       # check health
-go run . deploy       # deploy to Fly.io
-go run . container    # build & run via ko + Docker
-go run . --env development   # explicit dev mode
-go run . service --no-mox=false   # include mox mail server when needed
-go run . cli --help   # tooling & debugging namespace
+go run . runtime list         # list available services
+go run . runtime status       # check local health
+go run . runtime container    # build & run via ko + Docker
+go run . workflows deploy     # deploy to Fly.io
+go run . tools flyctl status  # access supporting tooling
+go run . dev api-check        # compare Go API surfaces
 ```
 
 ## Need More?

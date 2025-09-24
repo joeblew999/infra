@@ -10,6 +10,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the AI command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(NewAICmd())
+}
+
 func NewAICmd() *cobra.Command {
 	aiCmd := &cobra.Command{
 		Use:   "ai",

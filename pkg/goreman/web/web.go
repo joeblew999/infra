@@ -22,18 +22,18 @@ import (
 
 func init() {
 	templates.RegisterNavItem(templates.NavItem{
-		Href:  config.ProcessesHTTPPath,
-		Text:  "Processes",
-		Icon:  "🔍",
+		Href:  config.RuntimeHTTPPath,
+		Text:  "Runtime Services",
+		Icon:  "🛠️",
 		Color: "indigo",
 		Order: 60,
 	})
 }
 
-const processesStreamInterval = 3 * time.Second
+const runtimeStreamInterval = 3 * time.Second
 
 //go:embed templates/processes-page.html
-var processesPageTemplate string
+var runtimePageTemplate string
 
 // ProcessStatusWeb represents the process status payload for the JSON API.
 type ProcessStatusWeb struct {
@@ -64,7 +64,7 @@ func (w *WebHandler) SetupRoutes(r chi.Router) {
 
 // ProcessesPageHandler serves the main processes page.
 func (w *WebHandler) ProcessesPageHandler(rw http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("processes-page").Parse(processesPageTemplate)
+	tmpl, err := template.New("processes-page").Parse(runtimePageTemplate)
 	if err != nil {
 		log.Error("error parsing processes template", "error", err)
 		http.Error(rw, "failed to render page", http.StatusInternalServerError)
@@ -74,7 +74,7 @@ func (w *WebHandler) ProcessesPageHandler(rw http.ResponseWriter, r *http.Reques
 	var content strings.Builder
 	data := struct {
 		BasePath string
-	}{BasePath: config.ProcessesHTTPPath}
+	}{BasePath: config.RuntimeHTTPPath}
 
 	if err := tmpl.Execute(&content, data); err != nil {
 		log.Error("error executing processes template", "error", err)
@@ -82,7 +82,7 @@ func (w *WebHandler) ProcessesPageHandler(rw http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	fullHTML, err := templates.RenderBasePage("Processes", content.String(), config.ProcessesHTTPPath)
+	fullHTML, err := templates.RenderBasePage("Runtime Services", content.String(), config.RuntimeHTTPPath)
 	if err != nil {
 		log.Error("error rendering base page", "error", err)
 		http.Error(rw, "failed to render page", http.StatusInternalServerError)
@@ -102,7 +102,7 @@ func (w *WebHandler) ProcessesStreamHandler(rw http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	ticker := time.NewTicker(processesStreamInterval)
+	ticker := time.NewTicker(runtimeStreamInterval)
 	defer ticker.Stop()
 
 	for {
@@ -205,7 +205,7 @@ func (w *WebHandler) RegisterDemoProcessHandler(rw http.ResponseWriter, r *http.
 	rw.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(rw).Encode(map[string]string{
 		"status":  "success",
-		"message": fmt.Sprintf("Demo process registered. Use %s/api/test-process/start to start it.", config.ProcessesHTTPPath),
+		"message": fmt.Sprintf("Demo process registered. Use %s/api/test-process/start to start it.", config.RuntimeHTTPPath),
 	})
 }
 
@@ -276,7 +276,7 @@ func collectProcessSnapshot() processSnapshot {
 
 func mapProcessSnapshot(snapshot processSnapshot) ProcessTemplateData {
 	processes := make([]ProcessCard, len(snapshot.Processes))
-	base := strings.TrimSuffix(config.ProcessesHTTPPath, "/")
+	base := strings.TrimSuffix(config.RuntimeHTTPPath, "/")
 
 	for i, proc := range snapshot.Processes {
 		border, badge := processCardClasses(proc.Status)

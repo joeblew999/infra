@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/dep"
 	"github.com/joeblew999/infra/pkg/log"
 )
 
@@ -118,8 +119,13 @@ type DockerOptions struct {
 
 // runGoctl executes goctl with the given arguments
 func (r *GoZeroRunner) runGoctl(operation string, args ...string) error {
+	// Ensure goctl binary is installed before running
+	if err := dep.InstallBinary(config.BinaryGoctl, false); err != nil {
+		return fmt.Errorf("failed to ensure goctl binary: %w", err)
+	}
+
 	goctlPath := config.Get(config.BinaryGoctl)
-	
+
 	// Handle relative paths by finding the repo root
 	if !filepath.IsAbs(goctlPath) {
 		wd, _ := os.Getwd()
@@ -134,11 +140,6 @@ func (r *GoZeroRunner) runGoctl(operation string, args ...string) error {
 			}
 			dir = parent
 		}
-	}
-	
-	// Ensure goctl binary exists
-	if _, err := os.Stat(goctlPath); os.IsNotExist(err) {
-		return fmt.Errorf("goctl binary not found at %s - run 'go run . dep install goctl' first", goctlPath)
 	}
 	
 	log.Info("Running goctl", "operation", operation, "args", args, "workdir", r.workDir)
@@ -197,4 +198,62 @@ func (r *GoZeroRunner) GenerateInfraAPI(ctx context.Context, packageName string,
 	
 	log.Info("Infra API generation completed", "package", packageName, "output", outputDir)
 	return nil
+}
+
+// Plugin management with individual install functions
+// This follows the pattern where plugins are treated as separate binaries
+
+// InstallOpenAPIPlugin installs the goctl-openapi plugin
+func (r *GoZeroRunner) InstallOpenAPIPlugin() error {
+	return r.installPlugin("goctl-openapi", "jayvynl/goctl-openapi")
+}
+
+// InstallGoCompactPlugin installs the goctl-go-compact plugin
+func (r *GoZeroRunner) InstallGoCompactPlugin() error {
+	return r.installPlugin("goctl-go-compact", "zeromicro/goctl-go-compact")
+}
+
+// InstallPHPPlugin installs the goctl-php plugin
+func (r *GoZeroRunner) InstallPHPPlugin() error {
+	return r.installPlugin("goctl-php", "zeromicro/goctl-php")
+}
+
+// InstallSwagPlugin installs the goctl-swag plugin
+func (r *GoZeroRunner) InstallSwagPlugin() error {
+	return r.installPlugin("goctl-swag", "CloverOS/goctl-swag")
+}
+
+// InstallGenginPlugin installs the gengin plugin
+func (r *GoZeroRunner) InstallGenginPlugin() error {
+	return r.installPlugin("gengin", "MasterJoyHunan/gengin")
+}
+
+// installPlugin is a helper that installs a plugin using go install
+func (r *GoZeroRunner) installPlugin(pluginName, repo string) error {
+	log.Info("Installing goctl plugin", "plugin", pluginName, "repo", repo)
+
+	// Install plugin using go install
+	installPath := fmt.Sprintf("github.com/%s@latest", repo)
+	cmd := exec.Command("go", "install", installPath)
+
+	if r.debug {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to install plugin %s: %w", pluginName, err)
+	}
+
+	log.Info("Plugin installed successfully", "plugin", pluginName)
+	return nil
+}
+
+// RunPlugin executes a goctl plugin
+func (r *GoZeroRunner) RunPlugin(pluginName, apiFile, outputDir string, extraArgs ...string) error {
+	// Build plugin command arguments
+	args := []string{"api", "plugin", "-p", pluginName, "-api", apiFile, "-dir", outputDir}
+	args = append(args, extraArgs...)
+
+	return r.runGoctl(fmt.Sprintf("run plugin %s", pluginName), args...)
 }

@@ -2,22 +2,14 @@ package caddy
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/dep"
-	"github.com/joeblew999/infra/pkg/goreman"
 )
-
-func init() {
-	// Register caddy service factory for decoupled access
-	goreman.RegisterService("caddy", func() error {
-		return StartSupervised(nil)
-	})
-}
 
 // Runner executes caddy commands with environment-aware configuration
 type Runner struct {
@@ -69,56 +61,9 @@ func (r *Runner) StartInBackground(configPath string) {
 	}()
 }
 
-// StartWithConfig generates a Caddyfile and starts Caddy in the background
-func StartWithConfig(config *CaddyConfig) *Runner {
-	// Generate and save Caddyfile
-	if err := config.GenerateAndSave("Caddyfile"); err != nil {
-		fmt.Printf("Failed to generate Caddyfile: %v\n", err)
-		return nil
-	}
-	
-	// Create runner and start in background
-	runner := New()
-	runner.StartInBackground(".data/caddy/Caddyfile")
-	return runner
-}
-
-// StartSupervised starts Caddy under goreman supervision (idempotent)
-// This is the recommended way to start Caddy in service mode
-func StartSupervised(caddyConfig *CaddyConfig) error {
-	// Generate Caddyfile if config provided
-	var configPath string
-	if caddyConfig != nil {
-		if err := caddyConfig.GenerateAndSave("Caddyfile"); err != nil {
-			return fmt.Errorf("failed to generate Caddyfile: %w", err)
-		}
-		configPath = filepath.Join(config.GetCaddyPath(), "Caddyfile")
-	} else {
-		// Default config path
-		configPath = ".data/caddy/Caddyfile"
-	}
-	
-	// Ensure config file exists
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Create default development config
-		defaultConfig := NewPresetConfig(PresetDevelopment, 80)
-		if err := defaultConfig.GenerateAndSave("Caddyfile"); err != nil {
-			return fmt.Errorf("failed to create default Caddyfile: %w", err)
-		}
-		configPath = filepath.Join(config.GetCaddyPath(), "Caddyfile")
-	}
-	
-	// Register and start with goreman supervision
-	// Create environment with reduced logging
-	env := os.Environ()
-	env = append(env, "CADDY_LOG_LEVEL=ERROR")
-	
-	return goreman.RegisterAndStart("caddy", &goreman.ProcessConfig{
-		Command:    config.GetCaddyBinPath(),
-		Args:       []string{"run", "--config", configPath, "--adapter", "caddyfile"},
-		WorkingDir: ".",
-		Env:        env,
-	})
+// Reload triggers a zero-downtime configuration reload for the running Caddy instance.
+func (r *Runner) Reload(configPath string) error {
+	return r.Run("reload", "--config", configPath, "--adapter", "caddyfile")
 }
 
 // FileServer starts a file server with environment-aware HTTPS configuration
@@ -169,12 +114,14 @@ type CaddyConfig struct {
 
 // DefaultConfig returns a default Caddy configuration
 func DefaultConfig() CaddyConfig {
+	cfg := config.GetConfig()
 	return CaddyConfig{
-		Port:   80,
-		Target: "localhost:1337",
+		Port:   defaultCaddyPort(),
+		Target: config.FormatLocalHostPort(cfg.Ports.WebServer),
 		Routes: []ProxyRoute{
-			{Path: "/bento-playground/*", Target: "localhost:4195"},
-			{Path: "/xtemplate/*", Target: "localhost:" + config.GetXTemplatePort()},
+			{Path: "/bento-playground/*", Target: config.FormatLocalHostPort(config.GetBentoPort())},
+			{Path: "/xtemplate/*", Target: config.FormatLocalHostPort(config.GetXTemplatePort())},
+			{Path: "/docs/*", Target: config.FormatLocalHostPort(cfg.Ports.Hugo)},
 		},
 	}
 }
@@ -194,11 +141,10 @@ func GenerateCaddyfile(cfg CaddyConfig) string {
 	content += fmt.Sprintf("# - Routes: %d\n", len(cfg.Routes))
 	content += "#\n\n"
 
+	portStr := strconv.Itoa(cfg.Port)
 	if config.ShouldUseHTTPS() {
-		// Development: HTTPS with automatic certificates
-		content += fmt.Sprintf("localhost:%d {\n", cfg.Port)
+		content += fmt.Sprintf("%s {\n", config.FormatLocalHostPort(portStr))
 	} else {
-		// Production: HTTP only
 		content += fmt.Sprintf(":%d {\n", cfg.Port)
 	}
 
@@ -229,11 +175,12 @@ func GenerateCaddyfile(cfg CaddyConfig) string {
 
 // GenerateCaddyfileSimple creates a Caddyfile with legacy signature for backward compatibility
 func GenerateCaddyfileSimple(port int, targetPort int) string {
+	targetPortStr := strconv.Itoa(targetPort)
 	cfg := CaddyConfig{
 		Port:   port,
-		Target: fmt.Sprintf("localhost:%d", targetPort),
+		Target: config.FormatLocalHostPort(targetPortStr),
 		Routes: []ProxyRoute{
-			{Path: "/bento-playground/*", Target: "localhost:4195"},
+			{Path: "/bento-playground/*", Target: config.FormatLocalHostPort(config.GetBentoPort())},
 		},
 	}
 	return GenerateCaddyfile(cfg)

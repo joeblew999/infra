@@ -7,6 +7,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Register mounts the toki command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetTokiCmd())
+}
+
 // GetTokiCmd returns the toki command for CLI integration
 func GetTokiCmd() *cobra.Command {
 	return tokiCmd

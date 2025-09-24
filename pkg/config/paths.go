@@ -3,7 +3,6 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -16,6 +15,8 @@ const (
 	EnvVarEnvironment  = "ENVIRONMENT"
 	EnvVarFlyAppName   = "FLY_APP_NAME"
 	EnvVarKoDockerRepo = "KO_DOCKER_REPO"
+	EnvVarAppRoot      = "APP_ROOT"
+	EnvVarNATSCluster  = "NATS_CLUSTER_ENABLED"
 
 	// Registry and image constants
 	// NOTE: All registry URLs and image names are constants to prevent obfuscation
@@ -38,6 +39,9 @@ const (
 	// DepDir is the designated location for all downloaded and managed external binary dependencies.
 	DepDir = ".dep"
 
+	// AppRootDir is the development root directory that mirrors the container's /app layout.
+	AppRootDir = "app"
+
 	// DepMCPDir is the designated location for all downloaded and managed MCP server binaries.
 	DepMCPDir = ".dep-mcp"
 
@@ -55,23 +59,6 @@ const (
 
 	// LogsDir is the directory for application log files.
 	LogsDir = ".logs"
-
-	// NATS stream constants
-	NATSLogStreamName    = "LOGS"
-	NATSLogStreamSubject = "logs.app"
-
-	// NATS cluster configuration
-	NATSClusterNameLocal      = "infra-local"
-	NATSClusterNameProduction = "infra-cluster"
-	NATSDockerImage           = "nats:alpine"
-
-	// NATS cluster ports for local development (separate from embedded NATS on 4222)
-	NATSClusterBasePort  = 4322 // Starting port for client connections (4322, 4323, 4324...)
-	NATSClusterBaseCPort = 6222 // Cluster port - SAME for all nodes (standard NATS clustering)
-	NATSClusterBaseHTTP  = 8322 // Starting port for HTTP monitoring (8322, 8323, 8324...)
-	NATSClusterNodeCount = 6    // Number of nodes in cluster
-
-	// Fly.io regions for NATS cluster deployment are defined in GetFlyRegions() function
 
 	// DocsDir is the directory containing Markdown documentation files.
 	DocsDir = "docs"
@@ -99,12 +86,12 @@ const (
 	BinaryDepNameFormat = "%s_%s_%s"
 
 	// Navigation paths for web interface
-	HomeHTTPPath      = "/"
-	MetricsHTTPPath   = "/metrics"
-	LogsHTTPPath      = "/logs"
-	StatusHTTPPath    = "/status"
-	ConfigHTTPPath    = "/config"
-	ProcessesHTTPPath = "/processes"
+	HomeHTTPPath    = "/"
+	MetricsHTTPPath = "/metrics"
+	LogsHTTPPath    = "/logs"
+	StatusHTTPPath  = "/status"
+	ConfigHTTPPath  = "/config"
+	RuntimeHTTPPath = "/runtime"
 
 	// Environment detection
 	EnvProduction  = "production"
@@ -113,6 +100,30 @@ const (
 	// Binary constants are now auto-generated in binaries_gen.go
 	// Run `go generate` to regenerate from dep.json
 )
+
+// GetAppRoot returns the base directory for runtime assets.
+// In production containers this resolves to /app, while locally it maps to ./app
+// (unless overridden via APP_ROOT). This keeps all runtime artifacts scoped to a
+// single folder that mirrors the Fly.io layout.
+func GetAppRoot() string {
+	if override := strings.TrimSpace(os.Getenv(EnvVarAppRoot)); override != "" {
+		return filepath.Clean(override)
+	}
+	if IsProduction() {
+		if isContainerEnvironment() {
+			return "/app"
+		}
+		return filepath.Join(".", AppRootDir)
+	}
+	return filepath.Join(".", AppRootDir)
+}
+
+func isContainerEnvironment() bool {
+	if _, err := os.Stat("/.dockerenv"); err == nil {
+		return true
+	}
+	return false
+}
 
 // GetDepPath returns the absolute path to the .dep directory.
 func GetDepPath() string {
@@ -135,16 +146,12 @@ func GetTaskfilesPath() string {
 }
 
 // GetDataPath returns the absolute path to the .data directory.
-// In Fly.io production, this points to the mounted volume at /app/.data
+// In Fly.io production, this points to the mounted volume at /app/.data.
 func GetDataPath() string {
-	if IsProduction() {
-		// In Fly.io production, use the mounted volume at /app/.data
-		return "/app/.data"
-	}
 	if IsTestEnvironment() {
 		return GetTestDataPath()
 	}
-	return filepath.Join(".", DataDir)
+	return filepath.Join(GetAppRoot(), DataDir)
 }
 
 // GetTestDataPath returns the absolute path to the .data-test directory.
@@ -172,7 +179,23 @@ func GetLogsPath() string {
 		// In Fly.io production, use the data directory for logs
 		return filepath.Join(GetDataPath(), "logs")
 	}
-	return filepath.Join(".", LogsDir)
+	return filepath.Join(GetAppRoot(), LogsDir)
+}
+
+// ShouldEnsureNATSCluster controls whether the orchestrator should attempt to boot
+// the full NATS cluster alongside the embedded leaf node. Defaults to true in
+// production and false in development unless explicitly overridden via
+// NATS_CLUSTER_ENABLED.
+func ShouldEnsureNATSCluster() bool {
+	if value := strings.TrimSpace(os.Getenv(EnvVarNATSCluster)); value != "" {
+		switch strings.ToLower(value) {
+		case "1", "true", "yes", "on":
+			return true
+		case "0", "false", "no", "off":
+			return false
+		}
+	}
+	return false
 }
 
 // Get returns the relative path to a binary dependency.
@@ -209,6 +232,11 @@ func GetKoBinPath() string {
 // GetFlyctlBinPath returns the absolute path to the flyctl binary.
 func GetFlyctlBinPath() string {
 	return Get(BinaryFlyctl)
+}
+
+// GetNscBinPath returns the absolute path to the nsc binary.
+func GetNscBinPath() string {
+	return Get(BinaryNsc)
 }
 
 // GetClaudeBinPath returns the absolute path to the claude binary.
@@ -326,30 +354,6 @@ func GetKoDefaultPlatforms() []string {
 	return []string{PlatformLinuxAmd64}
 }
 
-// GetPocketBaseDataPath returns the absolute path to the PocketBase data directory.
-// In test environments, uses .data-test/pocketbase for isolation.
-func GetPocketBaseDataPath() string {
-	if IsTestEnvironment() {
-		return filepath.Join(GetTestDataPath(), "pocketbase")
-	}
-	return filepath.Join(GetDataPath(), "pocketbase")
-}
-
-// GetPocketBasePort returns the default port for PocketBase server.
-func GetPocketBasePort() string {
-	return "8090"
-}
-
-// GetBentoPath returns the absolute path to the bento configuration directory.
-func GetBentoPath() string {
-	return filepath.Join(GetDataPath(), "bento")
-}
-
-// GetBentoPort returns the default port for bento service.
-func GetBentoPort() string {
-	return "4195"
-}
-
 // GetFontPath returns the absolute path to the font cache directory.
 // In test environments, uses .data-test/font for isolation.
 func GetFontPath() string {
@@ -364,58 +368,9 @@ func GetFontPathForFamily(family string) string {
 	return filepath.Join(GetFontPath(), family)
 }
 
-// GetCaddyPath returns the absolute path to the caddy configuration directory.
-// In test environments, uses .data-test/caddy for isolation.
-func GetCaddyPath() string {
-	if IsTestEnvironment() {
-		return filepath.Join(GetTestDataPath(), "caddy")
-	}
-	return filepath.Join(GetDataPath(), "caddy")
-}
-
-// GetCaddyPort returns the default port for caddy reverse proxy.
-func GetCaddyPort() string {
-	return "80"
-}
-
 // GetTransPath returns the absolute path to the translation cache directory.
 func GetTransPath() string {
 	return filepath.Join(GetDataPath(), "trans")
-}
-
-// GetWebServerPort returns the default port for the web server.
-func GetWebServerPort() string {
-	return "1337"
-}
-
-// GetNATSPort returns the default port for NATS server.
-func GetNATSPort() string {
-	return "4222"
-}
-
-// GetNATSURL returns the client connection URL for the embedded NATS server.
-func GetNATSURL() string {
-	return fmt.Sprintf("nats://localhost:%s", GetNATSPort())
-}
-
-// GetNatsS3Port returns the default port for the NATS S3 gateway.
-func GetNatsS3Port() string {
-	return "5222"
-}
-
-// GetMCPPort returns the default port for MCP server.
-func GetMCPPort() string {
-	return "8080"
-}
-
-// GetDeckAPIPort returns the default port for Deck API server.
-func GetDeckAPIPort() string {
-	return "8888"
-}
-
-// GetMetricsPort returns the default port for metrics server.
-func GetMetricsPort() string {
-	return "9091"
 }
 
 // GetDockerImageName returns the default Docker image name for local builds
@@ -433,91 +388,9 @@ func GetDockerImageFullName() string {
 	return GetDockerImageName() + ":" + GetDockerImageTag()
 }
 
-// GetNATSClusterDataPath returns the absolute path to the NATS cluster data directory.
-// In test environments, uses .data-test/nats-cluster for isolation.
-func GetNATSClusterDataPath() string {
-	if IsTestEnvironment() {
-		return filepath.Join(GetTestDataPath(), "nats-cluster")
-	}
-	return filepath.Join(GetDataPath(), "nats-cluster")
-}
-
-// GetNATSClusterName returns the cluster name for the current environment
-func GetNATSClusterName() string {
-	if IsProduction() {
-		return NATSClusterNameProduction
-	}
-	return NATSClusterNameLocal
-}
-
-// GetNATSDockerImage returns the NATS Docker image to use
-func GetNATSDockerImage() string {
-	return NATSDockerImage
-}
-
-// GetFlyRegions returns the Fly.io regions for NATS cluster deployment
-func GetFlyRegions() []string {
-	return []string{"iad", "lhr", "nrt", "syd", "fra", "sjc"}
-}
-
-// GetNATSClusterNodeCount returns the number of nodes in NATS cluster
-func GetNATSClusterNodeCount() int {
-	return NATSClusterNodeCount
-}
-
-// GetNATSClusterPortsForNode returns the client, cluster, and HTTP ports for a specific node
-func GetNATSClusterPortsForNode(nodeIndex int) (client, cluster, http int) {
-	return NATSClusterBasePort + nodeIndex,
-		NATSClusterBaseCPort, // Same cluster port for all nodes
-		NATSClusterBaseHTTP + nodeIndex
-}
-
-// GetXTemplatePath returns the absolute path to the xtemplate templates directory
-func GetXTemplatePath() string {
-	return filepath.Join(GetDataPath(), "xtemplate")
-}
-
-// GetXTemplatePort returns the default port for xtemplate server
-func GetXTemplatePort() string {
-	return "8080"
-}
-
 // GetXTemplateBinPath returns the absolute path to the xtemplate binary
 func GetXTemplateBinPath() string {
 	return Get(BinaryXtemplate)
-}
-
-// GetDeckPath returns the absolute path to the deck build directory.
-// In test environments, uses .data-test/deck for isolation.
-func GetDeckPath() string {
-	if IsTestEnvironment() {
-		return filepath.Join(GetTestDataPath(), DeckDir)
-	}
-	return filepath.Join(GetDataPath(), DeckDir)
-}
-
-// GetDeckBinPath returns the absolute path to the deck binaries directory.
-func GetDeckBinPath() string {
-	return filepath.Join(GetDeckPath(), "bin")
-}
-
-// GetDeckWASMPath returns the absolute path to the deck WASM directory.
-func GetDeckWASMPath() string {
-	return filepath.Join(GetDeckPath(), "wasm")
-}
-
-// GetDeckCachePath returns the absolute path to the deck cache directory.
-func GetDeckCachePath() string {
-	return filepath.Join(GetDeckPath(), "cache")
-}
-
-// GetMjmlPath returns the absolute path to the MJML directory.
-// In test environments, uses .data-test/mjml for isolation.
-func GetMjmlPath() string {
-	if IsTestEnvironment() {
-		return filepath.Join(GetTestDataPath(), MjmlDir)
-	}
-	return filepath.Join(GetDataPath(), MjmlDir)
 }
 
 // GetMjmlTemplatePath returns the absolute path to MJML templates directory.

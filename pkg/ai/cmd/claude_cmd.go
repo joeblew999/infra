@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/joeblew999/infra/pkg/ai"
+	"github.com/joeblew999/infra/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -113,18 +116,18 @@ func newClaudeMCPAddCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "add [name] [command]",
 		Short: "Add MCP server to Claude",
-		Long: `Add a new MCP server to Claude's configuration
+		Long: fmt.Sprintf(`Add a new MCP server to Claude's configuration
 
 Examples:
   # Add filesystem MCP server
-  go run . cli ai claude mcp add filesystem "bun x @modelcontextprotocol/server-filesystem"
+  go run . tools ai claude mcp add filesystem "bun x @modelcontextprotocol/server-filesystem"
   
   # Add DAP server with SSE transport  
-  go run . cli ai claude mcp add mcp-dap-server "http://localhost:8080"
+  go run . tools ai claude mcp add mcp-dap-server "http://localhost:%s"
   
   # Add GitHub MCP server
-  go run . cli ai claude mcp add github "bun x @modelcontextprotocol/server-github"`,
-		Args:  cobra.ExactArgs(2),
+  go run . tools ai claude mcp add github "bun x @modelcontextprotocol/server-github"`, config.GetMCPPort()),
+		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runMCPAddClaude(args[0], args[1])
 		},
@@ -165,10 +168,10 @@ Use 'preset-list' to see available servers.
 
 Examples:
   # Install GitHub MCP server
-  go run . cli ai claude mcp preset-install github
+  go run . tools ai claude mcp preset-install github
   
   # Install filesystem MCP server  
-  go run . cli ai claude mcp preset-install filesystem`,
+  go run . tools ai claude mcp preset-install filesystem`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			runner := ai.NewClaudeRunner()

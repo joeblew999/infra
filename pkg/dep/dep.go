@@ -34,7 +34,7 @@
 //
 // # Supported Binaries
 //
-// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush, tinygo, xtemplate, utm
+// Currently supported binaries: bento, task, tofu, caddy, ko, flyctl, garble, claude, nats, nsc, litestream, deck-tools, decksh, decksvg, deckpng, deckpdf, deckshfmt, deckshlint, zig, toki, goose, gs, gh, crush, tinygo, xtemplate, utm
 //
 // Each binary is automatically selected based on runtime.GOOS and runtime.GOARCH
 // using regex patterns to match GitHub release assets.
@@ -257,7 +257,7 @@ func InstallBinaryWithCrossPlatform(name string, debug, crossPlatform bool) erro
 		}
 		installPath = path
 	}
-	
+
 	currentMeta, err := readMeta(installPath)
 	if err == nil && currentMeta.Version == targetBinary.Version {
 		log.Info("Binary up to date", "name", name, "version", targetBinary.Version)
@@ -270,80 +270,99 @@ func InstallBinaryWithCrossPlatform(name string, debug, crossPlatform bool) erro
 		log.Info("Binary not found or metadata missing", "name", name, "action", "attempting download and installation")
 	}
 
+	installed := false
+
+	// Handle binary-specific installers first
+	switch targetBinary.Name {
+	case config.BinaryNsc:
+		installer := nscInstaller{}
+		if err := installer.Install(*targetBinary, debug); err != nil {
+			return err
+		}
+		installed = true
+	}
+
 	// Handle different source types
-	switch targetBinary.Source {
-	case "go-build":
-		// Use new builders package for go-build
-		builder := builders.GoBuildInstaller{}
-		if crossPlatform {
-			// Define standard cross-platform targets
-			platforms := []builders.Platform{
-				{OS: "darwin", Arch: "amd64"},
-				{OS: "darwin", Arch: "arm64"},
-				{OS: "linux", Arch: "amd64"},
-				{OS: "linux", Arch: "arm64"},
-				{OS: "windows", Arch: "amd64"},
-				{OS: "windows", Arch: "arm64"},
+	if !installed {
+		switch targetBinary.Source {
+		case "go-build":
+			// Use new builders package for go-build
+			builder := builders.GoBuildInstaller{}
+			if crossPlatform {
+				// Define standard cross-platform targets
+				platforms := []builders.Platform{
+					{OS: "darwin", Arch: "amd64"},
+					{OS: "darwin", Arch: "arm64"},
+					{OS: "linux", Arch: "amd64"},
+					{OS: "linux", Arch: "arm64"},
+					{OS: "windows", Arch: "amd64"},
+					{OS: "windows", Arch: "arm64"},
+				}
+				if err := builder.InstallWithPlatforms(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug, platforms); err != nil {
+					return err
+				}
+			} else {
+				if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+					return err
+				}
 			}
-			if err := builder.InstallWithPlatforms(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug, platforms); err != nil {
-				return err
-			}
-		} else {
+		case "go-install":
+			// Use go install for packages that support it
+			builder := builders.GoInstallInstaller{}
 			if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
 				return err
 			}
+		case "npm-package":
+			// Use new builders package for npm-package
+			builder := builders.NPMInstaller{}
+			if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
+				return err
+			}
+		case "github-release":
+			// Use new builders package for github-release
+			builder := builders.GitHubReleaseInstaller{}
+			// Convert AssetSelector types
+			var assets []builders.AssetSelector
+			for _, asset := range targetBinary.Assets {
+				assets = append(assets, builders.AssetSelector{
+					OS:    asset.OS,
+					Arch:  asset.Arch,
+					Match: asset.Match,
+				})
+			}
+			if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
+				return err
+			}
+		case "macos-app":
+			// Use macOS app installer for DMG-based app installations
+			builder := builders.MacOSAppInstaller{}
+			// Convert AssetSelector types
+			var assets []builders.AssetSelector
+			for _, asset := range targetBinary.Assets {
+				assets = append(assets, builders.AssetSelector{
+					OS:    asset.OS,
+					Arch:  asset.Arch,
+					Match: asset.Match,
+				})
+			}
+			if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
+				return err
+			}
+		case "claude-release":
+			// Use new builders package for claude-release
+			builder := builders.ClaudeReleaseInstaller{}
+			if err := builder.Install(targetBinary.Name, targetBinary.Version, debug); err != nil {
+				return err
+			}
+		default:
+			// Legacy fallback for tools without source field
+			return fmt.Errorf("no installer found for binary: %s", name)
 		}
-	case "go-install":
-		// Use go install for packages that support it
-		builder := builders.GoInstallInstaller{}
-		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
-			return err
-		}
-	case "npm-package":
-		// Use new builders package for npm-package
-		builder := builders.NPMInstaller{}
-		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Package, targetBinary.Version, debug); err != nil {
-			return err
-		}
-	case "github-release":
-		// Use new builders package for github-release
-		builder := builders.GitHubReleaseInstaller{}
-		// Convert AssetSelector types
-		var assets []builders.AssetSelector
-		for _, asset := range targetBinary.Assets {
-			assets = append(assets, builders.AssetSelector{
-				OS:    asset.OS,
-				Arch:  asset.Arch,
-				Match: asset.Match,
-			})
-		}
-		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
-			return err
-		}
-	case "macos-app":
-		// Use macOS app installer for DMG-based app installations
-		builder := builders.MacOSAppInstaller{}
-		// Convert AssetSelector types
-		var assets []builders.AssetSelector
-		for _, asset := range targetBinary.Assets {
-			assets = append(assets, builders.AssetSelector{
-				OS:    asset.OS,
-				Arch:  asset.Arch,
-				Match: asset.Match,
-			})
-		}
-		if err := builder.Install(targetBinary.Name, targetBinary.Repo, targetBinary.Version, assets, debug); err != nil {
-			return err
-		}
-	case "claude-release":
-		// Use new builders package for claude-release
-		builder := builders.ClaudeReleaseInstaller{}
-		if err := builder.Install(targetBinary.Name, targetBinary.Version, debug); err != nil {
-			return err
-		}
-	default:
-		// Legacy fallback for tools without source field
-		return fmt.Errorf("no installer found for binary: %s", name)
+		installed = true
+	}
+
+	if !installed {
+		return fmt.Errorf("installer not executed for binary: %s", name)
 	}
 
 	// Write metadata after successful installation

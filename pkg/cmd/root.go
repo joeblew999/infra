@@ -12,6 +12,7 @@ import (
 	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
 	serviceruntime "github.com/joeblew999/infra/pkg/service/runtime"
+	preflight "github.com/joeblew999/infra/pkg/workflows/preflight"
 	natsgo "github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 )
@@ -30,8 +31,7 @@ var rootCmd = &cobra.Command{
 	Long:    rootShortDescription,
 	Version: getVersionString(),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		env, _ := cmd.Flags().GetString("env")
-		return serviceruntime.Start(defaultServiceOptions(env))
+		return cmd.Help()
 	},
 }
 
@@ -48,9 +48,9 @@ func Execute() {
 	registerCommandGroups()
 
 	// Add organized command structure
-	RunCLI()       // Adds 'cli' namespace with tools
-	RunGoreman()   // Adds goreman process supervision commands
-	RunWorkflows() // Adds core infrastructure commands (deploy, status, init)
+	RunTools()
+	RunWorkflows()
+	RunDev()
 	assignCommandGroups()
 
 	if err := rootCmd.Execute(); err != nil {
@@ -325,13 +325,16 @@ func getVersionString() string {
 }
 
 func init() {
-	rootCmd.PersistentFlags().String("env", "production", "Environment: production or development")
+	rootCmd.PersistentFlags().String("env", "development", "Environment: production or development")
 	rootCmd.PersistentFlags().Bool("debug", false, "Enable debug mode")
 	rootCmd.PersistentFlags().StringVar(&flagLogLevel, "log-level", "", "Override log level (debug, info, warn, error)")
 	rootCmd.PersistentFlags().StringVar(&flagLogFormat, "log-format", "", "Override log format (json, text)")
 	rootCmd.PersistentFlags().StringSliceVar(&flagLogOutput, "log-output", nil, "Log destinations e.g. stdout,file=/tmp/app.log")
 
 	cobra.OnInitialize(initializeLogging)
+
+	// Initialize documentation commands
+	RunDocs()
 
 	// Set custom help template that shows only our organized structure
 	cobra.AddTemplateFuncs(template.FuncMap{
@@ -393,12 +396,8 @@ func ensureBuildInfo() {
 
 func defaultServiceOptions(env string) serviceruntime.Options {
 	return serviceruntime.Options{
-		Mode:         env,
-		NoDevDocs:    false,
-		NoNATS:       false,
-		NoPocketbase: false,
-		NoMox:        true,
-		Preflight:    RunDevelopmentPreflightIfNeeded,
+		Mode:      env,
+		Preflight: preflight.RunIfNeeded,
 	}
 }
 
@@ -406,6 +405,7 @@ const (
 	runtimeGroupID  = "runtime"
 	workflowGroupID = "workflows"
 	toolingGroupID  = "tooling"
+	devGroupID      = "dev"
 	advancedGroupID = "advanced"
 )
 
@@ -413,22 +413,16 @@ func registerCommandGroups() {
 	rootCmd.AddGroup(&cobra.Group{ID: runtimeGroupID, Title: "Service Runtime"})
 	rootCmd.AddGroup(&cobra.Group{ID: workflowGroupID, Title: "Workflows"})
 	rootCmd.AddGroup(&cobra.Group{ID: toolingGroupID, Title: "Tooling"})
+	rootCmd.AddGroup(&cobra.Group{ID: devGroupID, Title: "Developer"})
 	rootCmd.AddGroup(&cobra.Group{ID: advancedGroupID, Title: "Advanced"})
 }
 
 func assignCommandGroups() {
 	groupMap := map[string]string{
-		"service":    runtimeGroupID,
-		"shutdown":   runtimeGroupID,
-		"container":  runtimeGroupID,
-		"status":     workflowGroupID,
-		"deploy":     workflowGroupID,
-		"cluster":    workflowGroupID,
-		"config":     toolingGroupID,
-		"dep":        toolingGroupID,
-		"cli":        toolingGroupID,
-		"goreman":    toolingGroupID,
-		"api-check":  advancedGroupID,
+		"runtime":    runtimeGroupID,
+		"workflows":  workflowGroupID,
+		"tools":      toolingGroupID,
+		"dev":        devGroupID,
 		"completion": advancedGroupID,
 	}
 

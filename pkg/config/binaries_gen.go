@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-09-18 14:22:05.602708 +0700 +07 m=+0.001284210
+// Generated at 2025-09-24 17:52:54.133994 +0700 +07 m=+0.000248085
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety
@@ -18,6 +18,7 @@ const (
 	BinaryBun = "bun" // Fast JavaScript runtime, package manager, and bundler
 	BinaryClaude = "claude" // Claude Code CLI for AI-powered development assistance
 	BinaryNats = "nats" // CLI for NATS messaging system and JetStream management
+	BinaryNsc = "nsc" // NATS account and credentials management CLI
 	BinaryNatsServer = "nats-server" // NATS Server is a simple, high performance open source messaging system.
 	BinaryNatsTop = "nats-top" // A top-like tool for monitoring NATS servers.
 	BinaryLitestream = "litestream" // SQLite replication and disaster recovery tool
@@ -31,7 +32,9 @@ const (
 	BinaryGoctl = "goctl" // Code generation tool for go-zero microservices framework
 	BinaryNatsS3 = "nats-s3" // S3 gateway for NATS JetStream Object Store
 	BinaryMox = "mox" // Modern secure mail server with automatic HTTPS, DMARC, and webmail
+	BinaryPocketbase = "pocketbase" // Realtime backend and admin dashboard for your apps
 	BinaryUtm = "utm" // Full-featured system emulator and virtual machine host for macOS
+	BinaryHugo = "hugo" // Fast and flexible static site generator with modern theming support
 )
 
 // AllBinaryNames returns all available binary names from dep.json
@@ -47,6 +50,7 @@ func AllBinaryNames() []string {
 		BinaryBun,
 		BinaryClaude,
 		BinaryNats,
+		BinaryNsc,
 		BinaryNatsServer,
 		BinaryNatsTop,
 		BinaryLitestream,
@@ -60,7 +64,9 @@ func AllBinaryNames() []string {
 		BinaryGoctl,
 		BinaryNatsS3,
 		BinaryMox,
+		BinaryPocketbase,
 		BinaryUtm,
+		BinaryHugo,
 	}
 }
 

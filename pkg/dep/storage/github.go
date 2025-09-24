@@ -164,5 +164,5 @@ func (g *GitHub) ensureGitHubCLI() error {
 
 	// During dep installation or preflight, we can't auto-install to avoid circular dependency
 	// Just return a helpful error message
-	return fmt.Errorf("GitHub CLI not available at %s - run 'go run . dep install gh' first", ghPath)
+	return fmt.Errorf("GitHub CLI not available at %s - run 'go run . tools dep install gh' first", ghPath)
 }

@@ -49,7 +49,7 @@ pkg/deck/repo-tests/
 go run . deck test
 
 # Watch unit test directory for changes
-go run . cli deck watch pkg/deck/unit-tests
+go run . tools deck watch pkg/deck/unit-tests
 ```
 
 ### Repo Tests

@@ -40,36 +40,39 @@ func handleCaddyProxy(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("usage: caddy proxy <from-port> <to-port>")
 	}
-	
+
 	fromPort, err := strconv.Atoi(args[0])
 	if err != nil {
 		return fmt.Errorf("invalid from-port: %v", err)
 	}
-	
+
 	toPort, err := strconv.Atoi(args[1])
 	if err != nil {
 		return fmt.Errorf("invalid to-port: %v", err)
 	}
-	
+
 	runner := caddy.New()
+	portFromStr := strconv.Itoa(fromPort)
+	portToStr := strconv.Itoa(toPort)
+
 	from := fmt.Sprintf(":%d", fromPort)
-	to := fmt.Sprintf("localhost:%d", toPort)
-	
+	to := config.FormatLocalHostPort(portToStr)
+
 	if config.ShouldUseHTTPS() {
-		from = fmt.Sprintf("localhost:%d", fromPort)
+		from = config.FormatLocalHostPort(portFromStr)
 	}
-	
+
 	var url string
 	if config.ShouldUseHTTPS() {
-		url = fmt.Sprintf("https://localhost:%d", fromPort)
+		url = config.FormatLocalHTTPS(portFromStr)
 	} else {
-		url = fmt.Sprintf("http://localhost:%d", fromPort)
+		url = config.FormatLocalHTTP(portFromStr)
 	}
-	
-	fmt.Printf("Starting Caddy reverse proxy: %s -> %s (HTTPS: %v)\n", 
+
+	fmt.Printf("Starting Caddy reverse proxy: %s -> %s (HTTPS: %v)\n",
 		from, to, config.ShouldUseHTTPS())
 	fmt.Printf("🌐 URL: %s\n", url)
-	
+
 	return runner.ReverseProxy(from, to)
 }
 
@@ -77,7 +80,7 @@ func handleCaddyProxy(args []string) error {
 func handleCaddyServe(args []string) error {
 	root := "."
 	port := 8080
-	
+
 	if len(args) > 0 {
 		root = args[0]
 	}
@@ -88,20 +91,21 @@ func handleCaddyServe(args []string) error {
 			return fmt.Errorf("invalid port: %v", err)
 		}
 	}
-	
+
 	runner := caddy.New()
-	
+
 	var url string
+	portStr := strconv.Itoa(port)
 	if config.ShouldUseHTTPS() {
-		url = fmt.Sprintf("https://localhost:%d", port)
+		url = config.FormatLocalHTTPS(portStr)
 	} else {
-		url = fmt.Sprintf("http://localhost:%d", port)
+		url = config.FormatLocalHTTP(portStr)
 	}
-	
-	fmt.Printf("Starting Caddy file server: %s on port %d (HTTPS: %v)\n", 
+
+	fmt.Printf("Starting Caddy file server: %s on port %d (HTTPS: %v)\n",
 		root, port, config.ShouldUseHTTPS())
 	fmt.Printf("🌐 URL: %s\n", url)
-	
+
 	return runner.FileServer(root, port)
 }
 

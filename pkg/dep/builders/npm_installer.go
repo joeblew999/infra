@@ -107,5 +107,5 @@ func (i *NPMInstaller) ensureBun(debug bool) (string, error) {
 func (i *NPMInstaller) installBunDependency(_ bool) error {
 	// Import is avoided to prevent circular dependency
 	// Instead, we'll suggest the user to install bun manually first
-	return fmt.Errorf("bun is required but not available. Please install bun first by running: go run . dep install bun")
+	return fmt.Errorf("bun is required but not available. Please install bun first by running: go run . tools dep install bun")
 }

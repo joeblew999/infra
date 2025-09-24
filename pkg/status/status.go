@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joeblew999/infra/pkg/config"
 	"github.com/joeblew999/infra/pkg/log"
+	servicestate "github.com/joeblew999/infra/pkg/service/state"
 )
 
 // SystemStatus represents the current system status for web display
@@ -36,14 +36,21 @@ type SystemStatus struct {
 
 // ServiceStatus represents the status of a service
 type ServiceStatus struct {
-	Name     string `json:"name"`
-	Status   string `json:"status"`
-	Detail   string `json:"detail,omitempty"`
-	Port     int    `json:"port,omitempty"`
-	Icon     string `json:"icon,omitempty"`
-	Healthy  bool   `json:"healthy"`
-	Required bool   `json:"required"`
-	Level    string `json:"level"`
+	Name         string    `json:"name"`
+	State        string    `json:"state"`
+	Status       string    `json:"status"`
+	Description  string    `json:"description"`
+	Detail       string    `json:"detail,omitempty"`
+	Port         int       `json:"port,omitempty"`
+	Icon         string    `json:"icon,omitempty"`
+	Healthy      bool      `json:"healthy"`
+	Required     bool      `json:"required"`
+	Level        string    `json:"level"`
+	PID          int       `json:"pid,omitempty"`
+	LastAction   string    `json:"last_action,omitempty"`
+	LastActionAt time.Time `json:"last_action_at,omitempty"`
+	Message      string    `json:"message,omitempty"`
+	Ownership    string    `json:"ownership,omitempty"`
 }
 
 // GetCurrentStatus returns current system status for web display
@@ -103,70 +110,136 @@ func formatLastPause(mem runtime.MemStats) string {
 }
 
 func probeServices() []ServiceStatus {
-	var services []ServiceStatus
+	states := servicestate.Snapshot()
+	services := make([]ServiceStatus, 0, len(states))
 
-	for _, probe := range []struct {
-		Name     string
-		Port     int
-		Icon     string
-		Required bool
-		Detail   string
-	}{
-		{
-			Name:     "Web UI",
-			Port:     atoiOrDefault(config.GetWebServerPort(), 1337),
-			Icon:     "🌐",
-			Required: true,
-			Detail:   "HTTP server that hosts the control panel.",
-		},
-		{
-			Name:     "NATS",
-			Port:     atoiOrDefault(config.GetNATSPort(), 4222),
-			Icon:     "📡",
-			Required: true,
-			Detail:   "Embedded messaging backbone (JetStream).",
-		},
-		{
-			Name:     "Metrics",
-			Port:     atoiOrDefault(config.GetMetricsPort(), 9091),
-			Icon:     "📈",
-			Required: false,
-			Detail:   "Prometheus scrape endpoint.",
-		},
-		{
-			Name:     "Deck API",
-			Port:     atoiOrDefault(config.GetDeckAPIPort(), 8888),
-			Icon:     "🃏",
-			Required: false,
-			Detail:   "On-demand PowerPoint generator.",
-		},
-	} {
-		healthy := probePort(probe.Port)
-		level := "ok"
-		statusLabel := "Running"
-		if !healthy {
-			if probe.Required {
-				level = "error"
-				statusLabel = "Down"
+	for _, state := range states {
+		healthy := state.Running
+		ownership := state.Ownership
+		if ownership == "" {
+			ownership = "free"
+		}
+
+		canonicalState := state.State
+		if canonicalState == "" {
+			if state.Running {
+				canonicalState = "running"
 			} else {
-				level = "warn"
-				statusLabel = "Standby"
+				canonicalState = "stopped"
+			}
+		}
+
+		statusLabel := labelForServiceState(canonicalState)
+		level := levelForServiceState(canonicalState, state.Required, ownership)
+
+		detailLines := []string{state.Description}
+		if state.LastAction != "" {
+			detailLines = append(detailLines, fmt.Sprintf("Last: %s", state.LastAction))
+		}
+		if state.Message != "" {
+			detailLines = append(detailLines, state.Message)
+		}
+		if !state.UpdatedAt.IsZero() {
+			detailLines = append(detailLines, fmt.Sprintf("Updated: %s", state.UpdatedAt.Format(time.RFC3339)))
+		}
+		detail := strings.Join(detailLines, "\n")
+
+		switch {
+		case state.Running:
+			statusLabel = "Running"
+			level = "ok"
+		case ownership == "external":
+			statusLabel = "Conflict"
+			level = "error"
+		case ownership == "infra":
+			statusLabel = "In Use"
+			level = "warn"
+		case ownership == "this":
+			statusLabel = "Stale"
+			level = "warn"
+		case state.Required:
+			statusLabel = "Stopped"
+			level = "warn"
+		default:
+			statusLabel = "Standby"
+			level = "warn"
+		}
+
+		port := state.Port
+		if port == 0 && state.PortLabel != "" {
+			if parsed, err := strconv.Atoi(state.PortLabel); err == nil {
+				port = parsed
 			}
 		}
 
 		services = append(services, ServiceStatus{
-			Name:     probe.Name,
-			Status:   statusLabel,
-			Detail:   probe.Detail,
-			Port:     probe.Port,
-			Icon:     probe.Icon,
-			Healthy:  healthy,
-			Required: probe.Required,
-			Level:    level,
+			Name:         state.Name,
+			State:        canonicalState,
+			Status:       statusLabel,
+			Description:  state.Description,
+			Detail:       detail,
+			Port:         port,
+			Icon:         state.Icon,
+			Healthy:      healthy,
+			Required:     state.Required,
+			Level:        level,
+			PID:          state.PID,
+			LastAction:   state.LastAction,
+			LastActionAt: state.LastActionAt,
+			Message:      state.Message,
+			Ownership:    ownership,
 		})
 	}
 
 	return services
+}
+
+func labelForServiceState(state string) string {
+	switch state {
+	case "running":
+		return "Running"
+	case "ready":
+		return "Ready"
+	case "pending":
+		return "Pending"
+	case "reclaimed":
+		return "Reclaimed"
+	case "blocked":
+		return "Blocked"
+	case "error":
+		return "Error"
+	case "stopped":
+		return "Stopped"
+	default:
+		if state == "" {
+			return "Unknown"
+		}
+		return strings.Title(state)
+	}
+}
+
+func levelForServiceState(state string, required bool, ownership string) string {
+	switch state {
+	case "running", "ready":
+		return "ok"
+	case "blocked", "error":
+		return "error"
+	case "reclaimed", "pending":
+		return "warn"
+	case "stopped":
+		if required {
+			return "warn"
+		}
+		return "warn"
+	default:
+		if ownership == "external" {
+			return "error"
+		}
+		if required {
+			return "warn"
+		}
+		return "warn"
+	}
 }
 
 func probePort(port int) bool {

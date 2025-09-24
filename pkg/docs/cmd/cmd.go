@@ -11,6 +11,11 @@ import (
 	"github.com/joeblew999/infra/pkg/deck"
 )
 
+// Register mounts the docs command under the provided parent.
+func Register(parent *cobra.Command) {
+	parent.AddCommand(GetDocsCmd())
+}
+
 var docsCmd = &cobra.Command{
 	Use:   "docs",
 	Short: "Documentation utilities",

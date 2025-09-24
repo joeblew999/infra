@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -14,15 +15,16 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joeblew999/infra/pkg/auth"
 	"github.com/joeblew999/infra/pkg/caddy"
-	"github.com/joeblew999/infra/pkg/status"
+	"github.com/joeblew999/infra/pkg/config"
+	svcports "github.com/joeblew999/infra/pkg/service/ports"
 	"github.com/nats-io/nats.go"
 )
 
 // Removed embedded fs - using pkg-level web directory now
 
 const (
-	HTTPPort     = 8082      // Internal HTTP port for auth service
-	CaddyPort    = 8443      // External HTTPS port via Caddy
+	HTTPPort     = 8082 // Internal HTTP port for auth service
+	CaddyPort    = 8443 // External HTTPS port via Caddy
 	TestUsername = "testuser"
 )
 
@@ -40,7 +42,7 @@ func init() {
 	// Initialize NATS (optional - fallback to in-memory if not available)
 	natsURL := os.Getenv("NATS_URL")
 	if natsURL == "" {
-		natsURL = "nats://localhost:4222"
+		natsURL = config.GetNATSURL()
 	}
 
 	var err error
@@ -59,10 +61,13 @@ func init() {
 	}
 
 	// Initialize complete auth service
+	caddyPortStr := strconv.Itoa(CaddyPort)
+	httpPortStr := strconv.Itoa(HTTPPort)
+
 	config := auth.WebAuthnConfig{
 		RPDisplayName: "Auth Example",
 		RPID:          "localhost",
-		RPOrigins:     []string{fmt.Sprintf("https://localhost:%d", CaddyPort)},
+		RPOrigins:     []string{config.FormatLocalHTTPS(caddyPortStr)},
 	}
 
 	webDir := "../web" // Relative to the example directory
@@ -72,23 +77,22 @@ func init() {
 	}
 }
 
-
 func checkPorts() error {
 	ports := []int{HTTPPort, CaddyPort}
-	
+
 	for _, port := range ports {
-		if !status.IsPortAvailable(port) {
+		if !svcports.IsAvailable(port) {
 			if *forceFlag {
 				fmt.Printf("🔧 Killing process on port %d...\n", port)
-				if err := status.KillProcessByPort(port); err != nil {
+				if err := svcports.KillProcessByPort(port); err != nil {
 					return fmt.Errorf("failed to kill process on port %d: %v", port, err)
 				}
 				// Wait a moment for the port to be released
-				if !status.WaitForPortAvailable(port, 5*time.Second) {
+				if !svcports.WaitAvailable(port, 5*time.Second) {
 					return fmt.Errorf("port %d still not available after cleanup", port)
 				}
 			} else {
-				pid := status.GetProcessByPort(port)
+				pid := svcports.GetProcessByPort(port)
 				return fmt.Errorf("port %d is already in use (PID: %s). Use --force to kill existing processes", port, pid)
 			}
 		}
@@ -98,10 +102,10 @@ func checkPorts() error {
 
 func main() {
 	flag.Parse()
-	
+
 	fmt.Println("🔐 WebAuthn Auth Example with HTTPS")
 	fmt.Println("===================================")
-	
+
 	// Check and handle port conflicts
 	if err := checkPorts(); err != nil {
 		log.Fatal("Port conflict: ", err)
@@ -119,7 +123,7 @@ func main() {
 
 	// Start the HTTP server in a goroutine
 	go func() {
-		fmt.Printf("🌐 Starting auth service on http://localhost:%d\n", HTTPPort)
+		fmt.Printf("🌐 Starting auth service on %s\n", config.FormatLocalHTTP(httpPortStr))
 		if err := http.ListenAndServe(fmt.Sprintf(":%d", HTTPPort), r); err != nil {
 			log.Fatal("Auth server failed:", err)
 		}
@@ -128,13 +132,13 @@ func main() {
 	// Configure and start Caddy HTTPS proxy
 	config := caddy.NewPresetConfig(caddy.PresetSimple, CaddyPort).
 		WithMainTarget(fmt.Sprintf("localhost:%d", HTTPPort))
-	
+
 	fmt.Printf("🔒 Starting Caddy HTTPS proxy on port %d\n", CaddyPort)
-	fmt.Printf("🌍 WebAuthn will be available at: https://localhost:%d\n", CaddyPort)
-	fmt.Println("💡 NATS URL:", os.Getenv("NATS_URL"))
+	fmt.Printf("🌍 WebAuthn will be available at: %s\n", config.FormatLocalHTTPS(caddyPortStr))
+	fmt.Println("💡 NATS URL:", natsURL)
 	fmt.Println("")
 	fmt.Println("✅ HTTPS is required for WebAuthn/passkeys to work!")
-	fmt.Println("🎯 Open your browser to: https://localhost:" + fmt.Sprintf("%d", CaddyPort))
+	fmt.Println("🎯 Open your browser to: " + config.FormatLocalHTTPS(caddyPortStr))
 	fmt.Println("💡 Press Ctrl+C to stop all services")
 	fmt.Println("")
 
