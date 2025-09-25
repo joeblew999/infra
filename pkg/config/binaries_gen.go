@@ -3,7 +3,7 @@
 
 package config
 
-// Generated at 2025-09-24 17:52:54.133994 +0700 +07 m=+0.000248085
+// Generated at 2025-09-25 14:58:43.445121 +0700 +07 m=+0.001510626
 
 // Binary name constants - auto-generated from dep.json
 // Using constants prevents garble obfuscation and provides type safety

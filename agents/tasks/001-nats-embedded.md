@@ -17,19 +17,42 @@
 - [x] Integration of Task 000’s port detection into the per-service ensure helpers.
 - [x] Updated CLI (`infra runtime list`, `infra runtime up --only <name>`, `infra runtime status`, plus `go run .` alias updates).
 - [x] Documentation update summarising dev vs prod startup expectations, service inspection commands, and the new environment flags.
-- [ ] Validation notes: `infra runtime up --only nats`, `infra runtime up --only hugo`, `infra runtime list`, and `infra runtime status` all succeed (or produce clear guidance if something else is already bound to the port).
+- [x] Validation notes: `infra runtime up --only nats`, `infra runtime up --only hugo`, `infra runtime list`, and `infra runtime status` all succeed (or produce clear guidance if something else is already bound to the port).
+  - ✅ Plan: run each command manually, capture output snippets/guidance, and paste summary back here.
+  - ✅ `go run . runtime up --only nats` (SIGINT after `runtime start complete`) → embedded leaf booted with `runtime.ready` event; `nats-s3` status surfaced as structured JSON and shutdown reclaimed 4222/5222.
+  - ✅ `go run . runtime up --only hugo` (SIGINT post-ready) → docs server ensured dirs, reclaimed 1313, and exited cleanly with structured shutdown.
+  - ✅ `go run . runtime list` → confirms required vs optional split; `deck-watcher` remains optional/disabled.
+  - ✅ `go run . runtime status` → reports all services `stopped`/`free` when supervisor idle.
 
-## Open Questions / Needs Input
-- [ ] Any additional services we should include in the default “start individually” list (e.g. docs-hugo variants)?
-- [ ] How should the web UI present service status (new page vs. existing dashboard)?
+## Startup Classes
+- **Always-on services (Required=true)**
+  - Web Server (`web`) — control panel on port 1337.
+  - Embedded NATS (`nats`) — leaf node with JetStream enabled (client port 4222, S3 gateway on 5222) that can bridge to the multi-node cluster when `NATS_CLUSTER_ENABLED` is true.
+  - Caddy Reverse Proxy (`caddy`) — TLS/front door, defaults to port 80.
+
+- **Default optional services (Required=false, Enabled by default)**
+  - PocketBase (`pocketbase`) — database + admin UI on port 8090.
+  - Bento (`bento`) — stream processor on port 4195.
+  - Deck API (`deck-api`) — presentation API on port 8888.
+  - XTemplate (`xtemplate`) — template dev server on port 8080.
+  - Hugo Docs (`hugo`) — documentation site on port 1313.
+
+- **Disabled until integration lands**
+  - Deck Watcher (`deck-watch`).
+
+- [x] Hugo should be part of the default “start individually” list so docs stay in sync.
+- [x] We will surface service status on the existing dashboard as a dedicated panel.
 
 ## Next Steps (draft)
 - [x] Execute Task 000 (port stability) and verify behaviour.
 - [x] Integrate ensures + status updates across services.
 - [ ] Validate runtime commands in dev environment (docs updated in README + CLI usage sections).
+  - ✅ Action: manual validation session (no automation yet) + update README/CLI docs with any gotchas.
 
 
 ## Logging
 
 - [x] Route embedded NATS server output through the structured logger so console lines match other services (`pkg/nats/logger.go`).
-- [ ] Confirm goreman-managed services also present consistent log metadata once other binaries are wrapped.
+- [x] Confirm goreman-managed services also present consistent log metadata once other binaries are wrapped.
+  - ✅ First step: tail current goreman logs during runtime start to verify existing output before adding wrappers.
+  - ✅ Observed structured JSON lifecycle lines for `nats-s3`/others (`External process status`, `✅ Stopped process …`) during NATS/Hugo runs; no stray plain-text output from supervised binaries.
