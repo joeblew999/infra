@@ -203,26 +203,39 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		port = 8090
 	}
 
-	app.RootCmd.SetArgs([]string{
+	// Set os.Args so PocketBase's serve command picks up our flags
+	origArgs := os.Args
+	os.Args = []string{
+		"pocketbase",
 		"serve",
 		"--dir", dataDir,
 		"--http", fmt.Sprintf(":%d", port),
-	})
+	}
+	defer func() { os.Args = origArgs }()
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- app.Execute()
+		fmt.Fprintf(os.Stderr, "[pocketbase] Starting with args: %v\n", os.Args[1:])
+		// Start() registers commands and calls Execute(), which should block on serve
+		err := app.Start()
+		fmt.Fprintf(os.Stderr, "[pocketbase] app.Start() returned: %v\n", err)
+		errCh <- err
 	}()
 
 	if err := waitForTCP(port, 30*time.Second, errCh); err != nil {
-		return err
+		return fmt.Errorf("pocketbase failed to start: %w", err)
 	}
-	fmt.Printf("READY: pocketbase http://127.0.0.1:%d\n", port)
+	fmt.Fprintf(os.Stderr, "[pocketbase] Server started on http://127.0.0.1:%d\n", port)
+	fmt.Fprintf(os.Stderr, "[pocketbase] Waiting for shutdown signal...\n")
 
 	select {
 	case err := <-errCh:
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[pocketbase] Error: %v\n", err)
+		}
 		return err
 	case <-ctx.Done():
+		fmt.Fprintf(os.Stderr, "[pocketbase] Shutdown signal received\n")
 		// trigger graceful shutdown by signalling the process
 		_ = signalInterrupt()
 		return <-errCh

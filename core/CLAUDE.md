@@ -16,6 +16,45 @@ The agent guides are located at `/Users/apple/workspace/go/src/github.com/joeble
 
 These guides provide context for working with this codebase.
 
+## Task Tracking - CRITICAL
+
+**TODO.md**: Living task list - MUST be kept up to date during work sessions
+
+**Why This Matters**:
+- Claude Code sessions can lock out or timeout unexpectedly
+- Context gets lost between sessions
+- Future agents need to know what was being worked on and why
+- Prevents duplicate work and losing progress
+
+**Requirements**:
+1. **Update TODO.md immediately when**:
+   - Starting a new task (mark as in progress)
+   - Completing a task (mark as done, move to ✅ Completed section)
+   - Discovering new issues (add to appropriate priority section)
+   - Changing priorities or blocking issues
+
+2. **TODO.md Structure**:
+   - 🔥 Critical - In Progress (1-2 items max, currently active)
+   - 🎯 High Priority (next up, blocked items)
+   - 🔧 Refactoring (improvements, tech debt)
+   - 🛠️ Tooling (missing commands, dev experience)
+   - ✅ Completed (recent wins, for context)
+
+3. **Each Task Should Include**:
+   - Clear description of the problem
+   - Current status/blockers
+   - File locations (e.g., `services/pocketbase/service.go:217`)
+   - Next steps or investigation notes
+
+**Example Update Pattern**:
+```markdown
+- [x] **Debug PocketBase startup** - FIXED
+  - Root cause: app.Execute() returns immediately, doesn't block
+  - Solution: Use app.Start() + app.Serve() instead
+  - Fixed in: services/pocketbase/service.go:213-217
+  - Tested: Port 8090 now listening ✅
+```
+
 ## Documentation Structure
 
 **README.md**: Quick start and operational commands only

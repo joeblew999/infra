@@ -385,7 +385,7 @@ func registerDatastarRoutes(app *pocketbase.PocketBase) {
 			return forward(e, http.MethodPost, u)
 		}).Bind(apis.RequireAuth())
 
-		return nil
+		return se.Next()
 	})
 }
 
