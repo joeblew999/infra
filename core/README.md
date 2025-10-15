@@ -1,73 +1,177 @@
-# Core Platform
+# Core Runtime System
 
-This repository contains the deterministic core platform (Task 015). All new
-runtime modules and shared packages live here.
+A deterministic, event-driven orchestration system for running distributed services locally and in production. Built on process-compose with full programmatic control.
 
-## Goals
-- Deterministic startup pipeline around JetStream, PocketBase, and Caddy.
-- Shared packages that downstream services can import directly.
-- Real integration tests—CLI, TUI, web, and harness code exercise the actual
-  orchestrator components.
+## Quick Start
 
-See `pkg/runtime/README.md` for the detailed module layout. For subsystem
-playbooks, consult [docs/README.md](docs/README.md) which indexes the
-canonical guides.
+```bash
+# Load environment variables
+export $(cat .env | xargs)
 
-## Quick Commands
-- Start stack: `go run ./cmd/core stack up`
-- Stop stack: `go run ./cmd/core stack down`
-- Deploy to Fly: `go run ./tooling workflow deploy --profile fly --app <fly-app> --org <fly-org> --repo registry.fly.io/<fly-app>`
+# Start the complete stack (NATS, PocketBase, Caddy)
+go run ./cmd/core stack up
 
+# Check status
+go run ./cmd/core stack status
 
-## Repository Layout
-This workspace hosts three cooperating Go modules managed via `../go.work`:
-- `core/` (this directory) — runtime CLI, shared packages, and binaries under `cmd/` (e.g. `go run ./cmd/core`).
-- `controller/` — desired-state API and reconciler service. Run it from that directory with `GOWORK=off go run .`.
-- `tooling/` — release and Fly deployment CLI (`go run ./tooling`).
-
-Wrapper binaries such as `cmd/processcompose` stay in `cmd/` so each executable can import only the dependencies it needs without pulling deploy-time tooling into the runtime build.
-
-## Runtime
-- Start: `go run ./cmd/core stack up`
-- UI: `go run ./cmd/core tui` or `go run ./cmd/core web`
-- Stop: `go run ./cmd/core stack down`
-
-Full command reference: [docs/runtime.md](docs/runtime.md).
-
-## Controller Quickstart
-```sh
-# From controller/ (separate module).
-cd controller
-
-# Run the controller API with an explicit desired-state spec and bind address.
-GOWORK=off go run . --spec spec.yaml --addr 127.0.0.1:4400 \
-  --cloudflare-token-file ~/.config/core/cloudflare/api_token
-
-# Persist state to disk before exiting (Ctrl+C to stop); the spec file is updated on shutdown.
+# Stop services
+go run ./cmd/core stack down
 ```
 
-The controller exposes `/v1/services` (read) and `/v1/services/update` (PATCH) endpoints. Set
-`CONTROLLER_ADDR` or pass `--controller` to `core scale` commands so the runtime CLI can fetch and
-apply desired state updates against the running service. Cloudflare credentials can be supplied via
-`--cloudflare-token`, `--cloudflare-token-file`, or environment variables
-`CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_API_TOKEN_FILE`.
+## What is This?
 
-## Tooling
-- `go run ./tooling workflow deploy --profile fly --app <fly-app> --org <fly-org> --repo registry.fly.io/<fly-app>`
+The **core** is a unified runtime system that:
+- **Orchestrates services** using process-compose (embedded as a library)
+- **Manages dependencies** between services with health checks
+- **Abstracts service definitions** via `service.json` (works with any orchestrator)
+- **Resolves placeholders** (`${env.*}`, `${dep.*}`, `${data}`) at generation time
+- **Provides a single CLI** for all operations (local dev, deployment, debugging)
 
-For the complete Fly + Cloudflare deployment playbook—including setup, auth,
-and integration patterns—see the canonical guide at [docs/tooling.md](docs/tooling.md).
+## Architecture
 
-## Config Templates
-Templates for `.ko.yaml` and `fly.toml` live in `config/templates`. The workflow
-commands regenerate them automatically; run `go run ./tooling config init`
-manually only if you need custom overrides.
+### Components
 
-## Release Checklist
-- ✅ `go test ./...`
-- ✅ `git status --short`
-- 🚀 `go run ./tooling workflow deploy --profile fly --app <fly-app> --org <org-slug> --repo <registry>`
+```
+cmd/
+├── core/           # Main CLI orchestrator
+├── nats/           # NATS service binary
+├── pocketbase/     # PocketBase service binary
+├── caddy/          # Caddy service binary
+└── processcompose/ # Wrapper around process-compose library
 
-If ko still reports a dirty state, double-check for generated files (e.g. `core/.ko.yaml`, `core/fly.toml`) and either commit them or pass `--force` to regenerate after cleaning the tree.
+services/
+├── nats/           # NATS service spec + implementation
+├── pocketbase/     # PocketBase service spec + implementation
+└── caddy/          # Caddy service spec + implementation
 
+pkg/
+├── runtime/        # Core runtime (CLI, process mgmt, config, UI)
+└── shared/         # Shared packages (used by services + tooling)
+```
 
+### Service Abstraction
+
+Each service has a `service.json` that describes:
+- **Binaries** to build/download
+- **Process** command, args, environment
+- **Ports** exposed
+- **Health checks** for orchestration
+- **Compose overrides** for process-compose specific config
+
+Example: `services/nats/service.json`
+```json
+{
+  "binaries": [...],
+  "process": {
+    "command": "${dep.nats}",
+    "env": {...},
+    "compose": {
+      "readiness_probe": {
+        "http_get": {"url": "http://127.0.0.1:8222/healthz"},
+        "initial_delay_seconds": 3,
+        "failure_threshold": 5
+      }
+    }
+  },
+  "ports": {...}
+}
+```
+
+### Placeholder Resolution
+
+Placeholders are resolved during `process-compose.yaml` generation:
+
+| Placeholder | Resolved To | Example |
+|-------------|-------------|---------|
+| `${dep.nats}` | Binary path | `.dep/nats` |
+| `${data}` | Data directory | `.data` |
+| `${env.VAR}` | Environment variable | Value of `$VAR` |
+
+### Process Flow
+
+1. **`go run ./cmd/core stack up`**
+   ↓
+2. **Generate** `.core-stack/process-compose.yaml`
+   - Load `services/*/service.json`
+   - Ensure binaries exist (build or download)
+   - Resolve placeholders
+   - Merge compose overrides
+   ↓
+3. **Execute** `go run ./cmd/processcompose up`
+   - Start process-compose with generated config
+   - Monitor health checks
+   - Manage dependencies
+   ↓
+4. **Services run** with full control
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `.env` | Environment variables (auto-loaded by `cmd/core`) |
+| `services/*/service.json` | Service manifest (orchestrator-agnostic) |
+| `.core-stack/process-compose.yaml` | Generated orchestration config |
+| `pkg/runtime/process/processcompose.go` | Config generator |
+| `cmd/processcompose/main.go` | Our wrapper (full control) |
+
+## Health Checks
+
+Health checks prevent premature restarts:
+
+```json
+{
+  "initial_delay_seconds": 3,    // Wait before first check
+  "period_seconds": 5,            // Check interval
+  "timeout_seconds": 3,           // Per-check timeout
+  "failure_threshold": 5,         // Failures before restart
+  "success_threshold": 1          // Successes to mark healthy
+}
+```
+
+## Service Dependencies
+
+Dependencies are declared in `buildComposeDefinition()`:
+
+```go
+// PocketBase depends on NATS being healthy
+ensureDependsOn(pbEntry, map[string]map[string]any{
+    "nats": {"condition": "process_healthy"},
+})
+```
+
+## Stack Commands
+
+```bash
+# Lifecycle
+go run ./cmd/core stack up        # Start all services
+go run ./cmd/core stack down      # Stop all services
+go run ./cmd/core stack status    # Show status
+
+# Process management
+go run ./cmd/core stack process list
+go run ./cmd/core stack process logs <name>
+go run ./cmd/core stack process restart <name>
+go run ./cmd/core stack process stop <name>
+go run ./cmd/core stack process start <name>
+
+# Individual services
+go run ./cmd/core nats run        # Run NATS standalone
+go run ./cmd/core pocketbase run  # Run PocketBase standalone
+go run ./cmd/core caddy run       # Run Caddy standalone
+```
+
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for Fly.io deployment instructions.
+
+## Development
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
+- Adding new services
+- Customizing process-compose behavior
+- Debugging health checks
+- Working with the codebase
+
+## Troubleshooting
+
+See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
