@@ -2,28 +2,13 @@
 
 ## 🔥 Critical - In Progress
 
-- [ ] **Fix Caddy immediate exit - caddy.Run() doesn't block**
-  - **Root Cause Found**: `caddy.Run()` returns nil immediately instead of blocking!
-  - Debug output shows:
-    ```
-    [caddy] Calling caddy.Run()...
-    {"level":"info","msg":"server running"...}
-    [caddy] caddy.Run() returned: <nil>
-    ```
-  - Server briefly starts but exits immediately (TCP check passes then fails)
-  - Caused 289 restarts in process-compose before discovery
-  - Same pattern as PocketBase issue (returns instead of blocking)
-  - **Solution needed**: Research Caddy v2 API for proper blocking server lifecycle
-  - Possibilities:
-    1. Use different Caddy API (caddy.Start() + wait?)
-    2. Block on signal channel after Run()
-    3. Use Caddy's built-in signal handling differently
-  - Location: `services/caddy/service.go:99-124`
-  - **Added**: Comprehensive debug logging to track execution flow
-
-- [ ] **Test full stack orchestration with all three services**
-  - Goal: NATS → PocketBase → Caddy all running and healthy
-  - Status: NATS ✅ PocketBase ✅ Caddy ❌ (exits immediately, 289 crash loops)
+- [ ] **Fix Caddy 502 Bad Gateway - can't reach PocketBase**
+  - Issue: Caddy returns 502 when proxying to http://127.0.0.1:8090
+  - PocketBase works directly: `curl http://127.0.0.1:8090/api/health` → OK
+  - Caddy logs show server running but proxy failing
+  - Likely config issue with target URL or routing
+  - Location: `services/caddy/service.go` buildConfig() or service.json
+  - Next: Check Caddy config generation, verify target URL format
 
 ## 🎯 High Priority - Stack Orchestration
 
@@ -74,6 +59,17 @@
 
 ## ✅ Completed (This Session)
 
+- [x] **Fix Caddy immediate exit** - FIXED! 🎉
+  - Root cause: caddy.Run() returns nil, was using errCh select which exited immediately
+  - Solution: Block on `<-ctx.Done()` instead of errCh
+  - Caddy now runs stably in background after Run() returns
+  - Result: 0 restarts (was 289!), port 2015 listening
+- [x] **Full stack orchestration working** - 3/3 services running! 🎉
+  - ✅ NATS: port 4222, healthy, 0 restarts
+  - ✅ PocketBase: port 8090, healthy, 0 restarts
+  - ✅ Caddy: port 2015, listening, 0 restarts
+  - All ports confirmed with lsof, no crash loops
+  - Minor issue: Caddy 502 (config), but service itself stable
 - [x] **Backup and protect .data directory** - CRITICAL!
   - Created `.data/.BACKUP_TOKENS/` with Fly.io and Cloudflare API tokens
   - Added protection protocol to CLAUDE.md (⚠️ CRITICAL section)
@@ -83,7 +79,7 @@
   - Found 289 restarts in process-compose
   - Root cause: `caddy.Run()` returns nil immediately (doesn't block)
   - Added comprehensive debug logging to track execution
-  - Identified need for different Caddy API approach
+  - Researched Caddy v2 API using WebSearch
 - [x] **Debug PocketBase startup** - FIXED! 🎉
   - Root causes found:
     1. `admin@localhost` not valid email → changed to `admin@example.com` in `.env`
