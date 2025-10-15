@@ -2,17 +2,28 @@
 
 ## 🔥 Critical - In Progress
 
-- [ ] **Fix Caddy not listening on port 2015**
-  - Issue: Caddy logs "Server started" but port 2015 not actually listening
-  - Process status: Running in process-compose, but `lsof -i :2015` shows nothing
-  - Same symptom as PocketBase had, but different root cause (no OnServe hooks)
-  - Caddy uses `caddy.Run(&config)` which should block and listen
-  - Next: Add more debug logging, verify waitForTCP is working correctly
-  - Location: `services/caddy/service.go:99-103`
+- [ ] **Fix Caddy immediate exit - caddy.Run() doesn't block**
+  - **Root Cause Found**: `caddy.Run()` returns nil immediately instead of blocking!
+  - Debug output shows:
+    ```
+    [caddy] Calling caddy.Run()...
+    {"level":"info","msg":"server running"...}
+    [caddy] caddy.Run() returned: <nil>
+    ```
+  - Server briefly starts but exits immediately (TCP check passes then fails)
+  - Caused 289 restarts in process-compose before discovery
+  - Same pattern as PocketBase issue (returns instead of blocking)
+  - **Solution needed**: Research Caddy v2 API for proper blocking server lifecycle
+  - Possibilities:
+    1. Use different Caddy API (caddy.Start() + wait?)
+    2. Block on signal channel after Run()
+    3. Use Caddy's built-in signal handling differently
+  - Location: `services/caddy/service.go:99-124`
+  - **Added**: Comprehensive debug logging to track execution flow
 
 - [ ] **Test full stack orchestration with all three services**
   - Goal: NATS → PocketBase → Caddy all running and healthy
-  - Status: NATS ✅ PocketBase ✅ Caddy ⚠️ (process running but port not listening)
+  - Status: NATS ✅ PocketBase ✅ Caddy ❌ (exits immediately, 289 crash loops)
 
 ## 🎯 High Priority - Stack Orchestration
 
@@ -61,8 +72,18 @@
   - When we replace composecfg with upstream types
   - Breaking changes and how to adapt
 
-## ✅ Completed
+## ✅ Completed (This Session)
 
+- [x] **Backup and protect .data directory** - CRITICAL!
+  - Created `.data/.BACKUP_TOKENS/` with Fly.io and Cloudflare API tokens
+  - Added protection protocol to CLAUDE.md (⚠️ CRITICAL section)
+  - Documented recovery procedures
+  - Ensures autonomous deployment work can continue
+- [x] **Diagnose Caddy crash loop**
+  - Found 289 restarts in process-compose
+  - Root cause: `caddy.Run()` returns nil immediately (doesn't block)
+  - Added comprehensive debug logging to track execution
+  - Identified need for different Caddy API approach
 - [x] **Debug PocketBase startup** - FIXED! 🎉
   - Root causes found:
     1. `admin@localhost` not valid email → changed to `admin@example.com` in `.env`
