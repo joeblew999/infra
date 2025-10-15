@@ -2,15 +2,19 @@
 
 ## 🔥 Critical - In Progress
 
+- [ ] **Fix Caddy not listening on port 2015**
+  - Issue: Caddy logs "Server started" but port 2015 not actually listening
+  - Process status: Running in process-compose, but `lsof -i :2015` shows nothing
+  - Same symptom as PocketBase had, but different root cause (no OnServe hooks)
+  - Caddy uses `caddy.Run(&config)` which should block and listen
+  - Next: Add more debug logging, verify waitForTCP is working correctly
+  - Location: `services/caddy/service.go:99-103`
+
 - [ ] **Test full stack orchestration with all three services**
   - Goal: NATS → PocketBase → Caddy all running and healthy
-  - Status: NATS ✅ PocketBase ✅ testing full stack next...
+  - Status: NATS ✅ PocketBase ✅ Caddy ⚠️ (process running but port not listening)
 
 ## 🎯 High Priority - Stack Orchestration
-
-- [ ] **Get Caddy running after PocketBase is healthy**
-  - Now unblocked: PocketBase working!
-  - Dependencies: `depends_on: { pocketbase: { condition: process_healthy } }`
 
 ## 🔧 Refactoring - Process-Compose Integration
 
