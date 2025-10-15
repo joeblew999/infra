@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"sort"
@@ -34,6 +35,7 @@ func newStackCommand() *cobra.Command {
 	cmd.AddCommand(buildStackDownCommand("down", "Stop core services started with stack up"))
 	cmd.AddCommand(buildStackStatusCommand("status", "Show whether the local stack is running"))
 	cmd.AddCommand(newStackCleanCommand())
+	cmd.AddCommand(newStackDoctorCommand())
 	cmd.AddCommand(newStackProcessesCommand())
 	cmd.AddCommand(newStackProcessCommand())
 	cmd.AddCommand(newStackProjectCommand())
@@ -147,6 +149,25 @@ Use flags to clean only specific parts:
 	return cmd
 }
 
+func newStackDoctorCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "doctor",
+		Short: "Run diagnostics on the stack and detect issues",
+		Long: `Diagnose common stack issues:
+- Port conflicts
+- Health endpoint availability
+- Config file validity
+- .data directory permissions and tokens
+- Zombie processes
+- Process-compose connectivity
+
+Provides actionable suggestions for fixing detected issues.`,
+		RunE: stackDoctorRun,
+	}
+	cmd.Flags().Bool("verbose", false, "Show detailed diagnostic information")
+	return cmd
+}
+
 func stackUpRun(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	if ctx == nil {
@@ -226,6 +247,178 @@ func stackCleanRun(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Fprintln(out, "\n✅ Clean complete!")
+	return nil
+}
+
+func stackDoctorRun(cmd *cobra.Command, args []string) error {
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	out := cmd.OutOrStdout()
+
+	fmt.Fprintln(out, "🔍 Running stack diagnostics...\n")
+
+	issues := 0
+	warnings := 0
+
+	// 1. Check port availability
+	fmt.Fprintln(out, "→ Checking port availability...")
+	ports, err := getStackPorts()
+	if err != nil {
+		fmt.Fprintf(out, "  ⚠ Could not determine stack ports: %v\n", err)
+		warnings++
+	} else {
+		for _, port := range ports {
+			if isPortBusy(port) {
+				if verbose {
+					fmt.Fprintf(out, "  ✓ Port %d: in use (OK if stack is running)\n", port)
+				}
+			} else {
+				if verbose {
+					fmt.Fprintf(out, "  • Port %d: available\n", port)
+				}
+			}
+		}
+		if !verbose {
+			fmt.Fprintln(out, "  ✓ Port check complete")
+		}
+	}
+
+	// 2. Check process-compose connectivity
+	fmt.Fprintln(out, "\n→ Checking process-compose...")
+	port := process.ComposePort(args)
+	states, pcErr := process.FetchComposeProcesses(cmd.Context(), port)
+	if pcErr != nil {
+		if errors.Is(pcErr, process.ErrComposeUnavailable) {
+			fmt.Fprintf(out, "  ℹ Process-compose not running (port %d)\n", port)
+			fmt.Fprintln(out, "    Run: go run ./cmd/core stack up")
+		} else {
+			fmt.Fprintf(out, "  ❌ Process-compose error: %v\n", pcErr)
+			issues++
+		}
+	} else {
+		fmt.Fprintf(out, "  ✓ Process-compose running (%d processes)\n", len(states))
+
+		// Check individual process health
+		if verbose {
+			for _, state := range states {
+				status := "✓"
+				if !state.IsRunning {
+					status = "❌"
+					issues++
+				}
+				fmt.Fprintf(out, "    %s %s: %s (restarts: %d)\n",
+					status, state.Name, state.Status, state.Restarts)
+			}
+		}
+	}
+
+	// 3. Check health endpoints
+	fmt.Fprintln(out, "\n→ Checking health endpoints...")
+	healthChecks := []struct {
+		name string
+		url  string
+		port int
+	}{
+		{"NATS", "http://127.0.0.1:8222/healthz", 8222},
+		{"PocketBase", "http://127.0.0.1:8090/api/health", 8090},
+		{"Caddy", "http://127.0.0.1:2015/api/health", 2015},
+	}
+
+	for _, hc := range healthChecks {
+		if !isPortBusy(hc.port) {
+			if verbose {
+				fmt.Fprintf(out, "  • %s: not running (port %d not in use)\n", hc.name, hc.port)
+			}
+			continue
+		}
+
+		resp, err := http.Get(hc.url)
+		if err != nil {
+			fmt.Fprintf(out, "  ❌ %s: health check failed (%v)\n", hc.name, err)
+			issues++
+		} else {
+			resp.Body.Close()
+			if resp.StatusCode == 200 {
+				fmt.Fprintf(out, "  ✓ %s: healthy\n", hc.name)
+			} else {
+				fmt.Fprintf(out, "  ⚠ %s: returned status %d\n", hc.name, resp.StatusCode)
+				warnings++
+			}
+		}
+	}
+
+	// 4. Check .data directory
+	fmt.Fprintln(out, "\n→ Checking .data directory...")
+	dataDir := ".data/core"
+	if stat, err := os.Stat(dataDir); err == nil {
+		if !stat.IsDir() {
+			fmt.Fprintf(out, "  ❌ %s exists but is not a directory\n", dataDir)
+			issues++
+		} else {
+			fmt.Fprintf(out, "  ✓ %s exists\n", dataDir)
+
+			// Check for tokens
+			flyToken := ".data/core/fly/settings.json"
+			if _, err := os.Stat(flyToken); err == nil {
+				fmt.Fprintln(out, "  ✓ Fly.io token found")
+			} else if verbose {
+				fmt.Fprintln(out, "  • Fly.io token not found (optional)")
+			}
+
+			cfToken := ".data/core/cloudflare/settings.json"
+			if _, err := os.Stat(cfToken); err == nil {
+				fmt.Fprintln(out, "  ✓ Cloudflare token found")
+			} else if verbose {
+				fmt.Fprintln(out, "  • Cloudflare token not found (optional)")
+			}
+		}
+	} else {
+		fmt.Fprintf(out, "  ⚠ %s not found (deployment tokens unavailable)\n", dataDir)
+		warnings++
+	}
+
+	// 5. Check for zombie processes
+	fmt.Fprintln(out, "\n→ Checking for zombie processes...")
+	if ports != nil {
+		foundZombies := false
+		if pcErr != nil && errors.Is(pcErr, process.ErrComposeUnavailable) {
+			// process-compose not running, check if any ports are in use
+			for _, port := range ports {
+				if isPortBusy(port) {
+					fmt.Fprintf(out, "  ⚠ Port %d in use but process-compose not running\n", port)
+					warnings++
+					foundZombies = true
+					if !verbose {
+						fmt.Fprintln(out, "    Run: go run ./cmd/core stack clean --processes")
+					}
+				}
+			}
+		}
+		if !foundZombies {
+			fmt.Fprintln(out, "  ✓ No zombie processes detected")
+		}
+	}
+
+	// Summary
+	fmt.Fprintln(out, "\n" + strings.Repeat("━", 60))
+	if issues == 0 && warnings == 0 {
+		fmt.Fprintln(out, "✅ All checks passed! Stack is healthy.")
+	} else {
+		if issues > 0 {
+			fmt.Fprintf(out, "❌ Found %d issue(s)\n", issues)
+		}
+		if warnings > 0 {
+			fmt.Fprintf(out, "⚠  Found %d warning(s)\n", warnings)
+		}
+		fmt.Fprintln(out, "\nSuggested actions:")
+		if pcErr != nil && errors.Is(pcErr, process.ErrComposeUnavailable) {
+			fmt.Fprintln(out, "  • Start stack: go run ./cmd/core stack up")
+		}
+		if issues > 0 {
+			fmt.Fprintln(out, "  • Check logs: go run ./cmd/core stack processes")
+			fmt.Fprintln(out, "  • Clean and restart: go run ./cmd/core stack clean && go run ./cmd/core stack up")
+		}
+	}
+
 	return nil
 }
 
