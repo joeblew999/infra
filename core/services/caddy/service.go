@@ -96,50 +96,45 @@ func Run(ctx context.Context, extraArgs []string) error {
 
 	fmt.Fprintf(os.Stderr, "[caddy] Starting server on port %d, proxying to %s\n", cfg.Ports.HTTP.Port, cfg.Config.Target)
 
-	errCh := make(chan error, 1)
-	go func() {
-		fmt.Fprintf(os.Stderr, "[caddy] Calling caddy.Run()...\n")
-		err := withEnv(cfg.Process.Env, func() error {
-			return caddy.Run(&config)
-		})
-		fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() returned: %v\n", err)
-		errCh <- err
-	}()
+	// Start Caddy - this returns immediately after starting the server
+	fmt.Fprintf(os.Stderr, "[caddy] Calling caddy.Run()...\n")
+	err = withEnv(cfg.Process.Env, func() error {
+		return caddy.Run(&config)
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() failed: %v\n", err)
+		return fmt.Errorf("caddy.Run() failed: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() returned successfully (server now running)\n")
 
+	// Wait for server to be ready
 	fmt.Fprintf(os.Stderr, "[caddy] Waiting for TCP port %d...\n", cfg.Ports.HTTP.Port)
 	if err := waitForTCP(cfg.Ports.HTTP.Port, 10*time.Second); err != nil {
 		fmt.Fprintf(os.Stderr, "[caddy] TCP wait failed: %v\n", err)
 		_ = caddy.Stop()
-		// Check if caddy.Run() already failed
-		select {
-		case runErr := <-errCh:
-			if runErr != nil {
-				fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() error: %v\n", runErr)
-				return fmt.Errorf("caddy failed to start: %w", runErr)
-			}
-		default:
-		}
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "[caddy] Server started on http://127.0.0.1:%d\n", cfg.Ports.HTTP.Port)
+
+	fmt.Fprintf(os.Stderr, "[caddy] Server listening on http://127.0.0.1:%d\n", cfg.Ports.HTTP.Port)
 	fmt.Fprintf(os.Stderr, "[caddy] Proxying to target: %s\n", cfg.Config.Target)
 	fmt.Fprintf(os.Stderr, "[caddy] Waiting for shutdown signal...\n")
 
+	// Block until context is cancelled
+	// Caddy runs in background, we just wait for shutdown signal
+	<-ctx.Done()
+	fmt.Fprintf(os.Stderr, "[caddy] Shutdown signal received\n")
+
+	// Graceful shutdown
+	done := make(chan error, 1)
+	go func() { done <- caddy.Stop() }()
 	select {
-	case err := <-errCh:
+	case err := <-done:
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[caddy] Error: %v\n", err)
+			fmt.Fprintf(os.Stderr, "[caddy] Shutdown error: %v\n", err)
 		}
 		return err
-	case <-ctx.Done():
-		done := make(chan error, 1)
-		go func() { done <- caddy.Stop() }()
-		select {
-		case err := <-done:
-			return err
-		case <-time.After(5 * time.Second):
-			return fmt.Errorf("shutdown caddy: timeout waiting for stop")
-		}
+	case <-time.After(5 * time.Second):
+		return fmt.Errorf("shutdown caddy: timeout waiting for stop")
 	}
 }
 
