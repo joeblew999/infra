@@ -16,6 +16,66 @@ The agent guides are located at `/Users/apple/workspace/go/src/github.com/joeble
 
 These guides provide context for working with this codebase.
 
+## ⚠️ CRITICAL: .data Directory Protection
+
+**NEVER delete or modify without extreme caution!**
+
+### What's in .data
+
+`.data/` contains **irreplaceable API tokens** for deployment:
+- `core/fly/settings.json` - Fly.io API token and organization settings
+- `core/cloudflare/settings.json` - Cloudflare API tokens and zone configs
+- `core/cloudflare/tokens/` - Active and backup tokens
+- `core/secrets/` - Encrypted secrets storage
+
+**These tokens enable autonomous deployment work without user intervention.**
+
+### Mandatory Protection Protocol
+
+**Before ANY code changes that touch .data:**
+
+1. **Check the operation**:
+   ```bash
+   # Does this code modify .data/core/fly or .data/core/cloudflare?
+   grep -r "\.data/core" <files>
+   ```
+
+2. **Create timestamped backup**:
+   ```bash
+   cp -r .data/core .data/.BACKUP_TOKENS_$(date +%Y%m%d_%H%M%S)/
+   ```
+
+3. **Verify backup exists**:
+   ```bash
+   ls -lah .data/.BACKUP_TOKENS/
+   ```
+
+4. **After changes, test tokens**:
+   ```bash
+   # Verify Fly token works
+   go run . tooling fly auth whoami
+
+   # Verify Cloudflare token works
+   go run . tooling cloudflare zones list
+   ```
+
+### Recovery
+
+If tokens are accidentally deleted:
+```bash
+cp -r .data/.BACKUP_TOKENS/core/* .data/core/
+```
+
+### Why This Matters
+
+- **Autonomous work**: Without these tokens, deployment work requires user intervention
+- **Irreplaceable**: User must manually re-enter tokens (breaks automation)
+- **Session continuity**: Lost tokens mean stopping all deployment work
+
+### Existing Backup
+
+A baseline backup exists at `.data/.BACKUP_TOKENS/` created 2025-10-15.
+
 ## Task Tracking - CRITICAL
 
 **TODO.md**: Living task list - MUST be kept up to date during work sessions
