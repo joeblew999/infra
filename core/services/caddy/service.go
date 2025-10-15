@@ -90,18 +90,35 @@ func Run(ctx context.Context, extraArgs []string) error {
 
 	config, err := buildConfig(cfg)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "[caddy] Failed to build config: %v\n", err)
 		return err
 	}
 
+	fmt.Fprintf(os.Stderr, "[caddy] Starting server on port %d, proxying to %s\n", cfg.Ports.HTTP.Port, cfg.Config.Target)
+
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- withEnv(cfg.Process.Env, func() error {
+		fmt.Fprintf(os.Stderr, "[caddy] Calling caddy.Run()...\n")
+		err := withEnv(cfg.Process.Env, func() error {
 			return caddy.Run(&config)
 		})
+		fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() returned: %v\n", err)
+		errCh <- err
 	}()
 
+	fmt.Fprintf(os.Stderr, "[caddy] Waiting for TCP port %d...\n", cfg.Ports.HTTP.Port)
 	if err := waitForTCP(cfg.Ports.HTTP.Port, 10*time.Second); err != nil {
+		fmt.Fprintf(os.Stderr, "[caddy] TCP wait failed: %v\n", err)
 		_ = caddy.Stop()
+		// Check if caddy.Run() already failed
+		select {
+		case runErr := <-errCh:
+			if runErr != nil {
+				fmt.Fprintf(os.Stderr, "[caddy] caddy.Run() error: %v\n", runErr)
+				return fmt.Errorf("caddy failed to start: %w", runErr)
+			}
+		default:
+		}
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "[caddy] Server started on http://127.0.0.1:%d\n", cfg.Ports.HTTP.Port)
