@@ -7,12 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
-	coreNATS "github.com/joeblew99/infra/core/services/nats"
+	coreNATS "github.com/joeblew999/infra/core/services/nats"
 )
 
 func main() {
-	// Create a context that cancels on SIGINT/SIGTERM
-	// This allows graceful shutdown when process-compose stops the process
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 

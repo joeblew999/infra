@@ -1,20 +1,20 @@
 # NATS
 
-NATS message bus service for the core runtime, driven entirely by
-[`pillow`](https://github.com/Nintron27/pillow). The same binary launched
+NATS message bus service for the core runtime. The same binary launched
 locally is deployed on Fly, so behaviour stays identical across environments.
 
 ## Tools
 
 The manifest ensures the following supporting binaries are available alongside
-Pillow:
 
-- `pillow` – orchestrates NATS locally and on Fly
+
 - `nats` – upstream NATS CLI for diagnostics
 - `nsc` – JWT/auth management CLI
 
 
 NOTE: will also integrate https://github.com/litesql/ha and https://github.com/litesql/pocketbase-ha later...
+
+NOTE: might use https://github.com/Nintron27/pillow later too.
 
 ## Features
 

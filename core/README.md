@@ -22,158 +22,74 @@ go run . stack down
 
 ## What is This?
 
-The **core** is a unified runtime system that:
-- **Orchestrates services** using process-compose (embedded as a library)
-- **Manages dependencies** between services with health checks
-- **Abstracts service definitions** via `service.json` (works with any orchestrator)
-- **Resolves placeholders** (`${env.*}`, `${dep.*}`, `${data}`) at generation time
-- **Provides a single CLI** for all operations (local dev, deployment, debugging)
+Core orchestrates NATS, PocketBase, and Caddy as a unified stack with health checks and dependency management.
 
-## Architecture
+**Key Features**:
+- Single command to start/stop services
+- Automatic binary building
+- Health-based startup ordering
+- Environment configuration via `.env` (optional)
 
-### Components
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for design details.
 
-```
-cmd/
-├── core/           # Main CLI orchestrator
-├── nats/           # NATS service binary
-├── pocketbase/     # PocketBase service binary
-├── caddy/          # Caddy service binary
-└── processcompose/ # Wrapper around process-compose library
+## Configuration
 
-services/
-├── nats/           # NATS service spec + implementation
-├── pocketbase/     # PocketBase service spec + implementation
-└── caddy/          # Caddy service spec + implementation
-
-pkg/
-├── runtime/        # Core runtime (CLI, process mgmt, config, UI)
-└── shared/         # Shared packages (used by services + tooling)
-```
-
-### Service Abstraction
-
-Each service has a `service.json` that describes:
-- **Binaries** to build/download
-- **Process** command, args, environment
-- **Ports** exposed
-- **Health checks** for orchestration
-- **Compose overrides** for process-compose specific config
-
-Example: `services/nats/service.json`
-```json
-{
-  "binaries": [...],
-  "process": {
-    "command": "${dep.nats}",
-    "env": {...},
-    "compose": {
-      "readiness_probe": {
-        "http_get": {"url": "http://127.0.0.1:8222/healthz"},
-        "initial_delay_seconds": 3,
-        "failure_threshold": 5
-      }
-    }
-  },
-  "ports": {...}
-}
-```
-
-### Placeholder Resolution
-
-Placeholders are resolved during `process-compose.yaml` generation:
-
-| Placeholder | Resolved To | Example |
-|-------------|-------------|---------|
-| `${dep.nats}` | Binary path | `.dep/nats` |
-| `${data}` | Data directory | `.data` |
-| `${env.VAR}` | Environment variable | Value of `$VAR` |
-
-### Process Flow
-
-1. **`go run ./cmd/core stack up`**
-   ↓
-2. **Generate** `.core-stack/process-compose.yaml`
-   - Load `services/*/service.json`
-   - Ensure binaries exist (build or download)
-   - Resolve placeholders
-   - Merge compose overrides
-   ↓
-3. **Execute** `go run ./cmd/processcompose up`
-   - Start process-compose with generated config
-   - Monitor health checks
-   - Manage dependencies
-   ↓
-4. **Services run** with full control
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `.env` | Environment variables (auto-loaded by `cmd/core`) |
-| `services/*/service.json` | Service manifest (orchestrator-agnostic) |
-| `.core-stack/process-compose.yaml` | Generated orchestration config |
-| `pkg/runtime/process/processcompose.go` | Config generator |
-| `cmd/processcompose/main.go` | Our wrapper (full control) |
-
-## Health Checks
-
-Health checks prevent premature restarts:
-
-```json
-{
-  "initial_delay_seconds": 3,    // Wait before first check
-  "period_seconds": 5,            // Check interval
-  "timeout_seconds": 3,           // Per-check timeout
-  "failure_threshold": 5,         // Failures before restart
-  "success_threshold": 1          // Successes to mark healthy
-}
-```
-
-## Service Dependencies
-
-Dependencies are declared in `buildComposeDefinition()`:
-
-```go
-// PocketBase depends on NATS being healthy
-ensureDependsOn(pbEntry, map[string]map[string]any{
-    "nats": {"condition": "process_healthy"},
-})
-```
-
-## Stack Commands
-
+**`.env` file** (optional):
 ```bash
-# Lifecycle
-go run ./cmd/core stack up        # Start all services
-go run ./cmd/core stack down      # Stop all services
-go run ./cmd/core stack status    # Show status
+# PocketBase admin (auto-created on first run)
+CORE_POCKETBASE_ADMIN_EMAIL=admin@localhost
+CORE_POCKETBASE_ADMIN_PASSWORD=changeme123
 
-# Process management
-go run ./cmd/core stack process list
-go run ./cmd/core stack process logs <name>
-go run ./cmd/core stack process restart <name>
-go run ./cmd/core stack process stop <name>
-go run ./cmd/core stack process start <name>
-
-# Individual services
-go run ./cmd/core nats run        # Run NATS standalone
-go run ./cmd/core pocketbase run  # Run PocketBase standalone
-go run ./cmd/core caddy run       # Run Caddy standalone
+# SMTP for email features (optional)
+CORE_POCKETBASE_SMTP_HOST=smtp.gmail.com
+CORE_POCKETBASE_SMTP_PORT=587
+# ... more SMTP settings
 ```
 
-## Deployment
+See [.env.example](.env.example) for full configuration options.
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for Fly.io deployment instructions.
+**Generated Files**:
+- `.dep/` - Built service binaries
+- `.data/` - Service data (databases, logs)
+- `.core-stack/process-compose.yaml` - Generated orchestration config
 
-## Development
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for service configuration details.
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for:
-- Adding new services
-- Customizing process-compose behavior
-- Debugging health checks
-- Working with the codebase
+## Commands
 
-## Troubleshooting
+### Stack Management
+```bash
+go run . stack up              # Start all services
+go run . stack down            # Stop all services
+go run . stack status          # Show service status
+```
 
-See [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+### Process Control
+```bash
+go run . stack process list              # List all processes
+go run . stack process logs <name>       # View service logs
+go run . stack process restart <name>    # Restart a service
+go run . stack process stop <name>       # Stop a service
+go run . stack process start <name>      # Start a service
+```
+
+### Individual Services
+```bash
+go run . nats run              # Run NATS standalone
+go run . pocketbase run        # Run PocketBase standalone
+go run . caddy run             # Run Caddy standalone
+```
+
+### Access Services
+- **PocketBase**: http://localhost:8090
+- **PocketBase Admin**: http://localhost:8090/_/
+- **Caddy Proxy**: http://localhost:2015
+- **NATS Client**: nats://localhost:4222
+- **NATS Monitoring**: http://localhost:8222
+
+## Documentation
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design, generation flow, design decisions
+- **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Adding services, debugging, extending
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Fly.io deployment instructions

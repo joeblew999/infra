@@ -53,16 +53,19 @@ func configureSettings(app *pocketbase.PocketBase) error {
 	return nil
 }
 
-// ensureAdminUser creates a default superuser if configured via environment variables
-func ensureAdminUser(app *pocketbase.PocketBase) error {
-	email := os.Getenv("CORE_POCKETBASE_ADMIN_EMAIL")
-	password := os.Getenv("CORE_POCKETBASE_ADMIN_PASSWORD")
-
-	if email == "" || password == "" {
-		// Admin not configured - skip
-		fmt.Println("Note: No admin credentials configured. Create admin via: http://localhost:8090/_/")
-		return nil
+// getEnvOrDefault returns environment variable value or default if empty
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
 	}
+	return defaultValue
+}
+
+// ensureAdminUser creates a default superuser with sensible defaults
+func ensureAdminUser(app *pocketbase.PocketBase) error {
+	// Use defaults for local development, can be overridden via env
+	email := getEnvOrDefault("CORE_POCKETBASE_ADMIN_EMAIL", "admin@localhost")
+	password := getEnvOrDefault("CORE_POCKETBASE_ADMIN_PASSWORD", "changeme123")
 
 	// Check if any superuser already exists
 	superusers, err := app.FindAllRecords(core.CollectionNameSuperusers)

@@ -75,8 +75,9 @@ func Run(ctx context.Context, extraArgs []string) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	// Ignore extra args - Caddy is configured programmatically via service.json
 	if len(extraArgs) > 0 {
-		return fmt.Errorf("extra args not supported for embedded caddy: %v", extraArgs)
+		fmt.Fprintf(os.Stderr, "Warning: extra args ignored (configured via service.json): %v\n", extraArgs)
 	}
 
 	cfg, err := LoadConfig()

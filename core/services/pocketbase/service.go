@@ -167,8 +167,9 @@ func Run(ctx context.Context, extraArgs []string) error {
 		return err
 	}
 
+	// Ignore extra args - PocketBase is configured programmatically via service.json
 	if len(extraArgs) > 0 {
-		return fmt.Errorf("extra args not supported for embedded PocketBase runner: %v", extraArgs)
+		fmt.Fprintf(os.Stderr, "Warning: extra args ignored (configured via service.json): %v\n", extraArgs)
 	}
 
 	env := spec.ResolveEnv(paths)
@@ -210,7 +211,7 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- app.Start()
+		errCh <- app.Execute()
 	}()
 
 	if err := waitForTCP(port, 30*time.Second, errCh); err != nil {
