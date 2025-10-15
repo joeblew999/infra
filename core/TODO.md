@@ -1,16 +1,50 @@
 # TODO
 
-## 🔥 Critical - In Progress
+## 🎯 High Priority - Tooling & Testing
 
-- [ ] **Fix Caddy 502 Bad Gateway - can't reach PocketBase**
-  - Issue: Caddy returns 502 when proxying to http://127.0.0.1:8090
-  - PocketBase works directly: `curl http://127.0.0.1:8090/api/health` → OK
-  - Caddy logs show server running but proxy failing
-  - Likely config issue with target URL or routing
-  - Location: `services/caddy/service.go` buildConfig() or service.json
-  - Next: Check Caddy config generation, verify target URL format
+### Testing Infrastructure ✅
+- [x] **Create Go test integration for Web GUI** - DONE! 🎉
+  - Created `pkg/testing/webgui/` package
+  - HTTP client for testing stack health
+  - Integration tests for all services:
+    - `TestStackHealth` - PocketBase & Caddy health checks
+    - `TestNATSHealth` - NATS monitoring endpoint
+    - `TestPocketBaseAdmin` - Admin UI accessibility
+    - `TestCaddyProxy` - Proxy routing verification
+  - All tests passing: `go test -v ./pkg/testing/webgui/...`
+  - Files created:
+    - `pkg/testing/webgui/client.go` - Test client
+    - `pkg/testing/webgui/client_test.go` - Integration tests
+    - `pkg/testing/webgui/README.md` - Documentation
+  - Features:
+    - Skip with `SKIP_INTEGRATION_TESTS=1` env var
+    - 30s timeout with context
+    - Ready for CI/CD integration
 
-## 🎯 High Priority - Stack Orchestration
+### Core Stack Improvements
+- [ ] **Build stack clean command**
+  - Purpose: Kill zombies, remove generated files, clean state
+  - Should clean: `.core-stack/`, zombie processes, stale PIDs, old logs
+  - Add to: `pkg/runtime/cli/stack.go`
+  - Flags: `--all` (full reset), `--processes` (kill only), `--files` (delete only)
+
+- [ ] **Build stack doctor diagnostics command**
+  - Purpose: Automatic issue detection and reporting
+  - Checks:
+    - Port conflicts (lsof)
+    - Health endpoints responding
+    - Config validity (parse YAML)
+    - Version compatibility (process-compose, go, etc.)
+    - .data permissions and token presence
+    - Zombie processes detection
+  - Output: Colored report with ✅/❌ and fixes
+  - Add to: `pkg/runtime/cli/stack.go`
+
+- [ ] **Add health check monitoring dashboard**
+  - Real-time health status for all services
+  - Integration with process-compose API
+  - Display in TUI or web interface
+  - Alert on health check failures
 
 ## 🔧 Refactoring - Process-Compose Integration
 
@@ -98,15 +132,25 @@
 - [x] Add health probe best practices to docs
 - [x] Clone reference repos (.src/devbox, .src/process-compose, .src/pocketbase)
 - [x] Commit and push logging refactor changes
+- [x] **Fix tooling compilation errors** - FIXED! 🎉
+  - Removed ~150 lines of duplicate declarations from `tooling/pkg/orchestrator/deploy.go`
+  - Fixed Deployer interface signature in `interfaces.go`
+  - Result: Tooling compiles successfully, `go run . --help` works
+  - Verified: Fly.io token access from `.data/core` working (`go run . auth fly whoami`)
+- [x] **Create Web GUI integration tests** - DONE! 🎉
+  - Created `pkg/testing/webgui/` package with HTTP client
+  - 4 integration tests covering NATS, PocketBase, Caddy
+  - All tests passing with running stack
+  - Documentation and CI/CD examples included
 
 ---
 
 ## Notes
 
 **Current Stack Status**:
-- ✅ NATS: Running on port 4222, healthy
-- ✅ PocketBase: Fixed and working on port 8090, health endpoint responding
-- ⏳ Caddy: Ready to test (was waiting for PocketBase)
+- ✅ NATS: Running on port 4222, healthy, 0 restarts
+- ✅ PocketBase: Running on port 8090, healthy, 0 restarts
+- ✅ Caddy: Running on port 2015, healthy, 0 restarts (was 289 restarts!)
 
 **Key Learnings**:
 - `is_daemon: false` is REQUIRED for long-running services
