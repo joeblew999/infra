@@ -70,6 +70,4 @@ manually only if you need custom overrides.
 
 If ko still reports a dirty state, double-check for generated files (e.g. `core/.ko.yaml`, `core/fly.toml`) and either commit them or pass `--force` to regenerate after cleaning the tree.
 
-## tooling
 
-this does deployment and setsup Cloudflare and Fly with everything. 

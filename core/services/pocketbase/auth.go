@@ -3,7 +3,7 @@ package pocketbase
 
 import (
 	"bytes"
-	_ "embed"
+	"embed"
 	"encoding/json"
 	"fmt"
 	"html/template"
