@@ -21,12 +21,22 @@
     - 30s timeout with context
     - Ready for CI/CD integration
 
-### Core Stack Improvements
-- [ ] **Build stack clean command**
-  - Purpose: Kill zombies, remove generated files, clean state
-  - Should clean: `.core-stack/`, zombie processes, stale PIDs, old logs
-  - Add to: `pkg/runtime/cli/stack.go`
-  - Flags: `--all` (full reset), `--processes` (kill only), `--files` (delete only)
+### Core Stack Improvements ✅
+- [x] **Build stack clean command** - DONE! 🎉
+  - Added `go run ./cmd/core stack clean` command
+  - Features:
+    - Stop process-compose gracefully
+    - Kill zombie processes on ports (4222, 8090, 2015, 8222, 28081)
+    - Remove generated files (.core-stack/)
+  - Flags:
+    - Default: Full clean (all operations)
+    - `--processes`: Kill zombies only (keep files)
+    - `--files`: Remove files only (keep processes running)
+  - Implementation:
+    - Added `newStackCleanCommand()` and `stackCleanRun()` in stack.go
+    - Added `killProcessOnPort()` helper using lsof
+    - Graceful error handling with ✓/⚠ status indicators
+  - Tested: Successfully cleans files without stopping running stack
 
 - [ ] **Build stack doctor diagnostics command**
   - Purpose: Automatic issue detection and reporting
@@ -142,6 +152,28 @@
   - 4 integration tests covering NATS, PocketBase, Caddy
   - All tests passing with running stack
   - Documentation and CI/CD examples included
+- [x] **Build stack clean command** - DONE! 🎉
+  - Added `go run ./cmd/core stack clean` with --processes and --files flags
+  - Stops services, kills zombies, removes .core-stack/ directory
+  - Tested and working correctly
+
+---
+
+## Session Summary (2025-10-15)
+
+**Accomplished**:
+1. ✅ Fixed tooling compilation (removed 150+ duplicate lines)
+2. ✅ Created Web GUI integration test suite (4 tests, all passing)
+3. ✅ Built `stack clean` command with granular control
+4. ✅ Verified full stack health (0 restarts on all services)
+5. ✅ All commits pushed to main
+
+**Stack Status**: All services healthy
+- NATS: 4222 ✓
+- PocketBase: 8090 ✓
+- Caddy: 2015 ✓
+
+**Next Priority**: `stack doctor` diagnostics command
 
 ---
 
