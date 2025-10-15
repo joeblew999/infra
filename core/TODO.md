@@ -175,7 +175,8 @@
 3. ✅ Built `stack clean` command with granular control
 4. ✅ Built `stack doctor` diagnostics command with health checks
 5. ✅ Verified full stack health (0 restarts on all services)
-6. ✅ All commits pushed to main (5 commits total)
+6. ✅ Tested Fly.io deployment workflow
+7. ✅ All commits pushed to main (6 commits total)
 
 **Commands Added**:
 - `go run ./cmd/core stack clean` - Cleanup utility
@@ -186,7 +187,15 @@
 - PocketBase: 8090 ✓
 - Caddy: 2015 ✓
 
-**Next Priority**: Health check monitoring dashboard or refactoring work
+**Deployment Status**:
+- ✅ Tooling commands work
+- ✅ Fly.io token valid (gedw99@gmail.com)
+- ❌ Blocked: Organization "personal" not accessible
+- 📄 See: `DEPLOYMENT_TEST_RESULTS.md` for details
+
+**Action Required**: Update `.data/core/fly/settings.json` with correct org_slug
+
+**Next Priority**: Fix org configuration, then health monitoring dashboard
 
 ---
 
