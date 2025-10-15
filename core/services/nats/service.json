@@ -29,14 +29,33 @@
       "log": {
         "max_files": 10,
         "max_size": "20mb"
+      },
+      "readiness_probe": {
+        "http_get": {
+          "url": "http://127.0.0.1:8222/healthz"
+        },
+        "interval": "5s",
+        "timeout": "5s"
       }
     }
   },
   "ports": {
-    "client": {"port": 4222, "protocol": "nats"},
-    "cluster": {"port": 6222, "protocol": "nats"},
-    "http": {"port": 8222, "protocol": "http"},
-    "leaf": {"port": 7422, "protocol": "nats"}
+    "client": {
+      "port": 4222,
+      "protocol": "nats"
+    },
+    "cluster": {
+      "port": 6222,
+      "protocol": "nats"
+    },
+    "http": {
+      "port": 8222,
+      "protocol": "http"
+    },
+    "leaf": {
+      "port": 7422,
+      "protocol": "nats"
+    }
   },
   "config": {
     "backend": "pillow",
@@ -50,7 +69,13 @@
       },
       "production": {
         "hub_region": "iad",
-        "leaf_regions": ["lhr", "nrt", "syd", "fra", "sjc"],
+        "leaf_regions": [
+          "lhr",
+          "nrt",
+          "syd",
+          "fra",
+          "sjc"
+        ],
         "min_hub_nodes": 3,
         "leaf_nodes_per_region": 1
       }

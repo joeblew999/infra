@@ -294,7 +294,7 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		// Single-node local mode: disable clustering/leaf and let HTTP monitor choose a free port
 		natsOpts.Cluster = server.ClusterOpts{}
 		natsOpts.LeafNode = server.LeafNodeOpts{}
-		natsOpts.HTTPPort = 0
+		natsOpts.HTTPPort = spec.Ports.HTTP.Port
 	}
 
 	natsOpts.ServerName = fmt.Sprintf("core-nats-%s", cfg.Environment)

@@ -210,7 +210,7 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- app.Execute()
+		errCh <- app.Start()
 	}()
 
 	if err := waitForTCP(port, 30*time.Second, errCh); err != nil {
