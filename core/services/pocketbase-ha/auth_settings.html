@@ -1,0 +1,229 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Account Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+  <style>
+    body{font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:700px;margin:40px auto;padding:0 16px}
+    .card{border:1px solid #e3e3e3;border-radius:12px;padding:20px;margin-bottom:16px}
+    input,button{padding:10px;border:1px solid #aaa;border-radius:10px;margin-bottom:12px;box-sizing:border-box}
+    button{cursor:pointer;background:#007bff;color:white;border:none;font-weight:500}
+    button:hover{background:#0056b3}
+    button.danger{background:#dc3545}
+    button.danger:hover{background:#c82333}
+    .muted{color:#666;font-size:13px}
+    .success{color:#28a745;padding:10px;background:#d4edda;border-radius:8px;margin-bottom:12px}
+    .error{color:#dc3545;padding:10px;background:#f8d7da;border-radius:8px;margin-bottom:12px}
+    a{color:#007bff;text-decoration:none}
+    h3{margin-top:0}
+  </style>
+</head>
+<body data-signals-auth='{"signedIn":false}' data-signals-result='{"show":false,"message":"","type":"","section":""}'>
+  <h1>Account Settings</h1>
+  <p class="muted"><a href="/ds">Back to dashboard</a></p>
+
+  <div data-show="!$auth.signedIn" class="error">
+    Please <a href="/ds">sign in</a> to access settings.
+  </div>
+
+  <div data-show="$auth.signedIn">
+    <!-- Profile Section -->
+    <div class="card">
+      <h3>Profile</h3>
+      <div data-show="$result.show && $result.section==='profile' && $result.type==='success'" class="success" data-text="$result.message"></div>
+      <div data-show="$result.show && $result.section==='profile' && $result.type==='error'" class="error" data-text="$result.message"></div>
+
+      <form id="profileForm" data-on-submit="updateProfile() | prevent">
+        <input name="name" placeholder="Name" data-bind-value="$auth.name||''" />
+        <input name="username" placeholder="Username" data-bind-value="$auth.username||''" />
+        <button type="submit">Update Profile</button>
+      </form>
+    </div>
+
+    <!-- Change Password -->
+    <div class="card">
+      <h3>Change Password</h3>
+      <div data-show="$result.show && $result.section==='password' && $result.type==='success'" class="success" data-text="$result.message"></div>
+      <div data-show="$result.show && $result.section==='password' && $result.type==='error'" class="error" data-text="$result.message"></div>
+
+      <form id="passwordForm" data-on-submit="changePassword() | prevent">
+        <input name="oldPassword" type="password" placeholder="Current Password" required />
+        <input name="password" type="password" placeholder="New Password (min 8 chars)" required minlength="8" />
+        <input name="passwordConfirm" type="password" placeholder="Confirm New Password" required />
+        <button type="submit">Change Password</button>
+      </form>
+    </div>
+
+    <!-- Change Email -->
+    <div class="card">
+      <h3>Change Email</h3>
+      <div data-show="$result.show && $result.section==='email' && $result.type==='success'" class="success" data-text="$result.message"></div>
+      <div data-show="$result.show && $result.section==='email' && $result.type==='error'" class="error" data-text="$result.message"></div>
+
+      <p class="muted">Current: <span data-text="$auth.email"></span></p>
+      <form id="emailForm" data-on-submit="changeEmail() | prevent">
+        <input name="newEmail" type="email" placeholder="New Email" required />
+        <button type="submit">Request Email Change</button>
+      </form>
+    </div>
+
+    <!-- Delete Account -->
+    <div class="card">
+      <h3>Delete Account</h3>
+      <p class="muted">This action cannot be undone.</p>
+      <button class="danger" data-on-click="deleteAccount()">Delete My Account</button>
+    </div>
+  </div>
+
+<script type="module">
+if(localStorage.authToken){
+  datastar.defaults.headers['Authorization'] = localStorage.authToken;
+}
+
+// Connect to SSE for auth updates
+const es = new EventSource('/api/ds/sse');
+
+async function updateProfile(){
+  const form = document.getElementById('profileForm');
+  const data = new FormData(form);
+  const body = Object.fromEntries(data);
+
+  const r = await fetch('/api/ds/update-profile?collection=users',{
+    method:'PATCH',
+    headers:{...datastar.defaults.headers, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  const txt = await r.text();
+  try{
+    const j = JSON.parse(txt);
+    if(r.ok){
+      datastar.signal('result', {
+        show:true,
+        message:'Profile updated successfully!',
+        type:'success',
+        section:'profile'
+      });
+    }else{
+      datastar.signal('result', {
+        show:true,
+        message: j.message || 'Update failed: ' + txt,
+        type:'error',
+        section:'profile'
+      });
+    }
+  }catch{
+    datastar.signal('result', {show:true, message:'Update failed: ' + txt, type:'error', section:'profile'});
+  }
+}
+
+async function changePassword(){
+  const form = document.getElementById('passwordForm');
+  const data = new FormData(form);
+  const body = Object.fromEntries(data);
+
+  if(body.password !== body.passwordConfirm){
+    datastar.signal('result', {show:true, message:'Passwords do not match', type:'error', section:'password'});
+    return;
+  }
+
+  const r = await fetch('/api/ds/change-password?collection=users',{
+    method:'POST',
+    headers:{...datastar.defaults.headers, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  const txt = await r.text();
+  try{
+    const j = JSON.parse(txt);
+    if(r.ok){
+      datastar.signal('result', {
+        show:true,
+        message:'Password changed successfully!',
+        type:'success',
+        section:'password'
+      });
+      form.reset();
+    }else{
+      datastar.signal('result', {
+        show:true,
+        message: j.message || 'Change failed: ' + txt,
+        type:'error',
+        section:'password'
+      });
+    }
+  }catch{
+    datastar.signal('result', {show:true, message:'Change failed: ' + txt, type:'error', section:'password'});
+  }
+}
+
+async function changeEmail(){
+  const form = document.getElementById('emailForm');
+  const data = new FormData(form);
+  const body = Object.fromEntries(data);
+
+  const r = await fetch('/api/ds/request-email-change?collection=users',{
+    method:'POST',
+    headers:{...datastar.defaults.headers, 'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  const txt = await r.text();
+  if(r.ok || r.status === 204){
+    datastar.signal('result', {
+      show:true,
+      message:'Verification email sent! Check your new email address.',
+      type:'success',
+      section:'email'
+    });
+    form.reset();
+  }else{
+    try{
+      const j = JSON.parse(txt);
+      datastar.signal('result', {
+        show:true,
+        message: j.message || 'Request failed: ' + txt,
+        type:'error',
+        section:'email'
+      });
+    }catch{
+      datastar.signal('result', {show:true, message:'Request failed: ' + txt, type:'error', section:'email'});
+    }
+  }
+}
+
+async function deleteAccount(){
+  if(!confirm('Are you sure you want to delete your account? This cannot be undone.')){
+    return;
+  }
+
+  const r = await fetch('/api/ds/account?collection=users',{
+    method:'DELETE',
+    headers: datastar.defaults.headers
+  });
+
+  if(r.ok || r.status === 204){
+    localStorage.removeItem('authToken');
+    delete datastar.defaults.headers['Authorization'];
+    alert('Account deleted successfully');
+    location.href='/ds';
+  }else{
+    const txt = await r.text();
+    try{
+      const j = JSON.parse(txt);
+      alert('Delete failed: ' + (j.message || txt));
+    }catch{
+      alert('Delete failed: ' + txt);
+    }
+  }
+}
+
+window.updateProfile = updateProfile;
+window.changePassword = changePassword;
+window.changeEmail = changeEmail;
+window.deleteAccount = deleteAccount;
+</script>
+</body>
+</html>

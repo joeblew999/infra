@@ -13,10 +13,13 @@ import (
 
 	"github.com/Nintron27/pillow"
 	"github.com/nats-io/nats-server/v2/server"
+	"github.com/nats-io/jwt/v2"
 
 	runtimecfg "github.com/joeblew999/infra/core/pkg/runtime/config"
 	runtimedep "github.com/joeblew999/infra/core/pkg/runtime/dep"
 	composecfg "github.com/joeblew999/infra/core/pkg/runtime/process/composecfg"
+	"github.com/joeblew999/infra/pkg/config"
+	"github.com/joeblew999/infra/pkg/nats/auth"
 )
 
 //go:embed service.json
@@ -218,6 +221,31 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		return fmt.Errorf("prepare jetstream dir: %w", err)
 	}
 
+	// Ensure NSC auth artifacts are available
+	authArtifacts, err := auth.Ensure(ctx)
+	if err != nil {
+		return fmt.Errorf("ensure auth artifacts: %w", err)
+	}
+
+	// Parse operator JWT for trusted operators
+	operatorClaims, err := jwt.DecodeOperatorClaims(authArtifacts.OperatorJWT)
+	if err != nil {
+		return fmt.Errorf("decode operator JWT: %w", err)
+	}
+
+	// Create memory account resolver
+	memResolver := &server.MemAccResolver{}
+
+	// Store system account JWT
+	if err := memResolver.Store(authArtifacts.SystemAccountID, authArtifacts.SystemAccountJWT); err != nil {
+		return fmt.Errorf("store system account JWT: %w", err)
+	}
+
+	// Store application account JWT
+	if err := memResolver.Store(authArtifacts.ApplicationAccountID, authArtifacts.ApplicationAccountJWT); err != nil {
+		return fmt.Errorf("store application account JWT: %w", err)
+	}
+
 	natsOpts := &server.Options{
 		Host:                   "0.0.0.0",
 		Port:                   spec.Ports.Client.Port,
@@ -228,10 +256,15 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		StoreDir:               storeDir,
 		NoSigs:                 true,
 		DisableJetStreamBanner: true,
+
+		// NSC Authentication
+		TrustedOperators: []*jwt.OperatorClaims{operatorClaims},
+		AccountResolver:  memResolver,
+		SystemAccount:    authArtifacts.SystemAccountID,
 	}
 
 	if spec.Config.Deployment.Local.Nodes > 1 {
-		natsOpts.Cluster = server.ClusterOpts{Host: "0.0.0.0", Port: spec.Ports.Cluster.Port, Name: "core-nats-cluster"}
+		natsOpts.Cluster = server.ClusterOpts{Host: "0.0.0.0", Port: spec.Ports.Cluster.Port, Name: config.GetNATSClusterName()}
 	} else {
 		// Single-node local mode: disable clustering/leaf and let HTTP monitor choose a free port
 		natsOpts.Cluster = server.ClusterOpts{}

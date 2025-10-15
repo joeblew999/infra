@@ -8,9 +8,10 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 )
 
-// bootstrapAuth configures PocketBase authentication settings on app startup.
+// BootstrapAuth configures PocketBase authentication settings on app startup.
 // This includes creating default admin user and ensuring proper collection setup.
-func bootstrapAuth(app *pocketbase.PocketBase) error {
+// Exported for reuse by pocketbase-ha service.
+func BootstrapAuth(app *pocketbase.PocketBase) error {
 	// Use OnServe hook - this runs after database is initialized
 	app.OnServe().BindFunc(func(e *core.ServeEvent) error {
 		// Ensure default admin user exists (after DB is ready)

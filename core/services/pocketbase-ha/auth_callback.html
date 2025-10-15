@@ -1,0 +1,38 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Finishing sign in…</title>
+  <style>body{font-family:system-ui;margin:40px}</style>
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+</head>
+<body>
+  <h3>Exchanging code…</h3>
+  <pre id="out">Please wait…</pre>
+<script type="module">
+(async ()=>{
+  const p = new URLSearchParams(location.search);
+  const code = p.get('code'); const state = p.get('state');
+  if(!code){ document.getElementById('out').textContent='Missing code'; return }
+  const body = { provider:"", code, codeVerifier:"", redirectUrl: location.origin + "/ds/callback" };
+  const r = await fetch('/api/ds/auth-with-oauth2?collection=users&state='+encodeURIComponent(state),{
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+  });
+  const txt = await r.text();
+  try{
+    const j = JSON.parse(txt);
+    if(r.ok && j.token){
+      localStorage.authToken = j.token;
+      datastar.defaults.headers['Authorization'] = j.token;
+      document.getElementById('out').textContent='Success. Returning…';
+      setTimeout(()=>{ location.href='/ds' },600);
+      return;
+    }
+    document.getElementById('out').textContent='Error: '+txt;
+  }catch{
+    document.getElementById('out').textContent='Error: '+txt;
+  }
+})();
+</script>
+</body>
+</html>

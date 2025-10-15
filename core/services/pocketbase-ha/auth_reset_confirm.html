@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Set New Password</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+  <style>
+    body{font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:500px;margin:40px auto;padding:0 16px}
+    .card{border:1px solid #e3e3e3;border-radius:12px;padding:24px}
+    input,button{padding:10px;border:1px solid #aaa;border-radius:10px;width:100%;margin-bottom:12px;box-sizing:border-box}
+    button{cursor:pointer;background:#007bff;color:white;border:none;font-weight:500}
+    button:hover{background:#0056b3}
+    .muted{color:#666;font-size:13px}
+    .success{color:#28a745;padding:12px;background:#d4edda;border-radius:10px;margin-bottom:12px}
+    .error{color:#dc3545;padding:12px;background:#f8d7da;border-radius:10px;margin-bottom:12px}
+    a{color:#007bff;text-decoration:none}
+  </style>
+</head>
+<body data-signals-result='{"show":false,"message":"","type":""}'>
+  <div class="card">
+    <h2>Set New Password</h2>
+    <p class="muted">Enter your new password</p>
+
+    <div data-show="$result.show && $result.type==='success'" class="success" data-text="$result.message"></div>
+    <div data-show="$result.show && $result.type==='error'" class="error" data-text="$result.message"></div>
+
+    <form data-on-submit="confirmReset() | prevent">
+      <input name="password" type="password" placeholder="New Password (min 8 chars)" required minlength="8" />
+      <input name="passwordConfirm" type="password" placeholder="Confirm Password" required />
+      <button type="submit">Reset Password</button>
+    </form>
+
+    <p class="muted"><a href="/ds">Back to login</a></p>
+  </div>
+
+<script type="module">
+async function confirmReset(){
+  const p = new URLSearchParams(location.search);
+  const token = p.get('token');
+
+  if(!token){
+    datastar.signal('result', {show:true, message:'Reset link incomplete', type:'error'});
+    return;
+  }
+
+  const form = document.querySelector('form');
+  const data = new FormData(form);
+  const body = Object.fromEntries(data);
+
+  if(body.password !== body.passwordConfirm){
+    datastar.signal('result', {show:true, message:'Passwords do not match', type:'error'});
+    return;
+  }
+
+  body.token = token;
+
+  const r = await fetch('/api/ds/confirm-password-reset?collection=users',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+
+  const txt = await r.text();
+  try{
+    const j = JSON.parse(txt);
+    if(r.ok){
+      datastar.signal('result', {
+        show:true,
+        message:'Password reset successfully! Redirecting to login...',
+        type:'success'
+      });
+      setTimeout(()=>{ location.href='/ds' }, 2000);
+    }else{
+      datastar.signal('result', {
+        show:true,
+        message: j.message || 'Reset failed: ' + txt,
+        type:'error'
+      });
+    }
+  }catch{
+    datastar.signal('result', {show:true, message:'Reset failed: ' + txt, type:'error'});
+  }
+}
+window.confirmReset = confirmReset;
+</script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Email Verification</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+  <style>
+    body{font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:500px;margin:40px auto;padding:0 16px}
+    .card{border:1px solid #e3e3e3;border-radius:12px;padding:24px}
+    button{padding:10px;border:none;border-radius:10px;width:100%;cursor:pointer;background:#007bff;color:white;font-weight:500}
+    button:hover{background:#0056b3}
+    .success{color:#28a745;padding:12px;background:#d4edda;border-radius:10px}
+    .error{color:#dc3545;padding:12px;background:#f8d7da;border-radius:10px}
+    .info{color:#004085;padding:12px;background:#cce5ff;border-radius:10px}
+    a{color:#007bff;text-decoration:none}
+  </style>
+</head>
+<body data-signals-result='{"show":false,"message":"","type":"info"}'>
+  <div class="card">
+    <h2>Email Verification</h2>
+    <div data-show="$result.show" data-class="$result.type" data-text="$result.message"></div>
+    <p style="margin-top:16px"><a href="/ds">Back to login</a></p>
+  </div>
+
+<script type="module">
+(async ()=>{
+  const p = new URLSearchParams(location.search);
+  const token = p.get('token');
+
+  if(!token){
+    datastar.signal('result', {show:true, message:'Verification link incomplete. Please use the link from your email.', type:'error'});
+    return;
+  }
+
+  const r = await fetch('/api/ds/confirm-verification?collection=users',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({token})
+  });
+
+  const txt = await r.text();
+  try{
+    const j = JSON.parse(txt);
+    if(r.ok){
+      datastar.signal('result', {
+        show:true,
+        message:'Email verified successfully! You can now sign in.',
+        type:'success'
+      });
+      setTimeout(()=>{ location.href='/ds' }, 2000);
+    }else{
+      datastar.signal('result', {
+        show:true,
+        message: j.message || 'Verification failed: ' + txt,
+        type:'error'
+      });
+    }
+  }catch{
+    datastar.signal('result', {show:true, message:'Verification failed: ' + txt, type:'error'});
+  }
+})();
+</script>
+</body>
+</html>

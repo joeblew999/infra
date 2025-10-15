@@ -1,0 +1,47 @@
+{
+  "binaries": [],
+  "process": {
+    "command": "embedded",
+    "args": [],
+    "env": {
+      "POCKETBASE_DIR": "${data}/pocketbase-ha",
+      "PB_NAME": "${env.PB_NAME}",
+      "PB_REPLICATION_URL": "${env.PB_REPLICATION_URL}",
+      "PB_REPLICATION_STREAM": "${env.PB_REPLICATION_STREAM}",
+      "CORE_POCKETBASE_SMTP_HOST": "${env.CORE_POCKETBASE_SMTP_HOST}",
+      "CORE_POCKETBASE_SMTP_PORT": "${env.CORE_POCKETBASE_SMTP_PORT}",
+      "CORE_POCKETBASE_SMTP_USERNAME": "${env.CORE_POCKETBASE_SMTP_USERNAME}",
+      "CORE_POCKETBASE_SMTP_PASSWORD": "${env.CORE_POCKETBASE_SMTP_PASSWORD}",
+      "CORE_POCKETBASE_SMTP_FROM": "${env.CORE_POCKETBASE_SMTP_FROM}",
+      "CORE_POCKETBASE_SMTP_TLS": "${env.CORE_POCKETBASE_SMTP_TLS}",
+      "CORE_POCKETBASE_APP_URL": "${env.CORE_POCKETBASE_APP_URL}",
+      "CORE_POCKETBASE_ADMIN_EMAIL": "${env.CORE_POCKETBASE_ADMIN_EMAIL}",
+      "CORE_POCKETBASE_ADMIN_PASSWORD": "${env.CORE_POCKETBASE_ADMIN_PASSWORD}",
+      "CORE_POCKETBASE_GOOGLE_CLIENT_ID": "${env.CORE_POCKETBASE_GOOGLE_CLIENT_ID}",
+      "CORE_POCKETBASE_GOOGLE_CLIENT_SECRET": "${env.CORE_POCKETBASE_GOOGLE_CLIENT_SECRET}",
+      "CORE_POCKETBASE_GITHUB_CLIENT_ID": "${env.CORE_POCKETBASE_GITHUB_CLIENT_ID}",
+      "CORE_POCKETBASE_GITHUB_CLIENT_SECRET": "${env.CORE_POCKETBASE_GITHUB_CLIENT_SECRET}",
+      "CORE_POCKETBASE_MICROSOFT_CLIENT_ID": "${env.CORE_POCKETBASE_MICROSOFT_CLIENT_ID}",
+      "CORE_POCKETBASE_MICROSOFT_CLIENT_SECRET": "${env.CORE_POCKETBASE_MICROSOFT_CLIENT_SECRET}",
+      "CORE_POCKETBASE_APPLE_CLIENT_ID": "${env.CORE_POCKETBASE_APPLE_CLIENT_ID}",
+      "CORE_POCKETBASE_APPLE_CLIENT_SECRET": "${env.CORE_POCKETBASE_APPLE_CLIENT_SECRET}"
+    },
+    "compose": {
+      "availability": {
+        "restart": "always"
+      },
+      "log": {
+        "max_files": 10,
+        "max_size": "20mb"
+      }
+    }
+  },
+  "ports": {
+    "primary": {
+      "port": 8090,
+      "protocol": "http"
+    }
+  },
+  "scalable": true,
+  "scale_strategy": "regional"
+}

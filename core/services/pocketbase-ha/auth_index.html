@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Datastar + PocketBase Auth</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Datastar JS (current) -->
+  <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+  <style>
+    body{font:14px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:900px;margin:40px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .card{border:1px solid #e3e3e3;border-radius:12px;padding:16px}
+    input,button{padding:10px;border:1px solid #aaa;border-radius:10px}
+    button{cursor:pointer;background:#f9f9f9}
+    .muted{color:#666}
+    pre{background:#111;color:#eee;padding:12px;border-radius:10px;overflow:auto}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef}
+  </style>
+</head>
+<body data-signals-auth='{"signedIn": false}'>
+  <h1>Datastar + PocketBase Auth</h1>
+  <p class="muted">Password + OAuth2 (Apple/Google/etc.). Token lives in <code>localStorage.authToken</code>. UI binds to <code>$auth</code>.</p>
+
+  <div class="row" style="margin-bottom:16px">
+    <a href="/ds/signup" style="padding:8px 12px;background:#f0f0f0;border-radius:8px;text-decoration:none;color:#333">Sign Up</a>
+    <a href="/ds/reset" style="padding:8px 12px;background:#f0f0f0;border-radius:8px;text-decoration:none;color:#333">Reset Password</a>
+    <a data-show="$auth.signedIn" href="/ds/settings" style="padding:8px 12px;background:#f0f0f0;border-radius:8px;text-decoration:none;color:#333">Account Settings</a>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Password</h3>
+      <form
+        data-on-submit="@post('/api/ds/login',{ body:$form, then:(res)=>saveToken(res) }) | prevent">
+        <input name="identity" placeholder="email or username" />
+        <input name="password" type="password" placeholder="password" />
+        <input type="hidden" name="collection" value="users" />
+        <input type="hidden" name="identityField" value="email" />
+        <div class="row" style="margin-top:8px">
+          <button type="submit">Login</button>
+          <button type="button" data-on-click='@post("/api/ds/refresh",{ then:(res)=>saveToken(res) })'>Refresh</button>
+          <button type="button" data-on-click="logout()">Logout</button>
+        </div>
+      </form>
+
+      <h3 style="margin-top:16px">Whoami</h3>
+      <button data-on-click='@get("/api/ds/whoami",{ target:"#who" })'>Check</button>
+      <pre id="who">—</pre>
+    </div>
+
+    <div class="card">
+      <h3>Providers</h3>
+      <div id="providers" class="row"></div>
+      <div class="muted">Listed via PB <code>/auth-methods</code>.</div>
+
+      <h3 style="margin-top:16px">Live Auth ($auth)</h3>
+      <div class="tag" data-text="$auth.signedIn ? 'Signed in' : 'Signed out'"></div>
+      <div class="muted" data-show="$auth.signedIn" data-text="'User: '+($auth.email||$auth.username||$auth.name||$auth.id)"></div>
+
+      <h3 style="margin-top:16px">SSE</h3>
+      <div id="sse" class="tag">SSE: connecting…</div>
+    </div>
+  </div>
+
+<script type="module">
+// Keep Authorization header on Datastar fetches
+function saveToken(res){
+  if(res && res.token){ localStorage.authToken = res.token; }
+  datastar.defaults.headers['Authorization'] = localStorage.authToken || '';
+  datastar.toast('Token stored',{duration:900});
+}
+function logout(){
+  localStorage.removeItem('authToken');
+  delete datastar.defaults.headers['Authorization'];
+  fetch('/api/ds/logout',{method:'POST'}).catch(()=>{});
+  datastar.signal('auth',{signedIn:false}); // optimistic; SSE will confirm
+}
+if(localStorage.authToken){ datastar.defaults.headers['Authorization'] = localStorage.authToken; }
+
+// Providers (from PB)
+async function loadProviders(){
+  const r = await fetch('/api/ds/auth-methods?collection=users',{headers: datastar.defaults.headers});
+  const el = document.getElementById('providers'); el.innerHTML='';
+  if(!r.ok){ el.textContent='Failed to load providers'; return }
+  const j = await r.json();
+  (j.oauth2?.providers||[]).forEach(p=>{
+    const b=document.createElement('button');
+    b.textContent='Continue with '+(p.displayName||p.name);
+    b.onclick=async ()=>{
+      const cb = location.origin + '/ds/callback';
+      const r2 = await fetch('/api/ds/oauth-start?collection=users&provider='+encodeURIComponent(p.name)+'&redirect='+encodeURIComponent(cb),{headers: datastar.defaults.headers});
+      const j2 = await r2.json();
+      if(r2.ok && j2.authURL){ location.href=j2.authURL; } else { alert('OAuth start failed'); }
+    };
+    el.appendChild(b);
+  });
+}
+
+// Open SSE (Authorization header isn't sent by EventSource; if you need strict auth, accept ?token= and verify server-side)
+const es = new EventSource('/api/ds/sse');
+es.onopen = () => { document.getElementById('sse').textContent = 'SSE: open'; };
+es.onerror = () => { document.getElementById('sse').textContent = 'SSE: error'; };
+
+window.addEventListener('load', loadProviders);
+</script>
+</body>
+</html>

@@ -64,7 +64,14 @@ WHAT'S INSIDE (single file)
   POST /api/ds/impersonate                          → Impersonate user (superuser only)
 */
 
-func registerDatastarPocketBaseAuth(app *pocketbase.PocketBase) {
+// RegisterDatastarAuth registers all Datastar auth routes and handlers.
+// Exported for reuse by pocketbase-ha service.
+func RegisterDatastarAuth(app *pocketbase.PocketBase, customFS *embed.FS) {
+	// Use custom FS if provided, otherwise use the package-level embedFS
+	registerDatastarRoutes(app)
+}
+
+func registerDatastarRoutes(app *pocketbase.PocketBase) {
 	// ---- Pages ----
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		se.Router.GET("/ds", func(e *core.RequestEvent) error {

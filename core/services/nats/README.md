@@ -14,6 +14,7 @@ Pillow:
 - `nsc` – JWT/auth management CLI
 
 
+NOTE: will also integrate https://github.com/litesql/ha and https://github.com/litesql/pocketbase-ha later...
 
 ## Features
 

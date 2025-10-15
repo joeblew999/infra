@@ -165,12 +165,12 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 	})
 
 	// Bootstrap auth configuration (SMTP, OAuth2, admin user, collection setup)
-	if err := bootstrapAuth(app); err != nil {
+	if err := BootstrapAuth(app); err != nil {
 		return fmt.Errorf("bootstrap auth: %w", err)
 	}
 
 	// Register Datastar auth routes
-	registerDatastarPocketBaseAuth(app)
+	RegisterDatastarAuth(app, nil)
 
 	port := spec.Ports.Primary.Port
 	if port == 0 {
