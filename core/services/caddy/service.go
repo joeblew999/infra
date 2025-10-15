@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	_ "github.com/caddy-dns/acmedns"
@@ -142,6 +143,11 @@ func buildConfig(cfg *Config) (caddy.Config, error) {
 	listen := fmt.Sprintf(":%d", cfg.Ports.HTTP.Port)
 	target := cfg.Config.Target
 
+	// Extract host:port from target URL (e.g., "http://127.0.0.1:8090" → "127.0.0.1:8090")
+	// Caddy's "dial" expects just host:port, not full URL
+	dialAddr := strings.TrimPrefix(target, "http://")
+	dialAddr = strings.TrimPrefix(dialAddr, "https://")
+
 	httpConfig := map[string]any{
 		"servers": map[string]any{
 			"core": map[string]any{
@@ -151,7 +157,7 @@ func buildConfig(cfg *Config) (caddy.Config, error) {
 						"handle": []map[string]any{
 							{
 								"handler":   "reverse_proxy",
-								"upstreams": []map[string]any{{"dial": target}},
+								"upstreams": []map[string]any{{"dial": dialAddr}},
 							},
 						},
 					},
