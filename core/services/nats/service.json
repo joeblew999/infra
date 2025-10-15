@@ -5,21 +5,12 @@
       "version": "0.1.4",
       "source": "go-build",
       "path": "./cmd/nats"
-    },
-    {
-      "name": "nsc",
-      "version": "2.8.5",
-      "source": "placeholder"
     }
   ],
   "process": {
     "command": "${dep.nats}",
     "args": [],
     "env": {
-      "PILLOW_BACKEND": "pillow",
-      "PILLOW_TOPOLOGY": "hub-spoke",
-      "PILLOW_JETSTREAM": "true",
-      "PILLOW_AUTO_SCALE": "true",
       "NATS_DATA_DIR": "${data}/nats"
     },
     "compose": {
@@ -61,9 +52,9 @@
     }
   },
   "config": {
-    "backend": "pillow",
-    "topology": "hub-spoke",
-    "auto_scale": true,
+    "backend": "standalone",
+    "topology": "single-node",
+    "auto_scale": false,
     "jetstream": true,
     "deployment": {
       "local": {

@@ -11,15 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nintron27/pillow"
 	"github.com/nats-io/nats-server/v2/server"
-	"github.com/nats-io/jwt/v2"
 
 	runtimecfg "github.com/joeblew999/infra/core/pkg/runtime/config"
 	runtimedep "github.com/joeblew999/infra/core/pkg/runtime/dep"
 	composecfg "github.com/joeblew999/infra/core/pkg/runtime/process/composecfg"
-	"github.com/joeblew999/infra/pkg/config"
-	"github.com/joeblew999/infra/pkg/nats/auth"
 )
 
 //go:embed service.json
@@ -141,8 +137,8 @@ func (s *Spec) ComposeOverrides() map[string]any {
 	return s.Process.Compose.Map()
 }
 
-// Run executes the NATS service using Pillow. Additional arguments are appended
-// to the manifest-defined arguments when invoking Pillow.
+// Run executes the NATS service as a standalone embedded server.
+// No Pillow, no NSC auth - pure, simple NATS with JetStream.
 func Run(ctx context.Context, extraArgs []string) error {
 	if ctx == nil {
 		ctx = context.Background()
@@ -158,7 +154,7 @@ func Run(ctx context.Context, extraArgs []string) error {
 	}
 
 	if len(extraArgs) > 0 {
-		return fmt.Errorf("extra args not supported for embedded Pillow runner: %v", extraArgs)
+		return fmt.Errorf("extra args not supported for embedded runner: %v", extraArgs)
 	}
 
 	return runEmbedded(ctx, spec)
@@ -192,9 +188,9 @@ func (s *Spec) GetDeploymentStrategy(environment string) string {
 		len(prod.LeafRegions))
 }
 
-// IsPillowManaged returns true if this service uses Pillow for clustering.
+// IsPillowManaged returns false - core uses direct NATS server, not Pillow.
 func (s *Spec) IsPillowManaged() bool {
-	return s.Config.Backend == "pillow" && s.Config.AutoScale
+	return false
 }
 
 func replacePlaceholders(value string, paths map[string]string) string {
@@ -239,6 +235,8 @@ func replaceEnvPlaceholders(value string) string {
 	return value
 }
 
+// runEmbedded starts a standalone NATS server with JetStream enabled.
+// No authentication, no clustering - perfect for local development.
 func runEmbedded(ctx context.Context, spec *Spec) error {
 	cfg := runtimecfg.Load()
 	storeDir := filepath.Join(cfg.Paths.Data, "nats", "jetstream")
@@ -246,111 +244,70 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		return fmt.Errorf("prepare jetstream dir: %w", err)
 	}
 
-	// Ensure NSC auth artifacts are available
-	authArtifacts, err := auth.Ensure(ctx)
-	if err != nil {
-		return fmt.Errorf("ensure auth artifacts: %w", err)
-	}
-
-	// Parse operator JWT for trusted operators
-	operatorClaims, err := jwt.DecodeOperatorClaims(authArtifacts.OperatorJWT)
-	if err != nil {
-		return fmt.Errorf("decode operator JWT: %w", err)
-	}
-
-	// Create memory account resolver
-	memResolver := &server.MemAccResolver{}
-
-	// Store system account JWT
-	if err := memResolver.Store(authArtifacts.SystemAccountID, authArtifacts.SystemAccountJWT); err != nil {
-		return fmt.Errorf("store system account JWT: %w", err)
-	}
-
-	// Store application account JWT
-	if err := memResolver.Store(authArtifacts.ApplicationAccountID, authArtifacts.ApplicationAccountJWT); err != nil {
-		return fmt.Errorf("store application account JWT: %w", err)
-	}
-
+	// Pure standalone NATS configuration
 	natsOpts := &server.Options{
-		Host:                   "0.0.0.0",
-		Port:                   spec.Ports.Client.Port,
-		HTTPHost:               "0.0.0.0",
-		HTTPPort:               spec.Ports.HTTP.Port,
-		LeafNode:               server.LeafNodeOpts{Host: "0.0.0.0", Port: spec.Ports.Leaf.Port},
-		JetStream:              spec.Config.JetStream,
-		StoreDir:               storeDir,
-		NoSigs:                 true,
-		DisableJetStreamBanner: true,
+		Host:     "0.0.0.0",
+		Port:     spec.Ports.Client.Port,
+		HTTPHost: "0.0.0.0",
+		HTTPPort: spec.Ports.HTTP.Port,
 
-		// NSC Authentication
-		TrustedOperators: []*jwt.OperatorClaims{operatorClaims},
-		AccountResolver:  memResolver,
-		SystemAccount:    authArtifacts.SystemAccountID,
+		// JetStream enabled
+		JetStream: spec.Config.JetStream,
+		StoreDir:  storeDir,
+
+		// Server identity
+		ServerName: fmt.Sprintf("core-nats-%s", cfg.Environment),
+
+		// No authentication (for local dev)
+		// No clustering (single node)
+		// No TLS (for simplicity)
 	}
 
-	if spec.Config.Deployment.Local.Nodes > 1 {
-		natsOpts.Cluster = server.ClusterOpts{Host: "0.0.0.0", Port: spec.Ports.Cluster.Port, Name: config.GetNATSClusterName()}
-	} else {
-		// Single-node local mode: disable clustering/leaf and let HTTP monitor choose a free port
-		natsOpts.Cluster = server.ClusterOpts{}
-		natsOpts.LeafNode = server.LeafNodeOpts{}
-		natsOpts.HTTPPort = spec.Ports.HTTP.Port
-	}
-
-	natsOpts.ServerName = fmt.Sprintf("core-nats-%s", cfg.Environment)
-
-	opts := []pillow.Option{
-		pillow.WithNATSServerOptions(natsOpts),
-		pillow.WithLogging(true),
-		pillow.WithTimeout(10 * time.Second),
-	}
-
-	server, err := pillow.Run(opts...)
+	// Create and start NATS server
+	ns, err := server.NewServer(natsOpts)
 	if err != nil {
-		return fmt.Errorf("pillow run: %w", err)
+		return fmt.Errorf("create nats server: %w", err)
 	}
 
-	// Wait for client port
-	if err := waitForTCP(spec.Ports.Client.Port, 10*time.Second, nil); err != nil {
-		server.NATSServer.Shutdown()
-		server.NATSServer.WaitForShutdown()
-		return err
+	// Start the server in a goroutine - it will block in Start() until shutdown
+	go ns.Start()
+
+	// Wait for ports to be ready (this is more reliable than ReadyForConnections)
+	if err := waitForTCP(spec.Ports.Client.Port, 10*time.Second); err != nil {
+		ns.Shutdown()
+		ns.WaitForShutdown()
+		return fmt.Errorf("client port not ready: %w", err)
 	}
 
-	// Wait for HTTP monitor port (for health checks)
-	if err := waitForTCP(spec.Ports.HTTP.Port, 10*time.Second, nil); err != nil {
-		server.NATSServer.Shutdown()
-		server.NATSServer.WaitForShutdown()
-		return err
+	if err := waitForTCP(spec.Ports.HTTP.Port, 10*time.Second); err != nil {
+		ns.Shutdown()
+		ns.WaitForShutdown()
+		return fmt.Errorf("http port not ready: %w", err)
 	}
 
 	fmt.Printf("READY: nats tcp://127.0.0.1:%d\n", spec.Ports.Client.Port)
 
+	// Block until context is done
 	<-ctx.Done()
-	server.NATSServer.Shutdown()
-	server.NATSServer.WaitForShutdown()
+
+	// Graceful shutdown
+	ns.Shutdown()
+	ns.WaitForShutdown()
 	return nil
 }
 
-func waitForTCP(port int, timeout time.Duration, errCh <-chan error) error {
+func waitForTCP(port int, timeout time.Duration) error {
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	deadline := time.Now().Add(timeout)
-	for {
-		if errCh != nil {
-			select {
-			case err := <-errCh:
-				return err
-			default:
-			}
-		}
+
+	for time.Now().Before(deadline) {
 		conn, err := net.DialTimeout("tcp", addr, 250*time.Millisecond)
 		if err == nil {
 			_ = conn.Close()
 			return nil
 		}
-		if time.Now().After(deadline) {
-			return fmt.Errorf("port %d not ready: %w", port, err)
-		}
 		time.Sleep(250 * time.Millisecond)
 	}
+
+	return fmt.Errorf("port %d not ready after %v", port, timeout)
 }
