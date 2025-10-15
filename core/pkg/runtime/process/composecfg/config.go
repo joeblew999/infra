@@ -24,13 +24,16 @@ type Dependency struct {
 
 // Probe models Process Compose probes (http/tcp/exec).
 type Probe struct {
-	HTTPGet          *HTTPGet   `json:"http_get,omitempty"`
-	TCP              *TCPProbe  `json:"tcp,omitempty"`
-	Exec             *ExecProbe `json:"exec,omitempty"`
-	Interval         string     `json:"interval,omitempty"`
-	Timeout          string     `json:"timeout,omitempty"`
-	SuccessThreshold int        `json:"success_threshold,omitempty"`
-	FailureThreshold int        `json:"failure_threshold,omitempty"`
+	HTTPGet              *HTTPGet   `json:"http_get,omitempty"`
+	TCP                  *TCPProbe  `json:"tcp,omitempty"`
+	Exec                 *ExecProbe `json:"exec,omitempty"`
+	InitialDelaySeconds  int        `json:"initial_delay_seconds,omitempty"`
+	PeriodSeconds        int        `json:"period_seconds,omitempty"`
+	TimeoutSeconds       int        `json:"timeout_seconds,omitempty"`
+	Interval             string     `json:"interval,omitempty"`        // Deprecated: use PeriodSeconds  
+	Timeout              string     `json:"timeout,omitempty"`         // Deprecated: use TimeoutSeconds
+	SuccessThreshold     int        `json:"success_threshold,omitempty"`
+	FailureThreshold     int        `json:"failure_threshold,omitempty"`
 }
 
 // HTTPGet defines an HTTP probe.

@@ -25,6 +25,14 @@ processes:
         log:
             max_files: 10
             max_size: 20mb
+        readiness_probe:
+            failure_threshold: 5
+            http_get:
+                url: http://127.0.0.1:8222/healthz
+            initial_delay_seconds: 3
+            period_seconds: 5
+            success_threshold: 1
+            timeout_seconds: 3
         working_dir: .
     pocketbase:
         availability:
@@ -53,9 +61,12 @@ processes:
             - CORE_POCKETBASE_SMTP_USERNAME=
             - POCKETBASE_DIR=.data/pocketbase
         readiness_probe:
+            failure_threshold: 5
             http_get:
                 url: http://127.0.0.1:8090/api/health
-            interval: 5s
-            timeout: 5s
+            initial_delay_seconds: 5
+            period_seconds: 5
+            success_threshold: 1
+            timeout_seconds: 3
         working_dir: .
 version: "0.5"
