@@ -197,40 +197,15 @@ func replacePlaceholders(value string, paths map[string]string) string {
 	}
 	resolved := value
 	runtime := runtimecfg.Load()
-	// Replace ${dep.*} placeholders with binary paths
 	for name, path := range paths {
 		placeholder := fmt.Sprintf("${dep.%s}", name)
 		resolved = strings.ReplaceAll(resolved, placeholder, path)
 	}
-	// Replace runtime path placeholders
 	resolved = strings.ReplaceAll(resolved, "${data}", runtime.Paths.Data)
 	resolved = strings.ReplaceAll(resolved, "${bin}", runtime.Paths.Bin)
 	resolved = strings.ReplaceAll(resolved, "${dep}", runtime.Paths.Dep)
 	resolved = strings.ReplaceAll(resolved, "${logs}", runtime.Paths.Logs)
-	// Replace ${env.*} placeholders with environment variables
-	resolved = replaceEnvPlaceholders(resolved)
 	return resolved
-}
-
-// replaceEnvPlaceholders substitutes ${env.VARIABLE_NAME} with os.Getenv("VARIABLE_NAME").
-func replaceEnvPlaceholders(value string) string {
-	// Pattern: ${env.VARIABLE_NAME}
-	for {
-		start := strings.Index(value, "${env.")
-		if start == -1 {
-			break
-		}
-		end := strings.Index(value[start:], "}")
-		if end == -1 {
-			break
-		}
-		end += start
-		placeholder := value[start : end+1]
-		envVar := value[start+len("${env.") : end]
-		replacement := os.Getenv(envVar)
-		value = strings.ReplaceAll(value, placeholder, replacement)
-	}
-	return value
 }
 
 func withEnv(env map[string]string, fn func() error) error {
