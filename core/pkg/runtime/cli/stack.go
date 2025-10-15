@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -32,6 +33,7 @@ func newStackCommand() *cobra.Command {
 	cmd.AddCommand(buildStackUpCommand("up", "Run core services (NATS, PocketBase, Caddy) locally", true))
 	cmd.AddCommand(buildStackDownCommand("down", "Stop core services started with stack up"))
 	cmd.AddCommand(buildStackStatusCommand("status", "Show whether the local stack is running"))
+	cmd.AddCommand(newStackCleanCommand())
 	cmd.AddCommand(newStackProcessesCommand())
 	cmd.AddCommand(newStackProcessCommand())
 	cmd.AddCommand(newStackProjectCommand())
@@ -101,6 +103,7 @@ func buildStackUpCommand(use, short string, includeRunAlias bool) *cobra.Command
 	if includeRunAlias {
 		cmd.Aliases = append(cmd.Aliases, "run")
 	}
+	cmd.Flags().BoolP("detach", "d", false, "Run process-compose in detached mode (background)")
 	return cmd
 }
 
@@ -124,6 +127,26 @@ func buildStackStatusCommand(use, short string) *cobra.Command {
 	return cmd
 }
 
+func newStackCleanCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "clean",
+		Short: "Stop services, kill zombie processes, and clean generated files",
+		Long: `Clean the core stack by:
+1. Stopping process-compose if running
+2. Killing any zombie processes on stack ports (4222, 8090, 2015, 8222, 28081)
+3. Removing generated files (.core-stack/ directory)
+
+By default, performs a full clean (all steps).
+Use flags to clean only specific parts:
+  --processes    Kill zombie processes only (skip file removal)
+  --files        Remove generated files only (skip process management)`,
+		RunE: stackCleanRun,
+	}
+	cmd.Flags().Bool("processes", false, "Kill zombie processes only (skip file removal)")
+	cmd.Flags().Bool("files", false, "Remove generated files only (skip process management)")
+	return cmd
+}
+
 func stackUpRun(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
 	if ctx == nil {
@@ -139,6 +162,71 @@ func stackDownRun(cmd *cobra.Command, args []string) error {
 func stackStatusRun(cmd *cobra.Command, args []string) error {
 	asJSON, _ := cmd.Flags().GetBool("json")
 	return statusComposeStack(cmd, args, asJSON)
+}
+
+func stackCleanRun(cmd *cobra.Command, args []string) error {
+	processesOnly, _ := cmd.Flags().GetBool("processes")
+	filesOnly, _ := cmd.Flags().GetBool("files")
+
+	// Determine what to clean
+	// If neither flag is set, do both (full clean)
+	cleanProcesses := !filesOnly || processesOnly
+	cleanFiles := !processesOnly || filesOnly
+
+	out := cmd.OutOrStdout()
+
+	// Step 1: Stop process-compose if running (unless files-only mode)
+	if cleanProcesses {
+		fmt.Fprintln(out, "→ Stopping process-compose...")
+		port := process.ComposePort(args)
+		if err := process.ShutdownCompose(cmd.Context(), port); err != nil {
+			if !errors.Is(err, process.ErrComposeUnavailable) {
+				fmt.Fprintf(out, "  ⚠ Failed to stop process-compose: %v\n", err)
+			} else {
+				fmt.Fprintln(out, "  ✓ Process-compose not running")
+			}
+		} else {
+			fmt.Fprintln(out, "  ✓ Process-compose stopped")
+		}
+
+		// Step 2: Kill zombie processes on stack ports
+		fmt.Fprintln(out, "\n→ Checking for zombie processes...")
+		ports, err := getStackPorts()
+		if err != nil {
+			return fmt.Errorf("get stack ports: %w", err)
+		}
+
+		killedAny := false
+		for _, port := range ports {
+			if killed, err := killProcessOnPort(port); err != nil {
+				fmt.Fprintf(out, "  ⚠ Port %d: %v\n", port, err)
+			} else if killed {
+				fmt.Fprintf(out, "  ✓ Port %d: killed process\n", port)
+				killedAny = true
+			}
+		}
+		if !killedAny {
+			fmt.Fprintln(out, "  ✓ No zombie processes found")
+		}
+	}
+
+	// Step 3: Remove generated files
+	if cleanFiles {
+		fmt.Fprintln(out, "\n→ Cleaning generated files...")
+		coreStackDir := ".core-stack"
+		if _, err := os.Stat(coreStackDir); err == nil {
+			if err := os.RemoveAll(coreStackDir); err != nil {
+				fmt.Fprintf(out, "  ⚠ Failed to remove %s: %v\n", coreStackDir, err)
+			} else {
+				fmt.Fprintf(out, "  ✓ Removed %s/\n", coreStackDir)
+			}
+		} else {
+			fmt.Fprintf(out, "  ✓ %s/ does not exist\n", coreStackDir)
+		}
+	}
+
+	fmt.Fprintln(out, "\n✅ Clean complete!")
+	return nil
 }
 
 func stackProcessesRun(cmd *cobra.Command, args []string) error {
@@ -691,7 +779,15 @@ func runComposeStack(cmd *cobra.Command, args []string) error {
 	if err := process.EnsureServiceBinaries(cfg.Paths.AppRoot); err != nil {
 		return fmt.Errorf("ensure service binaries: %w", err)
 	}
-	composeArgs := append([]string{"up"}, args...)
+
+	// Check if --detach flag is set
+	detach, _ := cmd.Flags().GetBool("detach")
+	composeArgs := []string{"up"}
+	if detach {
+		composeArgs = append(composeArgs, "--detached")
+	}
+	composeArgs = append(composeArgs, args...)
+
 	return process.ExecuteCompose(ctx, cfg.Paths.AppRoot, composeArgs...)
 }
 
@@ -804,6 +900,37 @@ func isPortBusy(port int) bool {
 	}
 	_ = conn.Close()
 	return true
+}
+
+// killProcessOnPort kills any process listening on the given port.
+// Returns (true, nil) if a process was killed, (false, nil) if no process found.
+func killProcessOnPort(port int) (bool, error) {
+	if !isPortBusy(port) {
+		return false, nil
+	}
+
+	// Use lsof to find the PID listening on this port
+	cmd := fmt.Sprintf("lsof -ti :%d", port)
+	output, err := exec.Command("sh", "-c", cmd).Output()
+	if err != nil {
+		// No process found or lsof failed
+		return false, nil
+	}
+
+	pidStr := strings.TrimSpace(string(output))
+	if pidStr == "" {
+		return false, nil
+	}
+
+	// Kill the process
+	killCmd := fmt.Sprintf("kill -9 %s", pidStr)
+	if err := exec.Command("sh", "-c", killCmd).Run(); err != nil {
+		return false, fmt.Errorf("kill failed: %w", err)
+	}
+
+	// Give it a moment to die
+	time.Sleep(100 * time.Millisecond)
+	return true, nil
 }
 
 func getStackPorts() ([]int, error) {
