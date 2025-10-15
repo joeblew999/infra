@@ -2,21 +2,21 @@ package orchestrator
 
 import (
 	"context"
-	"io"
 
 	sharedcfg "github.com/joeblew999/infra/core/pkg/shared/config"
 	"github.com/joeblew999/infra/core/tooling/pkg/auth"
+	types "github.com/joeblew999/infra/core/tooling/pkg/types"
 )
 
-// AuthProvider handles authentication for both Fly and Cloudflare.
+// AuthProvider abstracts Fly and Cloudflare authentication.
 type AuthProvider interface {
-	EnsureFly(ctx context.Context, profile sharedcfg.ToolingProfile, opts auth.Options) error
-	EnsureCloudflare(ctx context.Context, profile sharedcfg.ToolingProfile, opts auth.Options) error
+	EnsureFly(context.Context, sharedcfg.ToolingProfile, auth.Options) error
+	EnsureCloudflare(context.Context, sharedcfg.ToolingProfile, auth.Options) error
 }
 
-// Deployer performs the actual deployment to Fly.
+// Deployer executes the final deployment steps.
 type Deployer interface {
-	Deploy(ctx context.Context) (string, error)
+	Deploy(context.Context, types.DeployRequest) (*types.DeployResult, error)
 }
 
 type deployerFactory func(sharedcfg.ToolingProfile, string, string, string) Deployer
