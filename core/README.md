@@ -5,18 +5,20 @@ A deterministic, event-driven orchestration system for running distributed servi
 ## Quick Start
 
 ```bash
-# Load environment variables
-export $(cat .env | xargs)
-
 # Start the complete stack (NATS, PocketBase, Caddy)
-go run ./cmd/core stack up
+go run . stack up
+
+# Or use make
+make run
 
 # Check status
-go run ./cmd/core stack status
+go run . stack status
 
 # Stop services
-go run ./cmd/core stack down
+go run . stack down
 ```
+
+**Note**: Environment variables are auto-loaded from `.env` if it exists.
 
 ## What is This?
 

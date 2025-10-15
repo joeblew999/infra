@@ -29,7 +29,7 @@ processes:
             failure_threshold: 5
             http_get:
                 url: http://127.0.0.1:8222/healthz
-            initial_delay_seconds: 3
+            initial_delay_seconds: 10
             period_seconds: 5
             success_threshold: 1
             timeout_seconds: 3

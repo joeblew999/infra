@@ -90,18 +90,22 @@ func ExecuteCompose(ctx context.Context, appRoot string, args ...string) error {
 		}
 	}
 
-	baseArgs := []string{"run", "./cmd/processcompose"}
+	// Build path to process-compose binary
+	composeBinPath := filepath.Join(appRoot, ".dep", "process-compose")
+
+	// Build cmdArgs for process-compose
+	cmdArgs := []string{}
 	if composeCommandNeedsConfig(command) {
-		baseArgs = append(baseArgs, "--config", composePath)
+		cmdArgs = append(cmdArgs, "--config", composePath)
 	}
 	if !hasFlag(tail, "--port", "-p") {
-		baseArgs = append(baseArgs, "--port", strconv.Itoa(composeServerPort))
+		cmdArgs = append(cmdArgs, "--port", strconv.Itoa(composeServerPort))
 		port = composeServerPort
 	}
-	cmdArgs := append(baseArgs, command)
+	cmdArgs = append(cmdArgs, command)
 	cmdArgs = append(cmdArgs, tail...)
 
-	cmd := exec.CommandContext(ctx, "go", cmdArgs...)
+	cmd := exec.CommandContext(ctx, composeBinPath, cmdArgs...)
 	if appRoot != "" {
 		cmd.Dir = appRoot
 	}

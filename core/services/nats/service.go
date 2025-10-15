@@ -310,11 +310,20 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		return fmt.Errorf("pillow run: %w", err)
 	}
 
+	// Wait for client port
 	if err := waitForTCP(spec.Ports.Client.Port, 10*time.Second, nil); err != nil {
 		server.NATSServer.Shutdown()
 		server.NATSServer.WaitForShutdown()
 		return err
 	}
+
+	// Wait for HTTP monitor port (for health checks)
+	if err := waitForTCP(spec.Ports.HTTP.Port, 10*time.Second, nil); err != nil {
+		server.NATSServer.Shutdown()
+		server.NATSServer.WaitForShutdown()
+		return err
+	}
+
 	fmt.Printf("READY: nats tcp://127.0.0.1:%d\n", spec.Ports.Client.Port)
 
 	<-ctx.Done()
