@@ -43,13 +43,19 @@
         "http_get": {
           "url": "http://127.0.0.1:8090/api/health"
         },
-        "timeout": "5s",
-        "interval": "5s"
+        "initial_delay_seconds": 5,
+        "period_seconds": 5,
+        "timeout_seconds": 3,
+        "success_threshold": 1,
+        "failure_threshold": 5
       }
     }
   },
   "ports": {
-    "primary": {"port": 8090, "protocol": "http"}
+    "primary": {
+      "port": 8090,
+      "protocol": "http"
+    }
   },
   "scalable": false,
   "scale_strategy": "infra"
