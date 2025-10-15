@@ -21,10 +21,6 @@
         "pocketbase": {
           "condition": "process_healthy"
         }
-      },
-      "log": {
-        "max_files": 5,
-        "timestamps": true
       }
     }
   },

@@ -258,6 +258,9 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		// Server identity
 		ServerName: fmt.Sprintf("core-nats-%s", cfg.Environment),
 
+		// Disable built-in signal handling - we manage shutdown via context
+		NoSigs: true,
+
 		// No authentication (for local dev)
 		// No clustering (single node)
 		// No TLS (for simplicity)
@@ -285,14 +288,20 @@ func runEmbedded(ctx context.Context, spec *Spec) error {
 		return fmt.Errorf("http port not ready: %w", err)
 	}
 
-	fmt.Printf("READY: nats tcp://127.0.0.1:%d\n", spec.Ports.Client.Port)
+	fmt.Fprintf(os.Stderr, "[nats] Server listening on tcp://127.0.0.1:%d\n", spec.Ports.Client.Port)
+	fmt.Fprintf(os.Stderr, "[nats] HTTP monitoring on http://127.0.0.1:%d\n", spec.Ports.HTTP.Port)
 
 	// Block until context is done
+	fmt.Fprintf(os.Stderr, "[nats] Waiting for shutdown signal...\n")
+	fmt.Fprintf(os.Stderr, "[nats] Context error before wait: %v\n", ctx.Err())
 	<-ctx.Done()
+	fmt.Fprintf(os.Stderr, "[nats] Context cancelled! Reason: %v\n", ctx.Err())
+	fmt.Fprintf(os.Stderr, "[nats] Shutdown signal received, cleaning up...\n")
 
 	// Graceful shutdown
 	ns.Shutdown()
 	ns.WaitForShutdown()
+	fmt.Fprintf(os.Stderr, "[nats] Shutdown complete\n")
 	return nil
 }
 

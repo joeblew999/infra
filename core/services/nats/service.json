@@ -14,18 +14,15 @@
       "NATS_DATA_DIR": "${data}/nats"
     },
     "compose": {
+      "is_daemon": false,
       "availability": {
         "restart": "always"
       },
-      "log": {
-        "max_files": 10,
-        "max_size": "20mb"
-      },
       "readiness_probe": {
-        "http_get": {
-          "url": "http://127.0.0.1:8222/healthz"
+        "exec": {
+          "command": "nc -z 127.0.0.1 4222"
         },
-        "initial_delay_seconds": 10,
+        "initial_delay_seconds": 3,
         "period_seconds": 5,
         "timeout_seconds": 3,
         "success_threshold": 1,

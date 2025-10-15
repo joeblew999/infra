@@ -3,13 +3,13 @@ module github.com/joeblew999/infra/core
 go 1.25.1
 
 require (
-	github.com/Nintron27/pillow v0.10.0
 	github.com/caddy-dns/acmedns v0.6.0
 	github.com/caddyserver/caddy/v2 v2.10.1
 	github.com/charmbracelet/ultraviolet v0.0.0-20250915111650-81d4262876ef
-	github.com/f1bonacc1/process-compose v1.75.2
+	github.com/f1bonacc1/process-compose v1.64.1
 	github.com/google/uuid v1.6.0
 	github.com/joeblew999/infra/core/controller v0.0.0
+	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/mholt/caddy-l4 v0.0.0-20250902102621-4a517a98d7fa
 	github.com/nats-io/nats-server/v2 v2.12.0
@@ -79,7 +79,6 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/domodwyer/mailyak/v3 v3.6.2 // indirect
-	github.com/drone/envsubst v1.0.3 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/f1bonacc1/glippy v0.0.0-20230614190937-e7ca07f99f6f // indirect
@@ -133,7 +132,6 @@ require (
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
@@ -142,7 +140,6 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jezek/xgb v1.1.1 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
@@ -150,9 +147,6 @@ require (
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/libdns/acmedns v0.5.0 // indirect
 	github.com/libdns/libdns v1.1.1 // indirect
-	github.com/litesql/go-ha v0.0.9 // indirect
-	github.com/litesql/go-sqlite3 v1.14.34 // indirect
-	github.com/litesql/pocketbase-ha v0.0.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20250827001030-24949be3fa54 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect

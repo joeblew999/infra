@@ -4,6 +4,7 @@ import "encoding/json"
 
 // Config describes Process Compose specific options for a process entry.
 type Config struct {
+	IsDaemon     *bool                 `json:"is_daemon,omitempty"`
 	Availability *Availability         `json:"availability,omitempty"`
 	DependsOn    map[string]Dependency `json:"depends_on,omitempty"`
 	Readiness    *Probe                `json:"readiness_probe,omitempty"`
@@ -49,7 +50,8 @@ type TCPProbe struct {
 
 // ExecProbe defines an exec probe command.
 type ExecProbe struct {
-	Command []string `json:"command,omitempty"`
+	Command    string `json:"command,omitempty"`
+	WorkingDir string `json:"working_dir,omitempty"`
 }
 
 // Log describes Process Compose log rotation options.

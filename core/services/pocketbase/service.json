@@ -14,17 +14,13 @@
       "POCKETBASE_DIR": "${data}/pocketbase"
     },
     "compose": {
+      "is_daemon": false,
       "availability": {
         "restart": "always"
       },
-      "depends_on": {
-        "nats": {
-          "condition": "process_healthy"
-        }
-      },
       "readiness_probe": {
-        "http_get": {
-          "url": "http://127.0.0.1:8090/api/health"
+        "exec": {
+          "command": "curl -f http://127.0.0.1:8090/api/health"
         },
         "initial_delay_seconds": 5,
         "period_seconds": 5,

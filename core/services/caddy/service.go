@@ -104,10 +104,15 @@ func Run(ctx context.Context, extraArgs []string) error {
 		_ = caddy.Stop()
 		return err
 	}
-	fmt.Printf("READY: caddy http://127.0.0.1:%d\n", cfg.Ports.HTTP.Port)
+	fmt.Fprintf(os.Stderr, "[caddy] Server started on http://127.0.0.1:%d\n", cfg.Ports.HTTP.Port)
+	fmt.Fprintf(os.Stderr, "[caddy] Proxying to target: %s\n", cfg.Config.Target)
+	fmt.Fprintf(os.Stderr, "[caddy] Waiting for shutdown signal...\n")
 
 	select {
 	case err := <-errCh:
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[caddy] Error: %v\n", err)
+		}
 		return err
 	case <-ctx.Done():
 		done := make(chan error, 1)
