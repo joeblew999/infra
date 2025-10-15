@@ -7,10 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	runtimecli "github.com/joeblew999/infra/core/pkg/runtime/cli"
 )
 
 func main() {
+	// Auto-load .env if it exists (fail silently if not - allows production without .env)
+	_ = godotenv.Load()
+
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
