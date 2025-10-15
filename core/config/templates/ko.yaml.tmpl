@@ -1,0 +1,45 @@
+# Template for rendering .ko.yaml via core-tool config init.
+# Variables:
+#   BaseImage   - base image used when ko builds binaries
+#   Module      - module import path (for base image overrides)
+#   ImportPath  - relative path to the Go main package
+#   BuildID     - identifier for the ko build stanza
+#   Platforms   - list of GOOS/GOARCH targets
+#   BuildEnv    - environment variables applied within the build stanza
+#   BuildFlags  - go build flags passed by ko
+#   LDFlags     - linker flags applied during build
+#   DefaultEnv  - environment variables applied globally
+#   Repository  - default KO repository
+
+defaultBaseImage: {{ .BaseImage }}
+
+baseImageOverrides:
+  {{ .Module }}: {{ .BaseImage }}
+
+# KO publishes default to the {{ .Repository }} registry.
+
+defaultPlatforms:
+{{- range .Platforms }}
+  - {{ . }}
+{{- end }}
+
+builds:
+  - id: {{ .BuildID }}
+    main: {{ .ImportPath }}
+    env:
+{{- range .BuildEnv }}
+      - {{ . }}
+{{- end }}
+    flags:
+{{- range .BuildFlags }}
+      - {{ . }}
+{{- end }}
+    ldflags:
+{{- range .LDFlags }}
+      - {{ . }}
+{{- end }}
+
+defaultEnv:
+{{- range .DefaultEnv }}
+  - {{ . }}
+{{- end }}

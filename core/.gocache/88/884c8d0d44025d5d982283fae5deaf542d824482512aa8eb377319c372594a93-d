@@ -1,0 +1,4 @@
+./authority.go
+./options.go
+./provisioner.go
+./scep.go

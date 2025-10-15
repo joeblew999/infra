@@ -1,0 +1,6 @@
+./caddy.go
+./execute.go
+./nats.go
+./pocketbase.go
+./root.go
+./stack.go

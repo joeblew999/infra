@@ -1,0 +1,7 @@
+{{define "navigation"}}
+<nav class="core-nav" data-datastar-keep="nav">
+  {{range .Snapshot.Navigation}}
+    <a href="?page={{.Route}}" class="{{if eq $.CurrentPage .Route}}active{{end}}">{{.Title}}</a>
+  {{end}}
+</nav>
+{{end}}

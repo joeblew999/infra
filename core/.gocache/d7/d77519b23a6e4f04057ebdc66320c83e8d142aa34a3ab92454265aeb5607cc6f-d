@@ -1,0 +1,11 @@
+./basic.go
+./bearer.go
+./doc.go
+./error.go
+./logger.go
+./ping.go
+./retry.go
+./schemer.go
+./scope.go
+./transport.go
+./useragent.go

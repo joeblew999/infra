@@ -1,0 +1,92 @@
+{{define "service_detail"}}
+<section class="process-detail-grid">
+  <aside class="panel processes-panel" data-datastar-keep="processes">
+    <div class="section-title">Processes</div>
+    {{template "process_list_inner" .}}
+  </aside>
+
+  <article class="panel service-detail-panel" data-datastar-keep="service-detail">
+    {{with $detail := index .Snapshot.ServiceDetails .CurrentPage}}
+    <header class="service-detail-header">
+      <h2>{{ $detail.Card.ID }}</h2>
+      <div class="pill-list">
+        <span class="pill">Status: {{ upper $detail.Card.Status }}</span>
+        <span class="pill">Health: {{ upper $detail.Card.Health }}</span>
+      </div>
+    </header>
+    <div class="service-meta">
+      <div><strong>Command</strong><span>{{ $detail.Card.Command }}</span></div>
+      {{if $detail.Card.Ports}}<div><strong>Ports</strong><span>{{ join $detail.Card.Ports ", " }}</span></div>{{end}}
+    </div>
+    <div>
+      <h3>Notes</h3>
+      <ul>
+        {{range $detail.Notes}}
+        <li>{{ . }}</li>
+        {{end}}
+      </ul>
+    </div>
+    <div>
+      <h3>Checklist</h3>
+      <ul>
+        {{range $detail.Checklist}}
+        <li>{{ . }}</li>
+        {{end}}
+      </ul>
+    </div>
+    {{else}}
+    <p>No service metadata available.</p>
+    {{end}}
+
+    {{with $proc := .CurrentProcess}}
+    {{if $proc.Runtime.ID}}
+    <div class="process-actions" data-process-actions>
+      <div class="process-action-group">
+        <button class="process-action-btn" data-process-name="{{ $proc.Runtime.ID }}" data-process-action="start" data-on-click.prevent="window.coreProcessActionHandler(evt)">Start</button>
+        <button class="process-action-btn" data-process-name="{{ $proc.Runtime.ID }}" data-process-action="stop" data-on-click.prevent="window.coreProcessActionHandler(evt)">Stop</button>
+        <button class="process-action-btn" data-process-name="{{ $proc.Runtime.ID }}" data-process-action="restart" data-on-click.prevent="window.coreProcessActionHandler(evt)">Restart</button>
+      </div>
+      {{if $proc.Scalable}}
+      <div class="process-scale" data-process-scale>
+        <label>Scale to</label>
+        <input type="number" min="0" value="{{ $proc.Runtime.Replicas }}" data-process-scale-input />
+        <button class="process-action-btn" data-process-name="{{ $proc.Runtime.ID }}" data-process-action="scale" data-on-click.prevent="window.coreProcessActionHandler(evt)">Apply</button>
+      </div>
+      {{else}}
+      <p class="process-scale-note">Local scaling disabled (strategy: {{if $proc.ScaleStrategy}}{{ $proc.ScaleStrategy }}{{else}}infra{{end}}).</p>
+      {{end}}
+    </div>
+    <p class="process-action-status" data-process-action-status>Ready.</p>
+    {{end}}
+    <div class="process-runtime">
+      <h3>Process Runtime</h3>
+      <div class="pill-list">
+        <span class="pill">Status: {{ upper $proc.Runtime.Status }}</span>
+        <span class="pill">Health: {{ upper $proc.Runtime.Health }}</span>
+        <span class="pill">Restarts: {{ $proc.Runtime.Restarts }}</span>
+        <span class="pill">Replicas: {{ $proc.Runtime.Replicas }}</span>
+      </div>
+      <dl>
+        <div><dt>Command</dt><dd>{{ $proc.Runtime.Command }}</dd></div>
+        {{if $proc.Runtime.Ports}}<div><dt>Ports</dt><dd>{{ join $proc.Runtime.Ports ", " }}</dd></div>{{end}}
+        <div><dt>Namespace</dt><dd>{{ if $proc.Runtime.Namespace }}{{ $proc.Runtime.Namespace }}{{ else }}—{{ end }}</dd></div>
+        <div><dt>Exit Code</dt><dd>{{ $proc.Runtime.ExitCode }}</dd></div>
+        <div><dt>Updated</dt><dd>{{ $proc.Runtime.UpdatedAt.Format "15:04:05" }}</dd></div>
+      </dl>
+    </div>
+    <div class="process-logs">
+      <h3>Recent Logs</h3>
+      {{if $proc.Logs.Lines}}
+      <pre>{{range $proc.Logs.Lines}}{{.}}
+{{end}}</pre>
+      {{else}}
+      <p>No logs captured yet.</p>
+      {{end}}
+      {{if $proc.Logs.Truncated}}<p class="process-logs-footnote">Log output truncated. Fetch more to view earlier lines.</p>{{end}}
+    </div>
+    {{else}}
+    <p class="process-runtime-empty">Process runtime data unavailable.</p>
+    {{end}}
+  </article>
+</section>
+{{end}}

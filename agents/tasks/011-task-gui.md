@@ -1,10 +1,3 @@
-# 011 - task gui
+# Task 011 — Task GUI
 
-the agent task are just markdown.
-
-we can have a datastar GUI that is like Github Issues with the agent/tasks being the store.
-
-this will allow us to run pkg/AI ai agents and have them update the agent/tasks and have the Web GUi update in real time. 
-
-it will mean users can see and edit taks via the Web gui.
-
+> Moved to `content/tasks/011-task-gui.md`. Use the Hugo site or read the Markdown directly.

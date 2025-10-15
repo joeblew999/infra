@@ -1,0 +1,5 @@
+./doc.go
+./image.go
+./index.go
+./mutate.go
+./rebase.go

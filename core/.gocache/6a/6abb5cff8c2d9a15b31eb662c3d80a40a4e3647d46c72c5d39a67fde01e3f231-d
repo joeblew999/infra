@@ -1,0 +1,12 @@
+./daemon.go
+./default.go
+./doc.go
+./future.go
+./kind.go
+./layout.go
+./multi.go
+./options.go
+./publish.go
+./recorder.go
+./shared.go
+./tarball.go

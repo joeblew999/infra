@@ -1,0 +1,323 @@
+{{define "core_page"}}
+<section class="core-page" id="core-page">
+  <h1>{{ .Title }}</h1>
+  {{template "navigation" .}}
+  <div class="core-content">
+    {{template "summary" .}}
+    {{if eq .CurrentPage "overview"}}
+      {{template "overview" .}}
+    {{else}}
+      {{template "service_detail" .}}
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+<!doctype html>
+<html lang="en" data-datastar>
+<head>
+  <meta charset="utf-8">
+  <title>{{ .Title }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="module" defer src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1120;
+      --panel: #111827;
+      --border: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    body { margin: 0; background: var(--bg); color: var(--text); }
+    .core-page { max-width: 1200px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+    h1 { margin: 0 0 1.5rem; font-size: 2.75rem; font-weight: 700; color: var(--accent); }
+    .core-content { display: grid; gap: 2rem; }
+    .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 1rem; padding: 1.5rem; }
+    .processes-panel { background: linear-gradient(140deg, rgba(56, 189, 248, 0.16), rgba(14, 116, 144, 0.08)); border: 1px solid rgba(56, 189, 248, 0.3); }
+    /* Navigation */
+    .core-nav { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .core-nav a { text-decoration: none; color: var(--text); border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: 999px; font-size: 0.85rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    .core-nav a.active { background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.4); color: var(--accent); }
+    /* Process list */
+    .process-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+    .process-list-item { border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 0.9rem; background: rgba(15, 23, 42, 0.65); transition: border-color 0.2s ease, background 0.2s ease; }
+    .process-list-item.active { border-color: rgba(56, 189, 248, 0.6); background: rgba(30, 64, 175, 0.25); }
+    .process-link { display: block; padding: 1rem; color: inherit; text-decoration: none; }
+    .process-link:hover { background: rgba(30, 64, 175, 0.2); border-radius: 0.9rem; }
+    .process-link-header { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.4rem; }
+    .process-name { font-size: 1.05rem; font-weight: 600; }
+    .process-status { font-size: 0.7rem; }
+    .process-link-meta { display: flex; flex-wrap: wrap; gap: 0.75rem; font-size: 0.78rem; color: var(--muted); }
+    .process-list-empty { color: var(--muted); font-size: 0.9rem; margin: 0; }
+    .process-actions { display: grid; gap: 0.75rem; align-items: center; margin-bottom: 0.75rem; }
+    .process-action-group { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+    .process-action-btn { background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 0.7rem; padding: 0.4rem 1rem; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--accent); cursor: pointer; transition: opacity 0.2s ease, background 0.2s ease; }
+    .process-action-btn:hover { background: rgba(56, 189, 248, 0.32); }
+    .process-action-btn[data-loading="true"] { opacity: 0.5; pointer-events: none; }
+    .process-action-status { font-size: 0.78rem; color: var(--muted); margin: -0.3rem 0 0.5rem; }
+    .process-scale { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; }
+    .process-scale label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .process-scale input { width: 4.5rem; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 0.6rem; padding: 0.35rem 0.6rem; color: var(--text); font-size: 0.85rem; }
+    .process-scale-note { margin: 0; font-size: 0.78rem; color: var(--muted); }
+    /* Overview components */
+    .summary { display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 1.05rem; }
+    .summary-item strong { display: block; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.4rem; }
+    .services-grid { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .service-card { background: linear-gradient(160deg, rgba(56, 189, 248, 0.12), rgba(56, 189, 248, 0.05)); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 1rem; padding: 1.5rem; }
+    .service-card h2 { margin: 0; font-size: 1.35rem; font-weight: 600; }
+    .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0 0.5rem; }
+    .badge { padding: 0.25rem 0.75rem; border-radius: 999px; background: rgba(56, 189, 248, 0.18); border: 1px solid rgba(56, 189, 248, 0.35); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+    .service-meta { display: grid; gap: 0.5rem; font-size: 0.95rem; }
+    .service-meta strong { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.75rem; }
+    .metrics ul, .tips ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+    .metrics li strong { display: block; font-size: 0.95rem; color: var(--muted); margin-bottom: 0.2rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    .metrics li span { font-size: 1.4rem; font-weight: 600; }
+    .events-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .event-form { display: flex; gap: 0.5rem; align-items: center; }
+    .event-form input { background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(148, 163, 184, 0.4); border-radius: 0.5rem; padding: 0.45rem 0.75rem; color: var(--text); font-size: 0.85rem; min-width: 220px; }
+    .event-form input::placeholder { color: var(--muted); }
+    .event-form button { background: rgba(56, 189, 248, 0.2); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 0.6rem; padding: 0.4rem 0.9rem; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.75rem; color: var(--accent); cursor: pointer; }
+    .event-form button:hover { background: rgba(56, 189, 248, 0.35); }
+    .events table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+    .events thead { text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-size: 0.75rem; }
+    .events th, .events td { padding: 0.65rem 0.5rem; border-bottom: 1px solid var(--border); }
+    .events tbody tr:last-child td { border-bottom: none; }
+    .section-title { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: var(--accent); }
+    .islands { display: grid; gap: 1rem; }
+    .island header { display: flex; align-items: baseline; gap: 0.75rem; }
+    .island h3 { margin: 0; font-size: 1.1rem; font-weight: 600; }
+    .island p { margin: 0.5rem 0 0; color: var(--muted); line-height: 1.5; }
+    .service-detail { display: grid; gap: 1.5rem; }
+    .pill-list { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .pill { border: 1px solid var(--border); border-radius: 999px; padding: 0.3rem 0.8rem; font-size: 0.8rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+    .process-detail-grid { display: grid; gap: 1.5rem; align-items: start; grid-template-columns: minmax(260px, 1fr) 2fr; }
+    .service-detail-panel h2 { margin: 0; font-size: 1.6rem; font-weight: 600; }
+    .service-detail-header { display: flex; flex-direction: column; gap: 0.75rem; }
+    .service-detail-panel .service-meta { display: grid; gap: 0.5rem; margin-top: 1rem; font-size: 0.95rem; }
+    .service-detail-panel .service-meta strong { display: block; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-size: 0.75rem; margin-bottom: 0.2rem; }
+    .process-runtime { margin-top: 1.5rem; display: grid; gap: 0.75rem; }
+    .process-runtime dl { margin: 0; display: grid; gap: 0.65rem; }
+    .process-runtime dt { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .process-runtime dd { margin: 0; font-size: 0.9rem; color: var(--text); }
+    .process-logs { margin-top: 1.5rem; }
+    .process-logs pre { margin: 0; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 0.9rem; padding: 1rem 1.2rem; font-family: "Fira Code", monospace; font-size: 0.82rem; line-height: 1.5; max-height: 320px; overflow-y: auto; color: var(--text); }
+    .process-logs-footnote { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; }
+    .process-runtime-empty { color: var(--muted); font-size: 0.9rem; margin-top: 1rem; }
+    @media (max-width: 960px) {
+      .process-detail-grid { grid-template-columns: 1fr; }
+    }
+    /* Debug pane */
+    .debug-pane { position: fixed; left: 0; right: 0; bottom: 0; padding: 1rem 1.5rem; z-index: 200; pointer-events: none; }
+    .debug-toggle { pointer-events: auto; background: rgba(56, 189, 248, 0.2); color: var(--accent); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
+    .debug-toggle:hover { background: rgba(56, 189, 248, 0.35); }
+    .debug-content { pointer-events: auto; margin-top: 0.75rem; width: 100%; max-height: 260px; overflow-y: auto; background: rgba(15, 23, 42, 0.98); border: 1px solid rgba(148, 163, 184, 0.3); border-radius: 0.9rem 0.9rem 0 0; padding: 1rem 1.25rem; box-shadow: 0 -20px 50px rgba(8, 47, 73, 0.45); }
+    .debug-content[hidden] { display: none; }
+    .debug-section { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.65rem; display: flex; align-items: baseline; gap: 0.35rem; }
+    .debug-label { display: inline-block; min-width: 80px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.72rem; }
+    .debug-events { list-style: none; margin: 0.35rem 0 0; padding: 0; font-family: "Fira Code", monospace; font-size: 0.72rem; color: var(--text); display: grid; gap: 0.4rem; }
+    .debug-events li { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 0.5rem; padding: 0.5rem 0.65rem; }
+    .debug-event-meta { font-weight: 600; color: var(--accent); margin-bottom: 0.35rem; }
+    .debug-events pre { margin: 0; white-space: pre-wrap; word-break: break-word; color: var(--text); }
+  </style>
+</head>
+<body data-debug="{{if .Debug}}true{{else}}false{{end}}" data-page="{{.CurrentPage}}">
+  {{template "core_page" .}}
+  {{if .Live}}
+  <div data-on-load.once="@get('/live?page={{urlquery .CurrentPage}}', {retryMaxCount: 1000, retryInterval: 1000, retryMaxWaitMs: 30000})" hidden></div>
+  {{end}}
+  {{if .Debug}}
+    {{template "debug_panel" .}}
+  {{end}}
+  {{if .Debug}}
+  <script type="module">
+    window.coreProcessAction = async function(name, action, extra = {}) {
+      const payload = { name, ...extra };
+      const res = await fetch(`/actions/process/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || res.statusText || 'Process action failed');
+      }
+    };
+
+    window.coreProcessActionHandler = async function(evt) {
+      evt?.preventDefault?.();
+      const btn = evt?.currentTarget;
+      if (!btn) return;
+      const { processName: name, processAction: action } = btn.dataset;
+      if (!name || !action) return;
+      const statusEl = document.querySelector('[data-process-action-status]');
+      if (statusEl) statusEl.textContent = `${action} ${name}…`;
+      btn.dataset.loading = 'true';
+      try {
+        const extra = {};
+        if (action === 'scale') {
+          const scope = btn.closest('[data-process-scale]') || btn.closest('[data-process-actions]');
+          const input = scope ? scope.querySelector('[data-process-scale-input]') : null;
+          if (input) {
+            const parsed = Number(input.value);
+            if (!Number.isNaN(parsed) && parsed >= 0) {
+              extra.count = parsed;
+            } else {
+              throw new Error('Enter a non-negative scale value');
+            }
+          }
+        }
+        await window.coreProcessAction(name, action, extra);
+        if (statusEl) statusEl.textContent = `${action} ${name} requested`;
+      } catch (err) {
+        console.error(err);
+        if (statusEl) statusEl.textContent = err.message || 'Process action failed';
+      } finally {
+        delete btn.dataset.loading;
+      }
+    };
+
+    (function () {
+      const body = document.body;
+      if (!body || body.dataset.debug !== 'true') return;
+      const pane = document.querySelector('[data-debug-pane]');
+      if (!pane) return;
+
+      const toggle = pane.querySelector('[data-debug-toggle]');
+      const panel = pane.querySelector('[data-debug-panel]');
+      const statusEl = pane.querySelector('[data-debug-status]');
+      const retriesEl = pane.querySelector('[data-debug-retries]');
+      const lastEl = pane.querySelector('[data-debug-last]');
+      const eventsEl = pane.querySelector('[data-debug-events]');
+
+      const events = [];
+      const maxEvents = 20;
+      let retries = 0;
+      let source;
+
+      if (toggle && panel) {
+        toggle.addEventListener('click', () => {
+          if (panel.hasAttribute('hidden')) {
+            panel.removeAttribute('hidden');
+          } else {
+            panel.setAttribute('hidden', '');
+          }
+        });
+      }
+
+      const page = body.dataset.page || 'overview';
+
+      const setStatus = (text) => {
+        if (statusEl) statusEl.textContent = text;
+      };
+
+      const setRetries = (count) => {
+        if (retriesEl) retriesEl.textContent = String(count);
+      };
+
+      const setLast = (text) => {
+        if (lastEl) lastEl.textContent = text || '—';
+      };
+
+      const formatDetail = (raw) => {
+        if (!raw) return '';
+        const cleaned = raw
+          .split('\n')
+          .map((line) => line.replace(/^data:\s?/, '').trimEnd())
+          .join('\n')
+          .trim();
+        if (!cleaned) return '';
+        return cleaned.length > 800 ? `${cleaned.slice(0, 800)}…` : cleaned;
+      };
+
+      const actionStatusEl = document.querySelector('[data-process-action-status]');
+
+      const renderEvents = () => {
+        if (!eventsEl) return;
+        eventsEl.innerHTML = '';
+        for (const item of events) {
+          const li = document.createElement('li');
+          const meta = document.createElement('div');
+          meta.className = 'debug-event-meta';
+          meta.textContent = `${item.time} — ${item.type}`;
+          li.appendChild(meta);
+          if (item.detail) {
+            const pre = document.createElement('pre');
+            pre.textContent = item.detail;
+            li.appendChild(pre);
+          }
+          eventsEl.appendChild(li);
+        }
+      };
+
+      const logEvent = (type, detail) => {
+        const time = new Date().toLocaleTimeString();
+        events.unshift({ time, type, detail: formatDetail(detail) });
+        if (events.length > maxEvents) events.length = maxEvents;
+        setLast(`${type} @ ${time}`);
+        renderEvents();
+      };
+
+      const connect = () => {
+        if (source) {
+          source.close();
+        }
+        setStatus('connecting…');
+        const endpoint = `/live?page=${encodeURIComponent(page)}&_debug=${Date.now()}`;
+        const es = new EventSource(endpoint);
+        source = es;
+
+        es.addEventListener('open', () => {
+          setStatus('connected');
+          if (retries !== 0) {
+            retries = 0;
+            setRetries(retries);
+          }
+          logEvent('open', 'stream established');
+        });
+
+        es.addEventListener('error', () => {
+          if (source !== es) return;
+          es.close();
+          retries += 1;
+          setRetries(retries);
+          setStatus('reconnecting…');
+          const delay = Math.min(30000, retries * 1000);
+          logEvent('error', `connection lost, retrying in ${delay / 1000}s`);
+          setTimeout(connect, delay);
+        });
+
+        es.addEventListener('datastar-patch-elements', (event) => logEvent('patch-elements', event.data));
+        es.addEventListener('datastar-patch-signals', (event) => {
+          logEvent('patch-signals', event.data);
+          const match = /^signals\s*(.*)$/.exec(event.data || '');
+          if (!match) return;
+          try {
+            const payload = JSON.parse(match[1]);
+            if (payload.recentEventsHTML) {
+              const body = document.getElementById('recent-events-body');
+              if (body) {
+                body.innerHTML = payload.recentEventsHTML;
+              }
+            }
+            if (payload.processActionStatus && actionStatusEl) {
+              actionStatusEl.textContent = payload.processActionStatus;
+            }
+          } catch (err) {
+            console.warn('parse patch-signals error', err);
+          }
+        });
+      };
+
+      setStatus('initialising…');
+      connect();
+    })();
+  </script>
+  {{end}}
+</body>
+</html>

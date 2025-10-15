@@ -1,0 +1,19 @@
+{
+  "binaries": [
+    {
+      "name": "demo-json",
+      "version": "0.0.1",
+      "source": "placeholder"
+    }
+  ],
+  "process": {
+    "command": "${dep.demo-json}",
+    "args": ["run"],
+    "env": {
+      "DEMO_MODE": "json"
+    }
+  },
+  "ports": {
+    "primary": {"port": 4040, "protocol": "http"}
+  }
+}

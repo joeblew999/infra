@@ -1,0 +1,7 @@
+./adminapi.go
+./ca.go
+./certificates.go
+./command.go
+./crypto.go
+./maintain.go
+./pki.go

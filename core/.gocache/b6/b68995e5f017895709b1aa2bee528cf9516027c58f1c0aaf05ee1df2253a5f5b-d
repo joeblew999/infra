@@ -1,0 +1,6 @@
+./doc.go
+./parse.go
+./reflect.go
+./sequence.go
+./subcommand.go
+./usage.go

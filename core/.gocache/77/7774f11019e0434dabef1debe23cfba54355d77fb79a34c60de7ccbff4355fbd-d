@@ -1,0 +1,7 @@
+./accepts.go
+./adapter.go
+./compressor.go
+./content_types.go
+./handle.go
+./prefer.go
+./response_writer.go

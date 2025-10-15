@@ -115,6 +115,14 @@ func GetFlyRegions() []string {
 	return []string{"iad", "lhr", "nrt", "syd", "fra", "sjc"}
 }
 
+// GetUsePillowHubAndSpoke returns whether to use hub-and-spoke topology (true)
+// or full mesh clustering (false) for Pillow NATS clusters on Fly.io
+func GetUsePillowHubAndSpoke() bool {
+	// Default to false (full mesh/FlyioClustering)
+	// Set NATS_PILLOW_HUB_AND_SPOKE=true to enable hub-and-spoke topology
+	return os.Getenv("NATS_PILLOW_HUB_AND_SPOKE") == "true"
+}
+
 func GetNATSClusterNodeCount() int {
 	return NATSClusterNodeCount
 }

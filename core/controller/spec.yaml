@@ -1,0 +1,45 @@
+services:
+  - id: pocketbase
+    displayName: PocketBase
+    description: Core identity datastore
+    scale:
+      strategy: infra
+      autoscale: metrics
+      cooldown: 10m
+      regions:
+        - name: iad
+          min: 1
+          desired: 2
+          max: 4
+        - name: fra
+          min: 1
+          desired: 1
+          max: 3
+    storage:
+      provider: cloudflare-r2
+      credentialsRef: secret/cloudflare/r2
+      buckets:
+        litestream: pocketbase-litestream
+        assets: pocketbase-assets
+    routing:
+      provider: cloudflare
+      zone: example.com
+      dns_records:
+        - name: pocketbase
+          type: CNAME
+          ttl: 60
+          content: pocketbase.internal.example.com
+      load_balancing:
+        strategy: latency
+  - id: worker
+    displayName: Background Worker
+    scale:
+      strategy: local
+      autoscale: metrics
+      regions:
+        - name: iad
+          min: 1
+          desired: 1
+          max: 8
+    storage:
+      provider: none

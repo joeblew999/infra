@@ -1,0 +1,23 @@
+{{define "debug_panel"}}
+<div class="debug-pane" data-debug-pane>
+  <button type="button" class="debug-toggle" data-debug-toggle>Datastar Debug</button>
+  <div class="debug-content" data-debug-panel hidden>
+    <div class="debug-section">
+      <span class="debug-label">Status:</span>
+      <span data-debug-status>idle</span>
+    </div>
+    <div class="debug-section">
+      <span class="debug-label">Retries:</span>
+      <span data-debug-retries>0</span>
+    </div>
+    <div class="debug-section">
+      <span class="debug-label">Last Event:</span>
+      <span data-debug-last>—</span>
+    </div>
+    <div class="debug-section">
+      <span class="debug-label">Events:</span>
+      <ul class="debug-events" data-debug-events></ul>
+    </div>
+  </div>
+</div>
+{{end}}

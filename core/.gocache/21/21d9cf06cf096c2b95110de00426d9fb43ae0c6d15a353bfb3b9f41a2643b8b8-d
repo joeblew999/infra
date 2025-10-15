@@ -1,0 +1,4 @@
+./binaries.go
+./composeclient.go
+./process.go
+./processcompose.go

@@ -1,0 +1,10 @@
+./client.go
+./common.go
+./logs.go
+./processes.go
+./project.go
+./restart.go
+./scale_process.go
+./start.go
+./status.go
+./stop.go

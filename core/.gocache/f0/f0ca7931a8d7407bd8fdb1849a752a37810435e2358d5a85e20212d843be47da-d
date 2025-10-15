@@ -1,0 +1,4 @@
+# test log
+getenv TMPDIR
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestTempDir4023029574/001/demo
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T

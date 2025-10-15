@@ -1,0 +1,7 @@
+./deprecation.go
+./logger.go
+./process.go
+./processcondition_string.go
+./project.go
+./project_state.go
+./restartpolicy_string.go

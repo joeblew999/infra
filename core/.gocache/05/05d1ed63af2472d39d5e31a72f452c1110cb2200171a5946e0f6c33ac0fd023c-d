@@ -1,0 +1,8 @@
+./caddyfile.go
+./client.go
+./fastcgi.go
+./header.go
+./pool.go
+./reader.go
+./record.go
+./writer.go

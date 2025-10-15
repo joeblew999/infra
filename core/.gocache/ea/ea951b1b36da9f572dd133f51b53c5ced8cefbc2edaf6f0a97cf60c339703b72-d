@@ -1,0 +1,9 @@
+./digest.go
+./image.go
+./index.go
+./options.go
+./referrers.go
+./remote.go
+./signatures.go
+./unknown.go
+./write.go

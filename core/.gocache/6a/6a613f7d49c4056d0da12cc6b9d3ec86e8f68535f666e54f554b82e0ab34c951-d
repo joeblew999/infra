@@ -1,0 +1,9 @@
+./cobra.go
+./commandfactory.go
+./commandfuncs.go
+./commands.go
+./main.go
+./packagesfuncs.go
+./removebinary.go
+./storagefuncs.go
+./x509rootsfallback.go

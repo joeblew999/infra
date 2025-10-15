@@ -1,0 +1,16 @@
+./context.go
+./doc.go
+./negotiate.go
+./not_implemented.go
+./operation.go
+./parameter.go
+./rapidoc.go
+./redoc.go
+./request.go
+./router.go
+./security.go
+./spec.go
+./swaggerui.go
+./swaggerui_oauth2.go
+./ui_options.go
+./validation.go

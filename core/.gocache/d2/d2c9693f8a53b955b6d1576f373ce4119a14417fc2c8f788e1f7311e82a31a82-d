@@ -1,0 +1,15 @@
+./activation.go
+./application_key.go
+./attest.go
+./certification.go
+./challenge.go
+./eventlog.go
+./eventlog_workarounds.go
+./secureboot.go
+./storage.go
+./tpm.go
+./tpm_fake.go
+./tpm_other.go
+./vendors.go
+./win_events.go
+./wrapped_tpm20.go

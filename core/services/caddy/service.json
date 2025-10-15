@@ -1,0 +1,39 @@
+{
+  "binaries": [
+    {
+      "name": "caddy",
+      "version": "2.10.1",
+      "source": "go-build",
+      "path": "./cmd/caddy"
+    }
+  ],
+  "process": {
+    "command": "${dep.caddy}",
+    "args": [],
+    "env": {
+      "CADDY_HOST": "0.0.0.0"
+    },
+    "compose": {
+      "availability": {
+        "restart": "always"
+      },
+      "depends_on": {
+        "pocketbase": {
+          "condition": "process_healthy"
+        }
+      },
+      "log": {
+        "max_files": 5,
+        "timestamps": true
+      }
+    }
+  },
+  "ports": {
+    "http": {"port": 2015, "protocol": "http"}
+  },
+  "config": {
+    "target": "http://127.0.0.1:8090"
+  },
+  "scalable": false,
+  "scale_strategy": "infra"
+}

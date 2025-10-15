@@ -1,0 +1,4 @@
+./caddyfile.go
+./frontmatter.go
+./templates.go
+./tplcontext.go

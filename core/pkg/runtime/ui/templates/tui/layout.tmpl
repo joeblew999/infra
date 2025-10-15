@@ -1,0 +1,14 @@
+{{define "tui"}}
+{{.Title}}
+{{repeat "=" (len .Title)}}
+
+{{template "navigation" .}}
+
+{{template "summary" .}}
+
+{{if eq .CurrentPage "overview"}}
+{{template "overview" .}}
+{{else}}
+{{template "service_detail" .}}
+{{end}}
+{{end}}

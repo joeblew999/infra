@@ -1,0 +1,10 @@
+{
+  "name": "datastarui-sampleapp",
+  "version": "0.1.0",
+  "private": true,
+  "devDependencies": {
+    "@playwright/test": "1.53.1",
+    "@tailwindcss/cli": "4.1.12",
+    "tailwindcss": "4.1.12"
+  }
+}

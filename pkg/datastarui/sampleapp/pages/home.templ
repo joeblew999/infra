@@ -1,0 +1,82 @@
+package pages
+
+import (
+    "path/filepath"
+
+    templpkg "github.com/a-h/templ"
+    "github.com/coreycole/datastarui/components/button"
+    "github.com/coreycole/datastarui/components/card"
+)
+
+templ Home() {
+    {{
+        cssPath := "/css/out.css"
+        if files, err := filepath.Glob("static/css/out.*.css"); err == nil && len(files) > 0 {
+            cssPath = "/css/" + filepath.Base(files[0])
+        }
+    }}
+    <!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="UTF-8"/>
+            <meta name="viewport" content="width=device-width, initial-scale=1"/>
+            <title>DatastarUI Sample</title>
+            <link rel="stylesheet" href={ cssPath }/>
+            <script type="module" src="https://cdn.jsdelivr.net/gh/starfederation/datastar@main/bundles/datastar.js"></script>
+        </head>
+        <body class="min-h-screen bg-background text-foreground">
+            <main class="container mx-auto flex min-h-screen flex-col gap-10 px-6 py-12">
+                <section class="space-y-3 text-center">
+                    <h1 class="text-3xl font-semibold tracking-tight">DatastarUI Sample</h1>
+                    <p class="text-muted-foreground">
+                        These pages compose shared DatastarUI components so we can prove the build + Playwright workflow from this repo.
+                    </p>
+                </section>
+                <div class="grid gap-6 md:grid-cols-2">
+                    @card.Card(card.CardArgs{Class: "shadow-sm"}) {
+                        @card.CardHeader(card.CardHeaderArgs{}) {
+                            @card.CardTitle(card.CardTitleArgs{}) { Interactive Button }
+                            @card.CardDescription(card.CardDescriptionArgs{}) {
+                                Datastar signals update the copy below as you click.
+                            }
+                        }
+                        @card.CardContent(card.CardContentArgs{Class: "space-y-3 text-center"}) {
+                            <div data-signals="{count: 0}" class="space-y-3">
+                                @button.Button(button.ButtonArgs{
+                                    Attributes: templpkg.Attributes{
+                                        "data-on-click": "$count++",
+                                        "data-testid":   "home-counter",
+                                    },
+                                }) {
+                                    Clicked <span data-text="$count">0</span> times
+                                }
+                                <p class="text-sm text-muted-foreground" data-testid="home-counter-note">
+                                    Playwright verifies that the counter increments.
+                                </p>
+                            </div>
+                        }
+                    }
+                    @card.Card(card.CardArgs{Class: "shadow-sm"}) {
+                        @card.CardHeader(card.CardHeaderArgs{}) {
+                            @card.CardTitle(card.CardTitleArgs{}) { Sample Navigation }
+                            @card.CardDescription(card.CardDescriptionArgs{}) {
+                                The dashboard shows a richer flow built from the same forked components.
+                            }
+                        }
+                        @card.CardContent(card.CardContentArgs{Class: "space-y-3"}) {
+                            <p class="text-sm text-muted-foreground">
+                                View the dashboard to try a dismissible alert and a simple support form driven by Datastar signals.
+                            </p>
+                            @button.Button(button.ButtonArgs{
+                                Variant: "outline",
+                                Attributes: templpkg.Attributes{"href": "/dashboard"},
+                            }) {
+                                Go to dashboard
+                            }
+                        }
+                    }
+                </div>
+            </main>
+        </body>
+    </html>
+}

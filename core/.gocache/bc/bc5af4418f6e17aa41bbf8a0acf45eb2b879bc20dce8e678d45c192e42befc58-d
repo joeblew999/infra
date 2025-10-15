@@ -1,0 +1,10 @@
+./api.go
+./crl.go
+./rekey.go
+./renew.go
+./revoke.go
+./sign.go
+./ssh.go
+./sshRekey.go
+./sshRenew.go
+./sshRevoke.go

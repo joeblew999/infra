@@ -1,0 +1,15 @@
+./config.go
+./convert.go
+./description.go
+./errors.go
+./generate.go
+./genqlient_directive.go
+./imports.go
+./main.go
+./names.go
+./parse.go
+./stringlist.go
+./template.go
+./types.go
+./util.go
+./validation.go

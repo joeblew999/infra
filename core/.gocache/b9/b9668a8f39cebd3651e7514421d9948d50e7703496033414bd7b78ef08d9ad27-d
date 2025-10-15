@@ -1,0 +1,3 @@
+./configadapters.go
+./httploader.go
+./load.go

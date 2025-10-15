@@ -1,0 +1,6 @@
+./deprecated_ecdsa.go
+./ecdsa.go
+./ed25519.go
+./keys.go
+./pkix.go
+./rsa.go

@@ -1,0 +1,8 @@
+./colortracker.go
+./log_observer_connector.go
+./logger_facade.go
+./logger_interface.go
+./logs_observer.go
+./nil_logger.go
+./process_log_buffer.go
+./unique_id.go

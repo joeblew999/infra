@@ -1,0 +1,31 @@
+{{define "process_list_inner"}}
+  {{if .Processes}}
+    <ul class="process-list" data-datastar-keep="process-list">
+      {{range .Processes}}
+      <li class="process-list-item{{if .Selected}} active{{end}}" data-datastar-key="{{ .ID }}">
+        <a href="?page={{urlquery .Route}}" class="process-link">
+          <div class="process-link-header">
+            <span class="process-name">{{ .Title }}</span>
+            <span class="process-status badge">{{ upper .Runtime.Status }}</span>
+          </div>
+          <div class="process-link-meta">
+            <span>Health {{ upper .Runtime.Health }}</span>
+            <span>Restarts {{ .Runtime.Restarts }}</span>
+            <span>Replicas {{ .Runtime.Replicas }}</span>
+            <span>Updated {{ .Runtime.UpdatedAt.Format "15:04:05" }}</span>
+          </div>
+        </a>
+      </li>
+      {{end}}
+    </ul>
+  {{else}}
+    <p class="process-list-empty">No processes available.</p>
+  {{end}}
+{{end}}
+
+{{define "processes_section"}}
+<section class="panel processes-panel" data-datastar-keep="processes">
+  <div class="section-title">Processes</div>
+  {{template "process_list_inner" .}}
+</section>
+{{end}}

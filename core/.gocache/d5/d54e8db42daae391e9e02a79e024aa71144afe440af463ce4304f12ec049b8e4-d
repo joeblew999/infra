@@ -1,0 +1,13 @@
+./apply.go
+./build.go
+./cache.go
+./commands.go
+./config.go
+./create.go
+./delete.go
+./publisher.go
+./resolve.go
+./resolver.go
+./root.go
+./run.go
+./version.go

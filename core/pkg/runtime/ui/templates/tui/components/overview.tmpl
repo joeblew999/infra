@@ -1,0 +1,43 @@
+{{define "overview"}}
+{{template "process_list" .}}
+
+SERVICES
+---------
+{{range .Snapshot.Services}}
+• {{printf "%-12s" .ID}} status: {{printf "%-10s" .Status}} health: {{printf "%-12s" .Health}}
+  command   {{.Command}}
+  {{- if .Description}}
+  about     {{.Description}}
+  {{- end}}
+  {{- if .Ports}}
+  ports     {{join .Ports ", "}}
+  {{- end}}
+  activity  {{.LastEvent}}
+{{end}}
+
+METRICS
+-------
+{{range .Snapshot.Metrics}}
+• {{printf "%-18s" .Label}} {{printf "%6s" .Value}}  ({{.Hint}})
+{{end}}
+
+RECENT EVENTS
+-------------
+{{range .Snapshot.Events}}
+{{.Timestamp}} {{upper .Level}} {{.Message}}
+{{end}}
+
+TIPS
+----
+{{range .Snapshot.Tips}}
+• {{.}}
+{{end}}
+
+TEXT ISLANDS
+------------
+{{range .Snapshot.TextIslands}}
+[{{upper .Locale}}] {{.Title}}
+{{.Body}}
+
+{{end}}
+{{end}}

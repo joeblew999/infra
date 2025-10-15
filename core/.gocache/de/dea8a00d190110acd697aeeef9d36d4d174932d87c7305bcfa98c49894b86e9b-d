@@ -1,0 +1,4 @@
+./clone.go
+./errors.go
+./git.go
+./info.go

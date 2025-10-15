@@ -1,0 +1,7 @@
+./Flags.go
+./color.go
+./config.go
+./files.go
+./settings.go
+./styles.go
+./themes.go

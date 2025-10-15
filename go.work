@@ -2,6 +2,10 @@ go 1.25.1
 
 use .
 
+use ./core
+
+use ./core/tooling
+
 use ./pkg/auth/example
 
 use ./pkg/caddy/example

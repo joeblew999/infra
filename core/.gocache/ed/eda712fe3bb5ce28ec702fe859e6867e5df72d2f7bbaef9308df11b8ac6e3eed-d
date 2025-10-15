@@ -1,0 +1,6 @@
+./attributes.go
+./builder.go
+./content.go
+./marshal.go
+./structs.go
+./verify.go

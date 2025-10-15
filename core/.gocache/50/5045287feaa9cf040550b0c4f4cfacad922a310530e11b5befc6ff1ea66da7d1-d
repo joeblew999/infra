@@ -1,0 +1,6 @@
+./browse.go
+./browsetplcontext.go
+./caddyfile.go
+./command.go
+./matcher.go
+./staticfiles.go

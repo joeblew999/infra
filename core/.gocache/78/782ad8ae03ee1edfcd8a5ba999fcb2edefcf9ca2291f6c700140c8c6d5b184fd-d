@@ -1,0 +1,16 @@
+./append.go
+./catalog.go
+./config.go
+./copy.go
+./delete.go
+./digest.go
+./doc.go
+./export.go
+./filemap.go
+./get.go
+./list.go
+./manifest.go
+./options.go
+./pull.go
+./push.go
+./tag.go

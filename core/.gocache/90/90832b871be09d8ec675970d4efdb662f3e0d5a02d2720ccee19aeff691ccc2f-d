@@ -1,0 +1,5 @@
+./build.go
+./filestuff.go
+./publish.go
+./selector.go
+./validate.go

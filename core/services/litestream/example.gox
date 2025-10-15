@@ -1,0 +1,139 @@
+//go:build !cgo
+
+// Package example shows how to embed PocketBase + Litestream + NATS in a single
+// no-cgo binary. It wires PocketBase (using modernc.org/sqlite) and configures
+// Litestream to replicate the PocketBase SQLite DB to S3-compatible storage.
+//
+// Notes:
+//   - Build with: `go build -tags "sqlite_omit_load_extension modernc" ./...`
+//   - Set env: LITESTREAM_ACCESS_KEY_ID / LITESTREAM_SECRET_ACCESS_KEY for S3.
+//   - Adjust S3 URL, bucket, and region via EXAMPLE_* envs below.
+//   - This uses the Litestream library API; pin a version/tag to avoid breakage.
+package example
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"time"
+
+	pb "github.com/pocketbase/pocketbase"
+	"github.com/pocketbase/pocketbase/apis"
+	"github.com/pocketbase/pocketbase/core"
+
+	// Pure-Go SQLite driver (no cgo)
+	_ "modernc.org/sqlite"
+
+	// Litestream (streaming replication for SQLite)
+	ls "github.com/benbjohnson/litestream"
+
+	// NATS client (for your infra control/metrics)
+	nats "github.com/nats-io/nats.go"
+)
+
+// Env keys with sensible defaults for local dev.
+const (
+	defaultDBDir   = "pb_data"
+	defaultDBName  = "data.db"
+	defaultS3URL   = "s3://your-bucket/pb"
+	defaultNatsURL = "nats://127.0.0.1:4222"
+)
+
+// Run boots PocketBase, starts Litestream replication of its SQLite DB to S3,
+// and establishes a NATS connection for publishing health/metrics.
+func Run() error {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
+	// ---- Resolve paths & config ----
+	dbDir := getenv("EXAMPLE_DB_DIR", defaultDBDir)
+	dbName := getenv("EXAMPLE_DB_NAME", defaultDBName)
+	dbPath := filepath.Join(dbDir, dbName)
+	if err := os.MkdirAll(dbDir, 0o755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", dbDir, err)
+	}
+
+	s3URL := getenv("EXAMPLE_S3_URL", defaultS3URL) // e.g. s3://my-bucket/pb
+
+	// ---- Start PocketBase (modernc/sqlite) ----
+	app := pb.New()
+	app.OnBeforeServe().Add(func(e *core.ServeEvent) error {
+		// Basic health endpoint for readiness checks.
+		e.Router.AddRoute(echoGET("/healthz", func(c apis.EchoContext) error { return c.String(http.StatusOK, "ok") }))
+		return nil
+	})
+
+	// Start PocketBase in a goroutine so we can wire Litestream alongside it.
+	errCh := make(chan error, 1)
+	go func() {
+		if err := app.Start(); err != nil {
+			errCh <- fmt.Errorf("pocketbase start: %w", err)
+		}
+	}()
+
+	// ---- Litestream: open DB and configure S3 replica ----
+	ldb := ls.NewDB(dbPath)
+	// Create a replica client from URL (supports s3 and many S3-compatible stores)
+	rc, err := ls.NewReplicaClientFromURL(s3URL)
+	if err != nil {
+		return fmt.Errorf("litestream replica url: %w", err)
+	}
+	replica := ls.NewReplica(ldb, rc)
+	// Optional: tune sync interval/retention; defaults are sane.
+	replica.SyncInterval = 1 * time.Second
+	ldb.Replicas = append(ldb.Replicas, replica)
+
+	// Open the litestream DB, run restore-if-needed, then start replicating.
+	if err := ldb.Open(); err != nil {
+		return fmt.Errorf("litestream open: %w", err)
+	}
+	defer func() { _ = ldb.Close() }()
+
+	// If db doesn't exist yet, try to restore the latest snapshot+WAL from S3.
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		if err := ls.Restore(ctx, ldb, rc, dbPath, nil); err != nil {
+			log.Printf("[litestream] no snapshot to restore or restore failed: %v", err)
+		}
+	}
+
+	// Start background replication.
+	go func() {
+		if err := ldb.Replicate(ctx); err != nil && ctx.Err() == nil {
+			log.Printf("[litestream] replicate error: %v", err)
+		}
+	}()
+
+	// ---- NATS connection (optional metrics/control plane) ----
+	nc, err := nats.Connect(getenv("EXAMPLE_NATS_URL", defaultNatsURL))
+	if err != nil {
+		log.Printf("[nats] connect failed: %v", err)
+	} else {
+		defer nc.Drain()
+		_ = nc.Publish("infra.pocketbase.ready", []byte("1"))
+	}
+
+	// ---- Wait for shutdown or PocketBase error ----
+	select {
+	case <-ctx.Done():
+		return nil
+	case err := <-errCh:
+		return err
+	}
+}
+
+// echoGET is a tiny helper to add GET routes without importing Echo directly.
+func echoGET(path string, h func(apis.EchoContext) error) *apis.Route {
+	return &apis.Route{Method: http.MethodGet, Path: path, Handler: h}
+}
+
+func getenv(k, def string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return def
+}

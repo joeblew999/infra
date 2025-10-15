@@ -1,0 +1,22 @@
+# test log
+getenv TMPDIR
+getenv CORE_APP_ROOT
+getenv CORE_APP_ROOT
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAll3476588111/001/.dep
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAll3476588111/001
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAll3476588111/001/.dep/alpha
+getenv CORE_APP_ROOT
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAll3476588111/001/.dep/alpha
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T
+getenv TMPDIR
+getenv CORE_APP_ROOT
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/002/alpha
+getenv CORE_APP_ROOT
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/001/.dep
+stat /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/001
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/002/alpha
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/001/.dep/alpha
+getenv CORE_APP_ROOT
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T/TestEnsureAllWithExternalPath13394773/001/.dep/alpha
+open /var/folders/pj/n3sth0z55md7lydld97r8mmh0000gn/T

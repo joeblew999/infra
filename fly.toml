@@ -1,12 +1,24 @@
-# fly.toml app configuration file generated for infra-mgmt-nameless-bird-1313 on 2025-08-07T12:57:56+08:00
-#
-# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
-#
+# Template for rendering fly.toml via core-tool config init.
+# Variables:
+#   AppName         - Fly application slug
+#   PrimaryRegion   - default deployment region
+#   KillSignal      - POSIX signal used during shutdown
+#   KillTimeout     - duration before forced stop
+#   Environment     - ordered environment variables (slice of key/value pairs)
+#   Volume          - data volume mount (Source, Destination)
+#   InternalPort    - port exposed by the container
+#   Processes       - process group names associated with services
+#   HTTPChecksPath  - path used for HTTP health checks
+#   MetricsPort     - port exposing Prometheus metrics
+#   MetricsPath     - path for metrics scraping
+#   OrgSlug         - Fly organization slug (documented for reference)
 
-app = 'infra-mgmt'
+app = 'test-core-app'
 primary_region = 'syd'
 kill_signal = 'SIGINT'
 kill_timeout = '5s'
+
+# Deploy within the personal organization by default.
 
 [experimental]
   auto_rollback = true
@@ -18,7 +30,7 @@ kill_timeout = '5s'
   PORT = '1337'
 
 [[mounts]]
-  source = 'infra_data'
+  source = 'core_data'
   destination = '/app/.data'
 
 [[services]]

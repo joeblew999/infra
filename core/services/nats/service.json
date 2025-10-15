@@ -1,0 +1,61 @@
+{
+  "binaries": [
+    {
+      "name": "nats",
+      "version": "0.1.4",
+      "source": "go-build",
+      "path": "./cmd/nats"
+    },
+    {
+      "name": "nsc",
+      "version": "2.8.5",
+      "source": "placeholder"
+    }
+  ],
+  "process": {
+    "command": "${dep.nats}",
+    "args": [],
+    "env": {
+      "PILLOW_BACKEND": "pillow",
+      "PILLOW_TOPOLOGY": "hub-spoke",
+      "PILLOW_JETSTREAM": "true",
+      "PILLOW_AUTO_SCALE": "true",
+      "NATS_DATA_DIR": "${data}/nats"
+    },
+    "compose": {
+      "availability": {
+        "restart": "always"
+      },
+      "log": {
+        "max_files": 10,
+        "max_size": "20mb"
+      }
+    }
+  },
+  "ports": {
+    "client": {"port": 4222, "protocol": "nats"},
+    "cluster": {"port": 6222, "protocol": "nats"},
+    "http": {"port": 8222, "protocol": "http"},
+    "leaf": {"port": 7422, "protocol": "nats"}
+  },
+  "config": {
+    "backend": "pillow",
+    "topology": "hub-spoke",
+    "auto_scale": true,
+    "jetstream": true,
+    "deployment": {
+      "local": {
+        "nodes": 1,
+        "mode": "embedded"
+      },
+      "production": {
+        "hub_region": "iad",
+        "leaf_regions": ["lhr", "nrt", "syd", "fra", "sjc"],
+        "min_hub_nodes": 3,
+        "leaf_nodes_per_region": 1
+      }
+    }
+  },
+  "scalable": false,
+  "scale_strategy": "infra"
+}

@@ -1,0 +1,6 @@
+./compressed.go
+./doc.go
+./image.go
+./index.go
+./uncompressed.go
+./with.go

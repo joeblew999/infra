@@ -1,0 +1,13 @@
+./build.go
+./cache.go
+./config.go
+./doc.go
+./future.go
+./gobuild.go
+./gobuilds.go
+./layer.go
+./limit.go
+./options.go
+./recorder.go
+./shared.go
+./strict.go

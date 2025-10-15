@@ -1,0 +1,9 @@
+./blob.go
+./doc.go
+./gc.go
+./image.go
+./index.go
+./layoutpath.go
+./options.go
+./read.go
+./write.go

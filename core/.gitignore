@@ -1,0 +1,27 @@
+# Core workspace ignores
+
+# Generated runtime/tooling artifacts
+.data/
+.dep/
+.logs/
+.bin/
+.tmp/
+
+# Configs rendered from templates
+.ko.yaml
+fly.toml
+
+# Local environment noise
+*.env
+*.local
+*.log
+.DS_Store
+
+# Go build outputs
+*.test
+*.out
+coverage.*
+
+# Editor/OS cruft
+.idea/
+.vscode/

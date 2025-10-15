@@ -1,0 +1,103 @@
+{{define "recent_events_body"}}
+  {{range .Snapshot.Events}}
+  <tr data-datastar-key="{{ .Timestamp }}-{{ .Message }}">
+    <td>{{ .Timestamp }}</td>
+    <td>{{ upper .Level }}</td>
+    <td>{{ .Message }}</td>
+  </tr>
+  {{end}}
+{{end}}
+
+{{define "recent_events_table"}}
+  <table id="recent-events-table">
+    <thead><tr><th>Time</th><th>Level</th><th>Message</th></tr></thead>
+    <tbody id="recent-events-body">
+      {{template "recent_events_body" .}}
+    </tbody>
+  </table>
+{{end}}
+
+{{define "recent_events_section"}}
+<section class="events panel" id="recent-events" data-datastar-id="recent-events">
+  <div class="events-header">
+    <div class="section-title">Recent Events</div>
+    <form class="event-form" data-on-submit__prevent="(async () => {
+      const input = evt.target.elements.message;
+      const message = (input.value || '').trim();
+      await fetch('/actions/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message || undefined })
+      });
+      input.value = '';
+    })()">
+      <input type="text" name="message" placeholder="Custom message (optional)" autocomplete="off" />
+      <button type="submit">Add Event</button>
+    </form>
+  </div>
+  {{template "recent_events_table" .}}
+</section>
+{{end}}
+
+{{define "overview"}}
+{{template "processes_section" .}}
+
+<section class="panel" data-datastar-keep="services">
+  <div class="section-title">Services</div>
+  <div class="services-grid">
+    {{range .Snapshot.Services}}
+    <article class="service-card">
+      <h2>{{ .ID }}</h2>
+      <div class="badges">
+        <span class="badge">{{ upper .Status }}</span>
+        <span class="badge">{{ upper .Health }}</span>
+      </div>
+      <div class="service-meta">
+        <div><strong>Command</strong><span>{{ .Command }}</span></div>
+        {{if .Ports}}<div><strong>Ports</strong><span>{{ join .Ports ", " }}</span></div>{{end}}
+        {{if .LastEvent}}<div><strong>Activity</strong><span>{{ .LastEvent }}</span></div>{{end}}
+      </div>
+      {{if .Description}}<p>{{ .Description }}</p>{{end}}
+    </article>
+    {{end}}
+  </div>
+</section>
+
+<section class="metrics panel" data-datastar-keep="metrics">
+  <div class="section-title">Metrics</div>
+  <ul>
+    {{range .Snapshot.Metrics}}
+    <li>
+      <strong>{{ .Label }}</strong>
+      <span>{{ .Value }}</span>
+      {{if .Hint}}<small>{{ .Hint }}</small>{{end}}
+    </li>
+    {{end}}
+  </ul>
+</section>
+
+{{template "recent_events_section" .}}
+
+<section class="tips panel" data-datastar-keep="tips">
+  <div class="section-title">Tips</div>
+  <ul>
+    {{range .Snapshot.Tips}}
+    <li>{{ . }}</li>
+    {{end}}
+  </ul>
+</section>
+
+{{if .Snapshot.TextIslands}}
+<section class="panel" data-datastar-keep="text-islands">
+  <div class="section-title">Text Islands</div>
+  <div class="islands">
+    {{range .Snapshot.TextIslands}}
+    <article class="island">
+      <header><span class="badge">{{ upper .Locale }}</span><h3>{{ .Title }}</h3></header>
+      <p>{{ .Body }}</p>
+    </article>
+    {{end}}
+  </div>
+</section>
+{{end}}
+{{end}}

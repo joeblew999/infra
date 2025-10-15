@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
+	"strings"
 
 	sharedcfg "github.com/joeblew999/infra/core/pkg/shared/config"
 )
@@ -106,13 +109,40 @@ func (DefaultInstaller) Ensure(spec BinarySpec) (string, error) {
 	if err := os.MkdirAll(depDir, 0o755); err != nil {
 		return "", fmt.Errorf("ensure dep dir: %w", err)
 	}
-	binaryPath := filepath.Join(depDir, spec.Name)
+	binaryName := spec.Name
+	if runtime.GOOS == "windows" && filepath.Ext(binaryName) != ".exe" {
+		binaryName += ".exe"
+	}
+	binaryPath := filepath.Join(depDir, binaryName)
 	if spec.Source == SourcePlaceholder {
 		return ensurePlaceholder(spec, binaryPath)
+	}
+	if spec.Source == SourceGoBuild {
+		return buildGoBinary(spec, binaryPath)
 	}
 	// For now, stub installers simply return the expected path. Future work will
 	// add GitHub release downloads, go-build support, etc.
 	return binaryPath, nil
+}
+
+func buildGoBinary(spec BinarySpec, dest string) (string, error) {
+	if strings.TrimSpace(spec.Path) == "" {
+		return "", errors.New("go-build source requires path to package")
+	}
+	// Remove any existing binary so go build overwrites cleanly.
+	_ = os.Remove(dest)
+	cmd := exec.Command("go", "build", "-o", dest, spec.Path)
+	cmd.Dir = sharedcfg.GetAppRoot()
+	cmd.Env = append(os.Environ(), "GO111MODULE=on")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("go build %s: %w\n%s", spec.Path, err, string(output))
+	}
+	if runtime.GOOS != "windows" {
+		if err := os.Chmod(dest, 0o755); err != nil {
+			return "", fmt.Errorf("chmod built binary: %w", err)
+		}
+	}
+	return dest, nil
 }
 
 // ResolveBinaryPath combines the dependency directory with a binary name.

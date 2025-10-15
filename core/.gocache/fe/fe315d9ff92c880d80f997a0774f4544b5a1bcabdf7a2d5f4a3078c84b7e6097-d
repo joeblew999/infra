@@ -1,0 +1,9 @@
+./analyzer.go
+./debug.go
+./doc.go
+./fixer.go
+./flatten.go
+./flatten_name.go
+./flatten_options.go
+./mixin.go
+./schema.go

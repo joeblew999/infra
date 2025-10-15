@@ -1,0 +1,18 @@
+{{define "process_list"}}
+PROCESSES
+---------
+{{if .Processes}}
+{{range .Processes}}
+{{if .Selected}}*{{else}} {{end}} {{printf "%-16s" .Title}} status: {{printf "%-10s" (upper .Runtime.Status)}} health: {{printf "%-10s" (upper .Runtime.Health)}} restarts: {{printf "%3d" .Runtime.Restarts}}
+  command: {{.Runtime.Command}}
+  {{- if .Runtime.Ports}}
+  ports  : {{join .Runtime.Ports ", "}}
+  {{- end}}
+  replicas: {{.Runtime.Replicas}}
+  updated: {{.Runtime.UpdatedAt.Format "15:04:05"}}
+{{end}}
+{{else}}
+(no processes)
+{{end}}
+
+{{end}}

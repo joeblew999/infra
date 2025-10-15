@@ -1,0 +1,5 @@
+./basicauth.go
+./caddyauth.go
+./caddyfile.go
+./command.go
+./hashes.go

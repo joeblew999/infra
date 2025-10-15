@@ -1,0 +1,8 @@
+./commands.go
+./constants.go
+./errors.go
+./open_other.go
+./pcrs.go
+./structures.go
+./tpm.go
+./verify.go

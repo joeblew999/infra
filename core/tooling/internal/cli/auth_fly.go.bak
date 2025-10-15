@@ -1,0 +1,96 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	sharedcfg "github.com/joeblew999/infra/core/pkg/shared/config"
+	"github.com/joeblew999/infra/core/tooling/pkg/auth"
+	flyprefs "github.com/joeblew999/infra/core/tooling/pkg/fly"
+	profiles "github.com/joeblew999/infra/core/tooling/pkg/profiles"
+	"github.com/joeblew999/infra/core/tooling/pkg/providers"
+)
+
+func newAuthFlyCommand(profileFlag *string) *cobra.Command {
+	var (
+		tokenInput string
+		tokenPath  string
+		noBrowser  bool
+		timeout    time.Duration
+	)
+
+	cmd := &cobra.Command{
+		Use:   "fly",
+		Short: "Cache or update the Fly API token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile, _ := profiles.ResolveProfile(strings.TrimSpace(*profileFlag))
+			path := profiles.FirstNonEmpty(tokenPath, profile.TokenPath, flyprefs.DefaultTokenPath())
+			token, err := flyprefs.LoadToken(path)
+			if err == nil {
+				if identity, _, err := auth.VerifyFlyToken(cmd.Context(), profile, token); err == nil {
+					fmt.Fprintf(cmd.OutOrStdout(), "Fly token valid for %s\n", strings.TrimSpace(identity))
+					if err := printFlyLive(cmd.Context(), cmd.OutOrStdout(), profile, strings.TrimSpace(profile.FlyApp)); err == nil {
+						return nil
+					}
+					fmt.Fprintf(cmd.ErrOrStderr(), "Fly live check failed (%v); prompting for re-auth...\n", err)
+				}
+			}
+			prompter := auth.NewIOPrompter(cmd.InOrStdin(), cmd.OutOrStdout(), noBrowser)
+			return auth.RunFlyAuth(cmd.Context(), profile, tokenInput, path, noBrowser, timeout, cmd.InOrStdin(), cmd.OutOrStdout(), prompter)
+		},
+	}
+
+	cmd.Flags().StringVar(&tokenInput, "token", "", "Fly API token (skips browser login)")
+	cmd.Flags().StringVar(&tokenPath, "path", "", "Token file override (defaults to profile path)")
+	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Do not automatically open the login URL")
+	cmd.Flags().DurationVar(&timeout, "timeout", 5*time.Minute, "Timeout for the interactive login")
+
+	cmd.AddCommand(newAuthFlyVerifyCommand(profileFlag))
+
+	return cmd
+}
+
+func newAuthFlyVerifyCommand(profileFlag *string) *cobra.Command {
+	var tokenPath string
+
+	cmd := &cobra.Command{
+		Use:   "verify",
+		Short: "Verify cached Fly token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile, _ := profiles.ResolveProfile(strings.TrimSpace(*profileFlag))
+			path := profiles.FirstNonEmpty(tokenPath, profile.TokenPath, flyprefs.DefaultTokenPath())
+			token, err := flyprefs.LoadToken(path)
+			if err != nil {
+				return fmt.Errorf("load fly token: %w", err)
+			}
+			identity, _, err := auth.VerifyFlyToken(cmd.Context(), profile, token)
+			if err != nil {
+				return fmt.Errorf("verify fly token: %w", err)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Fly token valid for %s\n", strings.TrimSpace(identity))
+			return printFlyLive(cmd.Context(), cmd.OutOrStdout(), profile, strings.TrimSpace(profile.FlyApp))
+		},
+	}
+
+	cmd.Flags().StringVar(&tokenPath, "path", "", "Token file override (defaults to profile path)")
+	return cmd
+}
+
+func printFlyLive(ctx context.Context, out io.Writer, profile sharedcfg.ToolingProfile, appName string) error {
+	appName = strings.TrimSpace(appName)
+	if appName == "" {
+		fmt.Fprintln(out, "No Fly app configured; skipped live app check.")
+		return nil
+	}
+	info, err := providers.DescribeFly(ctx, profile, appName)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Fly app %s reachable (status=%s version=%d)\n", info.AppName, info.Status, info.Version)
+	return nil
+}

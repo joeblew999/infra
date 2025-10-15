@@ -1,0 +1,58 @@
+{{define "service_detail"}}
+{{template "process_list" .}}
+
+{{with $detail := index .Snapshot.ServiceDetails .CurrentPage}}
+SERVICE DETAIL
+--------------
+service: {{$detail.Card.ID}}
+status : {{$detail.Card.Status}}  health: {{$detail.Card.Health}}
+command: {{$detail.Card.Command}}
+{{if $detail.Card.Ports}}ports  : {{join $detail.Card.Ports ", "}}
+{{end}}
+
+NOTES
+-----
+{{range $detail.Notes}}
+- {{.}}
+{{end}}
+
+CHECKLIST
+---------
+{{range $detail.Checklist}}
+• {{.}}
+{{end}}
+{{else}}
+(no detail available)
+{{end}}
+
+{{with $proc := .CurrentProcess}}
+
+PROCESS RUNTIME
+---------------
+status    : {{upper $proc.Runtime.Status}}  health: {{upper $proc.Runtime.Health}}
+restarts  : {{$proc.Runtime.Restarts}}  exit: {{$proc.Runtime.ExitCode}}
+namespace : {{$proc.Runtime.Namespace}}
+replicas  : {{$proc.Runtime.Replicas}}
+scalable  : {{if $proc.Scalable}}yes{{else}}no{{end}} ({{if $proc.ScaleStrategy}}{{$proc.ScaleStrategy}}{{else}}unknown{{end}})
+updated   : {{$proc.Runtime.UpdatedAt.Format "15:04:05"}}
+command   : {{$proc.Runtime.Command}}
+{{if $proc.Runtime.Ports}}ports    : {{join $proc.Runtime.Ports ", "}}
+{{end}}
+
+LOG TAIL
+--------
+{{if $proc.Logs.Lines}}
+{{range $proc.Logs.Lines}}
+{{.}}
+{{end}}
+{{else}}
+(no logs captured)
+{{end}}
+{{if $proc.Logs.Truncated}}(logs truncated — fetch more to view earlier lines)
+{{end}}
+
+{{else}}
+(no process runtime data available)
+{{end}}
+
+{{end}}

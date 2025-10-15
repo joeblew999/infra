@@ -1,0 +1,4 @@
+./clone.go
+./navigation.go
+./snapshot.go
+./testdata.go

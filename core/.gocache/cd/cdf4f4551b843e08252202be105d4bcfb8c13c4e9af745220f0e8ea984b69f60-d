@@ -1,0 +1,9 @@
+./admin.pb.go
+./config.pb.go
+./context.go
+./eab.pb.go
+./majordomo.pb.go
+./majordomo_grpc.pb.go
+./policy.go
+./policy.pb.go
+./provisioners.pb.go

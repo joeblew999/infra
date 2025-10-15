@@ -1,0 +1,8 @@
+./doc.go
+./errors.go
+./file.go
+./image.go
+./index.go
+./interface.go
+./mediatypes.go
+./signatures.go

@@ -1,0 +1,7 @@
+./adapter.go
+./dispenser.go
+./formatter.go
+./importargs.go
+./importgraph.go
+./lexer.go
+./parse.go

@@ -1,0 +1,142 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"strings"
+
+	"github.com/spf13/cobra"
+
+	sharedcfg "github.com/joeblew999/infra/core/pkg/shared/config"
+	"github.com/joeblew999/infra/core/tooling/pkg/auth"
+	cloudflareprefs "github.com/joeblew999/infra/core/tooling/pkg/cloudflare"
+	profiles "github.com/joeblew999/infra/core/tooling/pkg/profiles"
+	"github.com/joeblew999/infra/core/tooling/pkg/providers"
+)
+
+func newAuthCloudflareCommand(profileFlag *string) *cobra.Command {
+	var (
+		tokenInput string
+		tokenPath  string
+		noBrowser  bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "cloudflare",
+		Short: "Cache or update the Cloudflare API token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile, _ := profiles.ResolveProfile(strings.TrimSpace(*profileFlag))
+			path := profiles.FirstNonEmpty(tokenPath, profile.CloudflareTokenPath, cloudflareprefs.DefaultTokenPath())
+			token, err := cloudflareprefs.LoadToken(path)
+			if err == nil {
+				if body, _, err := auth.VerifyCloudflareToken(cmd.Context(), token); err == nil {
+					fmt.Fprintf(cmd.OutOrStdout(), "Cloudflare token status: %s\n", strings.TrimSpace(body.Status))
+					settings, serr := cloudflareprefs.LoadSettings()
+					if serr == nil {
+						if err := printCloudflareLive(cmd.Context(), cmd.OutOrStdout(), profile, settings, strings.TrimSpace(profile.FlyApp)); err == nil {
+							return nil
+						}
+						fmt.Fprintf(cmd.ErrOrStderr(), "Cloudflare live check failed (%v); prompting for re-auth...\n", err)
+					} else {
+						fmt.Fprintf(cmd.ErrOrStderr(), "Cloudflare settings missing (%v); prompting for re-auth...\n", serr)
+					}
+				}
+			}
+			prompter := auth.NewIOPrompter(cmd.InOrStdin(), cmd.OutOrStdout(), noBrowser)
+			return auth.RunCloudflareAuth(cmd.Context(), profile, tokenInput, path, noBrowser, cmd.InOrStdin(), cmd.OutOrStdout(), prompter)
+		},
+	}
+
+	cmd.Flags().StringVar(&tokenInput, "token", "", "Cloudflare API token (skips prompt)")
+	cmd.Flags().StringVar(&tokenPath, "path", "", "Token file override (defaults to profile path)")
+	cmd.Flags().BoolVar(&noBrowser, "no-browser", false, "Print the token URL instead of opening a browser")
+
+	cmd.AddCommand(newAuthCloudflareVerifyCommand(profileFlag))
+	cmd.AddCommand(newAuthCloudflareBootstrapCommand(profileFlag))
+
+	return cmd
+}
+
+func newAuthCloudflareVerifyCommand(profileFlag *string) *cobra.Command {
+	var tokenPath string
+
+	cmd := &cobra.Command{
+		Use:   "verify",
+		Short: "Verify cached Cloudflare token",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile, _ := profiles.ResolveProfile(strings.TrimSpace(*profileFlag))
+			path := profiles.FirstNonEmpty(tokenPath, profile.CloudflareTokenPath, cloudflareprefs.DefaultTokenPath())
+			token, err := cloudflareprefs.LoadToken(path)
+			if err != nil {
+				return fmt.Errorf("load cloudflare token: %w", err)
+			}
+			body, _, err := auth.VerifyCloudflareToken(cmd.Context(), token)
+			if err != nil {
+				return fmt.Errorf("verify cloudflare token: %w", err)
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Cloudflare token status: %s\n", strings.TrimSpace(body.Status))
+			settings, err := cloudflareprefs.LoadSettings()
+			if err != nil {
+				return fmt.Errorf("load cloudflare settings: %w", err)
+			}
+			return printCloudflareLive(cmd.Context(), cmd.OutOrStdout(), profile, settings, strings.TrimSpace(profile.FlyApp))
+		},
+	}
+
+	cmd.Flags().StringVar(&tokenPath, "path", "", "Token file override (defaults to profile path)")
+	return cmd
+}
+
+func newAuthCloudflareBootstrapCommand(profileFlag *string) *cobra.Command {
+	var (
+		email     string
+		apiKey    string
+		tokenName string
+		tokenPath string
+		includeR2 bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "bootstrap",
+		Short: "Create a scoped Cloudflare token using a global API key",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile, _ := profiles.ResolveProfile(strings.TrimSpace(*profileFlag))
+			options := auth.BootstrapOptions{
+				Email:        strings.TrimSpace(email),
+				GlobalAPIKey: strings.TrimSpace(apiKey),
+				TokenName:    strings.TrimSpace(tokenName),
+				IncludeR2:    includeR2,
+				TokenPath:    strings.TrimSpace(tokenPath),
+			}
+			prompter := auth.NewIOPrompter(cmd.InOrStdin(), cmd.OutOrStdout(), false)
+			return auth.RunCloudflareBootstrap(cmd.Context(), profile, options, cmd.InOrStdin(), cmd.OutOrStdout(), prompter)
+		},
+	}
+
+	cmd.Flags().StringVar(&email, "email", "", "Cloudflare account email (defaults to prompt)")
+	cmd.Flags().StringVar(&apiKey, "global-key", "", "Cloudflare global API key (defaults to prompt)")
+	cmd.Flags().StringVar(&tokenName, "token-name", "", "Name for the generated API token")
+	cmd.Flags().StringVar(&tokenPath, "path", "", "Token file override (defaults to profile path)")
+	cmd.Flags().BoolVar(&includeR2, "include-r2", false, "Request R2 permissions in the generated token")
+	return cmd
+}
+
+func printCloudflareLive(ctx context.Context, out io.Writer, profile sharedcfg.ToolingProfile, settings cloudflareprefs.Settings, appName string) error {
+	if strings.TrimSpace(settings.ZoneName) == "" {
+		fmt.Fprintln(out, "No Cloudflare zone configured; skipped live check.")
+		return nil
+	}
+	info, err := providers.DescribeCloudflare(ctx, profile, settings, strings.TrimSpace(appName))
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Cloudflare zone %s reachable\n", info.ZoneName)
+	if info.Hostname != "" {
+		fmt.Fprintf(out, "  Hostname %s -> %s (proxied=%t, ttl=%d)\n", info.Hostname, info.Target, info.Proxied, info.TTL)
+	}
+	if info.Bucket != "" {
+		fmt.Fprintf(out, "  R2 bucket %s (region=%s) accessible\n", info.Bucket, info.BucketRegion)
+	}
+	return nil
+}

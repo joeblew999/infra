@@ -1,0 +1,44 @@
+processes:
+    caddy:
+        availability:
+            restart: always
+        command: .dep/caddy
+        depends_on:
+            pocketbase:
+                condition: process_healthy
+        environment:
+            - CADDY_HOST=0.0.0.0
+        log:
+            max_files: 5
+            timestamps: true
+        working_dir: .
+    nats:
+        availability:
+            restart: always
+        command: .dep/nats
+        environment:
+            - NATS_DATA_DIR=.data/nats
+            - PILLOW_AUTO_SCALE=true
+            - PILLOW_BACKEND=pillow
+            - PILLOW_JETSTREAM=true
+            - PILLOW_TOPOLOGY=hub-spoke
+        log:
+            max_files: 10
+            max_size: 20mb
+        working_dir: .
+    pocketbase:
+        availability:
+            restart: always
+        command: .dep/pocketbase
+        depends_on:
+            nats:
+                condition: process_healthy
+        environment:
+            - POCKETBASE_DIR=.data/pocketbase
+        readiness_probe:
+            http_get:
+                url: http://127.0.0.1:8090/api/health
+            interval: 5s
+            timeout: 5s
+        working_dir: .
+version: "0.5"

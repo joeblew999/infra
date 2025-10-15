@@ -1,0 +1,80 @@
+# Template for rendering fly.toml via core-tool config init.
+# Variables:
+#   AppName         - Fly application slug
+#   PrimaryRegion   - default deployment region
+#   KillSignal      - POSIX signal used during shutdown
+#   KillTimeout     - duration before forced stop
+#   Environment     - ordered environment variables (slice of key/value pairs)
+#   Volume          - data volume mount (Source, Destination)
+#   InternalPort    - port exposed by the container
+#   Processes       - process group names associated with services
+#   HTTPChecksPath  - path used for HTTP health checks
+#   MetricsPort     - port exposing Prometheus metrics
+#   MetricsPath     - path for metrics scraping
+#   OrgSlug         - Fly organization slug (documented for reference)
+
+app = '{{ .AppName }}'
+primary_region = '{{ .PrimaryRegion }}'
+kill_signal = '{{ .KillSignal }}'
+kill_timeout = '{{ .KillTimeout }}'
+
+# Deploy within the {{ .OrgSlug }} organization by default.
+
+[experimental]
+  auto_rollback = true
+
+[build]
+
+[env]
+{{- range .Environment }}
+  {{ .Key }} = '{{ .Value }}'
+{{- end }}
+
+[[mounts]]
+  source = '{{ .Volume.Source }}'
+  destination = '{{ .Volume.Destination }}'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = {{ .InternalPort }}
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = [{{- range $idx, $proc := .Processes }}{{ if $idx }}, {{ end }}'{{ $proc }}'{{ end }}]
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ['http', 'tls']
+
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 1000
+    soft_limit = 1000
+
+  [[services.tcp_checks]]
+    interval = '15s'
+    timeout = '2s'
+    grace_period = '1s'
+
+  [[services.http_checks]]
+    interval = '10s'
+    timeout = '2s'
+    grace_period = '5s'
+    method = 'get'
+    path = '{{ .HTTPChecksPath }}'
+    protocol = 'http'
+    tls_skip_verify = false
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+[[metrics]]
+  port = {{ .MetricsPort }}
+  path = '{{ .MetricsPath }}'

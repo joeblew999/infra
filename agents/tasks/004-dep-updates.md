@@ -1,10 +1,3 @@
-# 004 dep updates
+# Task 004 — dep Updates Convenience
 
-need a way to check for new versions off binaries off github.
-
-i think we have have this already ?
-
-we code gen after we update dep.json.
-
-I just think its a nice convenience feasture, because once its done, we can then run the whole system with new binaries are see things pass or fail. its a quick way !
-
+> Moved to `content/tasks/004-dep-updates.md`. Use the Hugo site or read the Markdown directly.

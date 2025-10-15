@@ -1,11 +1,3 @@
-# Datastar
+# Datastar Backend Agent Guide
 
-docs: https://data-star.dev/reference/attributes
-
-sdk: https://github.com/starfederation/datastar-go
-
-examples: https://github.com/starfederation/datastar-go/network/dependents
-
-
-
-
+> Moved to `content/agents/datastar/index.md`. Use the Hugo site or read the Markdown directly.

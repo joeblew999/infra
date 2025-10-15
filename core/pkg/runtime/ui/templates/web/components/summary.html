@@ -1,0 +1,8 @@
+{{define "summary"}}
+<div class="summary panel" data-datastar-keep="summary">
+  <div class="summary-item"><strong>Build</strong><span>{{ .BuildSummary }}</span></div>
+  <div class="summary-item"><strong>Environment</strong><span>{{ .Snapshot.Environment }}</span></div>
+  <div class="summary-item"><strong>Data Dir</strong><span>{{ .Snapshot.DataDir }}</span></div>
+  <div class="summary-item"><strong>Generated</strong><span>{{ .Generated }}</span></div>
+</div>
+{{end}}

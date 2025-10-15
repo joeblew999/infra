@@ -1,0 +1,6 @@
+baseURL = "http://localhost:1414/"
+languageCode = "en-us"
+title = "Agents Docs Sandbox"
+
+[params]
+sourceDir = "content/agents"

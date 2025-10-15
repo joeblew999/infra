@@ -1,0 +1,6 @@
+./blobs.go
+./blobs_disk.go
+./error.go
+./manifest.go
+./registry.go
+./tls.go

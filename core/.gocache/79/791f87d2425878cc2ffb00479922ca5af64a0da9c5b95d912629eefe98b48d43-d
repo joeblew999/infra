@@ -1,0 +1,10 @@
+./config.go
+./doc.go
+./hash.go
+./image.go
+./index.go
+./layer.go
+./manifest.go
+./platform.go
+./progress.go
+./zz_deepcopy_generated.go
