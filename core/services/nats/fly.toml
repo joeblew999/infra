@@ -1,0 +1,63 @@
+# Fly.io configuration for NATS service with Pillow clustering
+app = 'infra-nats-iad'
+primary_region = 'iad'
+kill_signal = 'SIGINT'
+kill_timeout = '10s'
+
+[experimental]
+  auto_rollback = true
+
+[build]
+  # Built with ko by tooling/core-tool
+
+[env]
+  CORE_ENVIRONMENT = 'production'
+  NATS_PILLOW_HUB_AND_SPOKE = 'false'  # Use mesh clustering
+
+[[mounts]]
+  source = 'nats_data'
+  destination = '/app/.data'
+  initial_size = '10GB'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 4222
+  auto_stop_machines = false  # Keep NATS always running
+  auto_start_machines = true
+  min_machines_running = 1
+
+  # NATS Client port
+  [[services.ports]]
+    port = 4222
+    handlers = []
+
+  # NATS Cluster port
+  [[services.ports]]
+    port = 6222
+    handlers = []
+
+  # NATS HTTP monitoring
+  [[services.ports]]
+    port = 8222
+    handlers = ['http']
+
+  # NATS Leaf node port
+  [[services.ports]]
+    port = 7422
+    handlers = []
+
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 10000
+    soft_limit = 5000
+
+  [[services.tcp_checks]]
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    port = 4222
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1

@@ -1,0 +1,61 @@
+# Fly.io configuration for PocketBase service with Datastar auth
+app = 'infra-pocketbase-iad'
+primary_region = 'iad'
+kill_signal = 'SIGINT'
+kill_timeout = '10s'
+
+[experimental]
+  auto_rollback = true
+
+[build]
+  # Built with ko by tooling/core-tool
+
+[env]
+  CORE_ENVIRONMENT = 'production'
+  CORE_POCKETBASE_APP_URL = 'https://infra-pocketbase-iad.fly.dev'
+  PB_REPLICATION_URL = 'nats://infra-nats-iad.internal:4222'
+
+[[mounts]]
+  source = 'pocketbase_data'
+  destination = '/app/.data'
+  initial_size = '10GB'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8090
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ['http', 'tls']
+
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 1000
+    soft_limit = 500
+
+  [[services.tcp_checks]]
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    port = 8090
+
+  [[services.http_checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'get'
+    path = '/api/health'
+    protocol = 'http'
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
