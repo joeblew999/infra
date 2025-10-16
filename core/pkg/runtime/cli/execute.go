@@ -130,6 +130,13 @@ func newTUICommand() *cobra.Command {
 			store := live.NewStore(snapshot)
 			store.StartComposeSync(cmd.Context(), port, 2*time.Second)
 			store.StartControllerStream(cmd.Context(), controller, 3*time.Second)
+
+			// Start observability event stream
+			if err := store.StartEventStream(cmd.Context(), "nats://127.0.0.1:4222"); err != nil {
+				// Don't fail TUI startup if event stream fails, just warn
+				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to start event stream: %v\n", err)
+			}
+
 			return runtimeuitui.Run(cmd.Context(), cmd.OutOrStdout(), page, store)
 		},
 	}
@@ -172,6 +179,12 @@ func newWebCommand() *cobra.Command {
 				store := live.NewStore(snapshot)
 				store.StartComposeSync(cmd.Context(), port, 2*time.Second)
 				store.StartControllerStream(cmd.Context(), controller, 3*time.Second)
+
+				// Start observability event stream
+				if err := store.StartEventStream(cmd.Context(), "nats://127.0.0.1:4222"); err != nil {
+					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to start event stream: %v\n", err)
+				}
+
 				opts.Store = store
 			}
 
