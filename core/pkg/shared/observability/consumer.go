@@ -94,7 +94,7 @@ func (c *Consumer) Subscribe(pattern string, handler func(Event) error) error {
 		}
 
 		msg.Ack() // Acknowledge successful processing
-	}, nats.Durable("core-event-consumer"), nats.DeliverNew())
+	}, nats.DeliverNew()) // Ephemeral consumer - no durable name needed for watch CLI
 
 	if err != nil {
 		return fmt.Errorf("subscribe to %s: %w", pattern, err)
