@@ -43,3 +43,51 @@ jobs:
       run: |
         # Test that stack doctor command works (may fail if stack not running, that's ok)
         go run ./cmd/core stack doctor --verbose || echo "⚠️  Stack doctor checks completed with warnings (expected in CI)"
+
+  # Deployment job - only runs on main branch push
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    # Deployment environment (configure in GitHub repo settings)
+    environment:
+      name: production
+      url: https://core-v2.fly.dev
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Deploy to Fly.io
+      env:
+        FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      working-directory: ./core
+      run: |
+        # Use core CLI deploy command for non-interactive deployment
+        go run ./cmd/core deploy --app core-v2 --region syd
+
+    - name: Verify Deployment
+      run: |
+        # Wait for deployment to stabilize
+        sleep 30
+
+        # Check deployed app health
+        curl -f https://core-v2.fly.dev/api/health || {
+          echo "❌ Health check failed"
+          exit 1
+        }
+
+        echo "✅ Deployment successful and healthy"
+
+    - name: Notify Deployment Status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "🚀 Deployment to production successful"
+        else
+          echo "❌ Deployment to production failed"
+        fi
