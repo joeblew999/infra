@@ -76,6 +76,7 @@ are still being wired in.
 		newTUICommand(),
 		newWebCommand(),
 		newVersionCommand(),
+		newDeployCommand(),
 	)
 	return cmd
 }
