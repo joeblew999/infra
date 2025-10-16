@@ -7,7 +7,7 @@ replace github.com/joeblew999/infra => ../../../
 require (
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/joeblew999/infra v0.0.0-00010101000000-000000000000
-	github.com/nats-io/nats.go v1.45.0
+	github.com/nats-io/nats.go v1.46.1
 )
 
 require (
