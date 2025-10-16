@@ -105,7 +105,14 @@ func ExecuteCompose(ctx context.Context, appRoot string, args ...string) error {
 	cmdArgs = append(cmdArgs, command)
 	cmdArgs = append(cmdArgs, tail...)
 
-	cmd := exec.CommandContext(ctx, composeBinPath, cmdArgs...)
+	// For "up" command, don't use CommandContext so process-compose runs independently
+	// For other commands (down, status, etc.), use context for proper cancellation
+	var cmd *exec.Cmd
+	if command == "up" {
+		cmd = exec.Command(composeBinPath, cmdArgs...)
+	} else {
+		cmd = exec.CommandContext(ctx, composeBinPath, cmdArgs...)
+	}
 	if appRoot != "" {
 		cmd.Dir = appRoot
 	}

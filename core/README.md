@@ -8,8 +8,14 @@ A deterministic, event-driven orchestration system for running distributed servi
 # Start the complete stack (NATS, PocketBase, Caddy)
 go run . stack up
 
+# Or run in background/detached mode
+go run . stack up --detach
+# or
+go run . stack up -d
+
 # Or use make
-make run
+make run                # Foreground (blocks terminal)
+make run-detached       # Background (returns immediately)
 
 # Check status
 go run . stack status
@@ -59,7 +65,9 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for service configuration details
 
 ### Stack Management
 ```bash
-go run . stack up              # Start all services
+go run . stack up              # Start all services (foreground, blocks terminal)
+go run . stack up --detach     # Start all services in background (detached)
+go run . stack up -d           # Short form of --detach
 go run . stack down            # Stop all services
 go run . stack status          # Show service status
 ```

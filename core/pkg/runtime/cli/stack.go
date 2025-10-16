@@ -11,13 +11,16 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/joeblew999/infra/core/pkg/observability/events"
 	runtimecfg "github.com/joeblew999/infra/core/pkg/runtime/config"
 	"github.com/joeblew999/infra/core/pkg/runtime/process"
 	caddyservice "github.com/joeblew999/infra/core/services/caddy"
@@ -40,6 +43,7 @@ func newStackCommand() *cobra.Command {
 	cmd.AddCommand(newStackProcessCommand())
 	cmd.AddCommand(newStackProjectCommand())
 	cmd.AddCommand(newStackReloadCommand())
+	cmd.AddCommand(newStackObserveCommand())
 	return cmd
 }
 
@@ -399,7 +403,7 @@ func stackDoctorRun(cmd *cobra.Command, args []string) error {
 	}
 
 	// Summary
-	fmt.Fprintln(out, "\n" + strings.Repeat("━", 60))
+	fmt.Fprintln(out, "\n"+strings.Repeat("━", 60))
 	if issues == 0 && warnings == 0 {
 		fmt.Fprintln(out, "✅ All checks passed! Stack is healthy.")
 	} else {
@@ -1169,3 +1173,188 @@ func getStackPorts() ([]int, error) {
 }
 
 const composeStatusMode = "process-compose"
+
+func newStackObserveCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "observe",
+		Short: "Process observability and event streaming",
+		Long: `Monitor process-compose events and stream them to NATS JetStream.
+
+The observe command provides real-time visibility into process lifecycle events
+including starts, stops, crashes, restarts, and health changes.`,
+	}
+
+	cmd.AddCommand(newStackObserveAdapterCommand())
+	cmd.AddCommand(newStackObserveWatchCommand())
+
+	return cmd
+}
+
+func newStackObserveAdapterCommand() *cobra.Command {
+	var (
+		composePort  int
+		natsURL      string
+		pollInterval time.Duration
+	)
+
+	cmd := &cobra.Command{
+		Use:   "adapter",
+		Short: "Run the event adapter (polls process-compose and publishes to NATS)",
+		Long: `The event adapter continuously polls process-compose for state changes
+and publishes lifecycle events to NATS JetStream.
+
+Events are published to subjects like:
+  core.process.{name}.started
+  core.process.{name}.crashed
+  core.process.{name}.healthy
+
+Run this adapter in the background to enable real-time process monitoring.`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			adapter, err := events.NewAdapter(events.Config{
+				ComposePort:  composePort,
+				NATSURL:      natsURL,
+				PollInterval: pollInterval,
+			})
+			if err != nil {
+				return fmt.Errorf("create adapter: %w", err)
+			}
+
+			if err := adapter.Start(); err != nil {
+				return fmt.Errorf("start adapter: %w", err)
+			}
+
+			fmt.Fprintln(cmd.OutOrStdout(), "Event adapter running...")
+			fmt.Fprintf(cmd.OutOrStdout(), "  Process Compose: http://127.0.0.1:%d\n", composePort)
+			fmt.Fprintf(cmd.OutOrStdout(), "  NATS: %s\n", natsURL)
+			fmt.Fprintf(cmd.OutOrStdout(), "  Poll interval: %s\n", pollInterval)
+			fmt.Fprintln(cmd.OutOrStdout(), "\nPress Ctrl+C to stop")
+
+			// Wait for interrupt
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+			<-sigCh
+
+			fmt.Fprintln(cmd.OutOrStdout(), "\nStopping adapter...")
+			return adapter.Stop()
+		},
+	}
+
+	cmd.Flags().IntVar(&composePort, "compose-port", 28081, "Process Compose API port")
+	cmd.Flags().StringVar(&natsURL, "nats-url", "nats://127.0.0.1:4222", "NATS server URL")
+	cmd.Flags().DurationVar(&pollInterval, "poll-interval", 2*time.Second, "How often to poll for state changes")
+
+	return cmd
+}
+
+func newStackObserveWatchCommand() *cobra.Command {
+	var (
+		natsURL    string
+		process    string
+		eventType  string
+		jsonOutput bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "watch",
+		Short: "Watch process events in real-time",
+		Long: `Subscribe to process events from NATS and display them in real-time.
+
+Examples:
+  # Watch all events
+  core stack observe watch
+
+  # Watch events for a specific process
+  core stack observe watch --process nats
+
+  # Watch only crash events
+  core stack observe watch --type crashed
+
+  # Watch crashes for specific process
+  core stack observe watch --process pocketbase --type crashed`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			consumer, err := events.NewConsumer(natsURL)
+			if err != nil {
+				return fmt.Errorf("create consumer: %w", err)
+			}
+			defer consumer.Close()
+
+			if err := consumer.Connect(); err != nil {
+				return fmt.Errorf("connect: %w", err)
+			}
+
+			// Build subscription pattern
+			var pattern string
+			if process != "" && eventType != "" {
+				pattern = events.SubjectPattern(
+					events.ForProcessAndType(process, events.EventType(eventType)),
+				)
+			} else if process != "" {
+				pattern = events.SubjectPattern(events.ForProcess(process))
+			} else if eventType != "" {
+				pattern = events.SubjectPattern(events.ForEventType(events.EventType(eventType)))
+			} else {
+				pattern = events.SubjectPattern(events.AllEvents())
+			}
+
+			fmt.Fprintf(cmd.OutOrStdout(), "Watching events: %s\n", pattern)
+			fmt.Fprintln(cmd.OutOrStdout(), "Press Ctrl+C to stop\n")
+
+			// Subscribe with handler
+			handler := func(evt events.Event) error {
+				if jsonOutput {
+					// JSON output
+					data, _ := evt.MarshalJSON()
+					fmt.Fprintln(cmd.OutOrStdout(), string(data))
+				} else {
+					// Human-readable output with timestamp and severity
+					timestamp := evt.Timestamp.Format("15:04:05.000")
+					severity := evt.Severity()
+					icon := severityIcon(severity)
+					fmt.Fprintf(cmd.OutOrStdout(), "%s %s %s\n", timestamp, icon, evt.String())
+				}
+				return nil
+			}
+
+			if err := consumer.Subscribe(pattern, handler); err != nil {
+				return fmt.Errorf("subscribe: %w", err)
+			}
+
+			// Wait for interrupt
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+
+			sigCh := make(chan os.Signal, 1)
+			signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+			select {
+			case <-sigCh:
+				fmt.Fprintln(cmd.OutOrStdout(), "\nStopping...")
+			case <-ctx.Done():
+			}
+
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&natsURL, "nats-url", "nats://127.0.0.1:4222", "NATS server URL")
+	cmd.Flags().StringVarP(&process, "process", "p", "", "Filter by process name")
+	cmd.Flags().StringVarP(&eventType, "type", "t", "", "Filter by event type (started, stopped, crashed, healthy, unhealthy)")
+	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output events as JSON")
+
+	return cmd
+}
+
+func severityIcon(severity events.Severity) string {
+	switch severity {
+	case events.SeverityError:
+		return "❌"
+	case events.SeverityWarning:
+		return "⚠️ "
+	case events.SeverityInfo:
+		return "ℹ️ "
+	case events.SeverityDebug:
+		return "🐛"
+	default:
+		return "  "
+	}
+}

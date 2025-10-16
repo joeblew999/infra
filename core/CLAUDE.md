@@ -1,5 +1,27 @@
 # CLAUDE.md
 
+## ⚠️ CRITICAL: Username is joeblew999 (THREE 9s)
+
+**NEVER use `joeblew99` (two 9s) in import paths!**
+
+The correct GitHub username and Go module path is:
+- ✅ `github.com/joeblew999/infra/core`
+- ✅ `github.com/joeblew999/infra/core/pkg/observability/events`
+- ❌ `github.com/joeblew99/...` (WRONG - will cause build failures)
+
+**Why This Matters**:
+- Go module resolution fails with the wrong username
+- Imports won't resolve: `no required module provides package`
+- Time wasted debugging phantom module issues
+
+**Check Before Committing**:
+```bash
+# Find any incorrect imports
+grep -r "joeblew99" --include="*.go" .
+
+# Should return nothing!
+```
+
 ## Agent Guides
 
 Use the AGENTS.md at `/Users/apple/workspace/go/src/github.com/joeblew999/infra/agents/AGENTS.md`, following everything it says and its links.

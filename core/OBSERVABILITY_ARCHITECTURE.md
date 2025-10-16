@@ -1,568 +1,226 @@
 # Process-Compose Event Observability Architecture
 
-**Status**: Design Phase
-**Date**: 2025-10-15
-**Version**: 1.0
+**Status**: Phase 1 Implemented ✅
+**Date**: 2025-10-16
+**Version**: 2.0 (Polling-Based, No WebSockets)
 
-## Research Findings
+## Design Principles
 
-### Process-Compose Capabilities (v1.64.1)
+1. **Polling-based state detection** - No WebSocket streaming to clients
+2. **NATS pub/sub for event distribution** - Decoupled, scalable event delivery
+3. **Simple, reliable, observable** - Easy to understand and debug
+4. **Integrates with existing control plane** - Works with `stack process` commands
 
-After examining the process-compose source code, we have:
+## Architecture Overview
 
-✅ **WebSocket Support** (`/process/logs/ws`)
-- Real-time log streaming
-- Multiple process subscription
-- Follow mode for continuous streaming
-- Offset support for historical logs
-
-✅ **REST API Endpoints**:
 ```
-GET  /processes              → All process states
-GET  /process/:name          → Single process state
-GET  /project/state          → Project-wide state
-GET  /process/logs/:name     → Historical logs
-POST /process/start/:name    → Start process
-PATCH /process/stop/:name    → Stop process
-POST /process/restart/:name  → Restart process
+┌─────────────────────────────────────────────────────────────────┐
+│                    Process-Compose REST API                     │
+│                      GET /processes (poll)                      │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │
+                                 │ HTTP Poll (every 2s)
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event Adapter Service                        │
+│  1. Poll /processes endpoint                                    │
+│  2. Diff current vs previous state                              │
+│  3. Detect state transitions (started/stopped/crashed/healthy)  │
+│  4. Publish events to NATS JetStream                            │
+└────────────────────────────────┬────────────────────────────────┘
+                                 │
+                                 │ NATS Pub/Sub
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   NATS JetStream (Message Broker)               │
+│  Stream: PROCESS_EVENTS                                         │
+│  Subjects: core.process.{namespace}.{name}.{event_type}         │
+│  Retention: 24 hours                                            │
+└────────┬────────────┬──────────────┬──────────────┬─────────────┘
+         │            │              │              │
+         ▼            ▼              ▼              ▼
+    ┌────────┐  ┌─────────┐  ┌──────────┐  ┌──────────────┐
+    │ watch  │  │   TUI   │  │ Web GUI  │  │ Auto-Remedy  │
+    │  CLI   │  │Dashboard│  │Dashboard │  │  Policies    │
+    └────────┘  └─────────┘  └──────────┘  └──────────────┘
 ```
 
-✅ **Rich State Information** (`ProcessState`):
-```go
-- Name, Namespace, Status
-- Health (is_ready), HasHealthProbe
-- Restarts, ExitCode, Pid
-- SystemTime, Age
-- CPU, Memory usage
-- IsRunning, IsElevated
-```
+## Event Types
 
-❌ **No Native Event Stream**:
-- No SSE endpoint for state changes
-- No pub/sub for process events
-- Must poll `/processes` for state changes
+| Event | Trigger | Example Subject |
+|-------|---------|----------------|
+| `started` | Process became running | `core.process.default.nats.started` |
+| `stopped` | Process stopped (exit=0) | `core.process.default.pocketbase.stopped` |
+| `crashed` | Process exited non-zero | `core.process.default.caddy.crashed` |
+| `restarted` | Restart count increased | `core.process.default.nats.restarted` |
+| `healthy` | Health probe → Ready | `core.process.default.pocketbase.healthy` |
+| `unhealthy` | Health probe → Not Ready | `core.process.default.caddy.unhealthy` |
+| `status_changed` | Status string changed | `core.process.default.nats.status_changed` |
 
-### **Our Existing Control Plane** ✅
+## Implementation Status
 
-We already have comprehensive process mutation via `stack process`:
+### ✅ Phase 1: Core Event System (COMPLETED)
+
+**Files Created**:
+- `pkg/observability/events/adapter.go` - Event adapter (polls + publishes)
+- `pkg/observability/events/types.go` - Event types and schemas
+- `pkg/observability/events/consumer.go` - Consumer helpers
+- `pkg/runtime/cli/observe.go` - CLI commands
+
+**Commands Available**:
 ```bash
-go run . stack process start <name>     # Start stopped process
-go run . stack process stop <name>      # Stop running process
-go run . stack process restart <name>   # Restart process
-go run . stack process scale <name> N   # Scale to N replicas
-go run . stack process logs <name>      # View historical logs
-go run . stack process info <name>      # Get detailed state
+# Run event adapter
+go run ./cmd/core stack observe adapter
+
+# Watch events in real-time
+go run ./cmd/core stack observe watch
+go run ./cmd/core stack observe watch --process nats
+go run ./cmd/core stack observe watch --type crashed
+go run ./cmd/core stack observe watch --json
 ```
 
-**Key Insight**: We have **CONTROL** (write operations). We need **OBSERVABILITY** (read/events).
+**Features**:
+- Polls process-compose every 2s (configurable)
+- Detects all state transitions
+- Publishes to NATS JetStream
+- CLI watch command with filtering
+- JSON output for scripting
+- Documented in OBSERVABILITY_USAGE.md
 
-This enables powerful patterns:
-- **Auto-remediation**: Event adapter can call `stack process restart` on crash
-- **Health-based scaling**: Scale up/down based on health events
-- **Automatic recovery**: Restart unhealthy processes
-- **Policy enforcement**: Stop processes that exceed resource limits
+### 🔜 Phase 2: TUI Dashboard (PENDING)
 
-## Refined Architecture
+Real-time terminal dashboard showing:
+- Live process status grid
+- Recent events stream
+- Health indicators
+- Resource usage
 
-### **Complete Control Loop: Observe → Decide → Act**
+Uses NATS subscription (not WebSockets) to get live updates.
 
+### 🔜 Phase 3: Auto-Remediation Policies (PENDING)
+
+Automated recovery using existing `stack process` commands:
+
+```go
+// Example: Auto-restart crashed processes
+consumer.SubscribeEventType(EventTypeCrashed, func(evt Event) error {
+    if restarts < 3 {
+        exec.Command("go", "run", ".", "stack", "process", "restart", evt.Process).Run()
+    }
+    return nil
+})
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Process-Compose API                          │
-│  ┌────────────────┐              ┌──────────────────┐          │
-│  │ WebSocket      │              │ REST API         │          │
-│  │ /process/logs  │              │ /processes       │          │
-│  │ /ws            │              │ /project/state   │          │
-│  └────────────────┘              └──────────────────┘          │
-└────────┬────────────────────────────────────┬──────────────────┘
-         │                                     │
-         │ (log stream)                        │ (poll 2-5s)
-         ▼                                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              Event Adapter Service                              │
-│  ┌──────────────────────┐      ┌─────────────────────────┐     │
-│  │ Log Aggregator       │      │ State Change Detector   │     │
-│  │ - Connects to WS     │      │ - Polls /processes      │     │
-│  │ - Buffers logs       │      │ - Diffs previous state  │     │
-│  │ - Enriches metadata  │      │ - Detects transitions   │     │
-│  └──────────────────────┘      └─────────────────────────┘     │
-│                    │                        │                   │
-│                    └────────┬───────────────┘                   │
-│                             ▼                                   │
-│              ┌─────────────────────────────┐                    │
-│              │   Event Publisher           │                    │
-│              │   - Transforms to events    │                    │
-│              │   - Enriches with context   │                    │
-│              │   - Publishes to NATS       │                    │
-│              └─────────────────────────────┘                    │
-└──────────────────────────────┬──────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     NATS JetStream                              │
-│  Subject Hierarchy:                                             │
-│  • core.process.{name}.started                                  │
-│  • core.process.{name}.stopped                                  │
-│  • core.process.{name}.healthy                                  │
-│  • core.process.{name}.unhealthy                                │
-│  • core.process.{name}.restarted                                │
-│  • core.process.{name}.crashed                                  │
-│  • core.process.{name}.log                                      │
-│  • core.project.updated                                         │
-│                                                                  │
-│  Streams:                                                        │
-│  • PROCESS_EVENTS (retention: 1 hour, max: 10k msgs)           │
-│  • PROCESS_LOGS (retention: 1 hour, max: 100k msgs)            │
-└─────────────────────────────┬───────────────────────────────────┘
-                              │
-                              │ (subscribe)
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Event Consumers                              │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │ CLI         │  │ TUI          │  │ Web UI             │    │
-│  │ stack watch │  │ Dashboard    │  │ (SSE to browser)   │    │
-│  └─────────────┘  └──────────────┘  └────────────────────┘    │
-│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────┐    │
-│  │ Alerts      │  │ Metrics      │  │ Auto-remediation   │    │
-│  │ (webhooks)  │  │ (Prometheus) │  │ (restart policies) │    │
-│  └─────────────┘  └──────────────┘  └────────────────────┘    │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+Patterns:
+- Auto-restart on crash (with backoff)
+- Health-based recovery
+- Resource-based scaling
+- Dependency-aware restart chains
 
 ## Event Schema
 
-### State Change Events
-
 ```json
 {
-  "type": "process.started|stopped|healthy|unhealthy|restarted|crashed",
+  "type": "started",
   "process": "nats",
   "namespace": "default",
-  "timestamp": "2025-10-15T20:30:01Z",
-  "previous_state": {
-    "status": "Stopped",
-    "is_running": false,
-    "restarts": 0
-  },
-  "current_state": {
-    "status": "Running",
-    "is_running": true,
-    "pid": 12345,
-    "health": "Ready",
-    "restarts": 0,
-    "cpu": 0.5,
-    "mem": 45678912
-  },
-  "metadata": {
-    "duration_since_start": "5s",
-    "environment": "production"
-  }
-}
-```
-
-### Log Events
-
-```json
-{
-  "type": "process.log",
-  "process": "pocketbase",
-  "namespace": "default",
-  "timestamp": "2025-10-15T20:30:05Z",
-  "log": {
-    "level": "info",
-    "message": "[pocketbase] Server listening on :8090",
-    "raw": "[pocketbase] Server listening on :8090\n"
-  }
-}
-```
-
-### Project Events
-
-```json
-{
-  "type": "project.updated",
-  "timestamp": "2025-10-15T20:30:10Z",
+  "timestamp": "2025-10-16T09:53:31Z",
+  "subject": "core.process.default.nats.started",
+  "severity": "info",
   "state": {
-    "process_num": 3,
-    "running_process_num": 3,
-    "uptime": "5m30s"
+    "name": "nats",
+    "namespace": "default",
+    "status": "Running",
+    "is_ready": "Ready",
+    "has_ready_probe": true,
+    "restarts": 0,
+    "exit_code": 0,
+    "is_running": true,
+    "replicas": 1
   }
 }
 ```
 
-## Implementation Plan
+## Control Plane Integration
 
-### Phase 1: Event Adapter Core (Week 1)
+The event system integrates with existing `stack process` commands for full control loop:
 
-**Goal**: Get basic state change detection working
+**Observe** (Event Adapter):
+- Detects crashes, health issues, status changes
+- Publishes events to NATS
 
-**Components**:
-1. **State Poller**
-   ```go
-   // pkg/runtime/events/poller.go
-   type StatePoller struct {
-       client    *process.ComposeClient
-       interval  time.Duration
-       lastState map[string]ProcessState
-   }
+**Decide** (Policies/Rules):
+- Subscribe to events
+- Apply business logic (e.g., "restart if crashed < 3 times")
 
-   func (p *StatePoller) Poll(ctx context.Context) ([]StateChange, error)
-   ```
+**Act** (Existing Commands):
+- `stack process restart <name>` - Restart process
+- `stack process stop <name>` - Stop process
+- `stack process scale <name> N` - Scale replicas
+- `stack process start <name>` - Start process
 
-2. **State Differ**
-   ```go
-   // pkg/runtime/events/differ.go
-   func DetectChanges(prev, curr map[string]ProcessState) []StateChange
-   ```
+## Performance Characteristics
 
-3. **Event Publisher**
-   ```go
-   // pkg/runtime/events/publisher.go
-   type NATSPublisher struct {
-       nc *nats.Conn
-   }
+- **Polling Overhead**: ~1 HTTP request per 2 seconds (minimal)
+- **Memory**: Stores last state snapshot only (~10KB for typical stack)
+- **Latency**: 0-2s to detect state change (configurable poll interval)
+- **NATS Throughput**: Handles 1000s events/sec easily
+- **Event Retention**: 24 hours in JetStream (configurable)
 
-   func (p *NATSPublisher) Publish(event Event) error
-   ```
+## Why Polling? (Not WebSockets)
 
-**Files to Create**:
-- `pkg/runtime/events/adapter.go` - Main adapter service
-- `pkg/runtime/events/poller.go` - State polling
-- `pkg/runtime/events/differ.go` - Change detection
-- `pkg/runtime/events/publisher.go` - NATS publishing
-- `pkg/runtime/events/types.go` - Event types
+✅ **Simple**: No connection management, reconnection logic
+✅ **Reliable**: HTTP is stateless, no connection drops
+✅ **Observable**: Easy to debug with curl/logs
+✅ **Low Overhead**: 2s polling is negligible
+✅ **Consistent**: Same pattern for GUI/TUI (poll or NATS events)
+✅ **Proven**: Many production systems use polling for observability
 
-**Testing**:
-- Unit tests for differ logic
-- Integration test with mock process-compose
-- Verify event publishing to NATS
+❌ WebSockets add complexity:
+- Connection management
+- Reconnection logic
+- State synchronization on reconnect
+- Not needed for 2s update cadence
 
-### Phase 2: Log Streaming (Week 2)
+## Usage Examples
 
-**Goal**: Stream logs via WebSocket and publish to NATS
+See [OBSERVABILITY_USAGE.md](OBSERVABILITY_USAGE.md) for complete guide.
 
-**Components**:
-1. **WebSocket Client**
-   ```go
-   // pkg/runtime/events/logstream.go
-   type LogStreamer struct {
-       wsURL    string
-       processes []string
-   }
-
-   func (ls *LogStreamer) Stream(ctx context.Context) (<-chan LogEvent, error)
-   ```
-
-2. **Log Parser**
-   ```go
-   // Parse log levels from messages
-   func ParseLogLevel(message string) (level string, parsed string)
-   ```
-
-**Files to Create**:
-- `pkg/runtime/events/logstream.go` - WebSocket log streaming
-- `pkg/runtime/events/logparser.go` - Log parsing and enrichment
-
-**Testing**:
-- Connect to real process-compose WebSocket
-- Verify log streaming works
-- Test reconnection on disconnect
-
-### Phase 3: CLI Consumer (Week 2-3)
-
-**Goal**: Build `stack watch` command as first consumer
-
-**Command**:
+**Quick Start**:
 ```bash
-$ go run ./cmd/core stack watch
-→ Watching stack events (Ctrl+C to exit)...
+# Terminal 1: Start stack
+go run ./cmd/core stack up
 
-[20:30:01] nats: started (pid 12345)
-[20:30:01] nats: healthy
-[20:30:05] pocketbase: started (pid 12346)
-[20:30:05] pocketbase: healthy
-[20:30:12] caddy: restarted (1 restart)
-[20:30:13] caddy: unhealthy (connection refused)
-[20:30:18] caddy: healthy
+# Terminal 2: Start event adapter
+go run ./cmd/core stack observe adapter
 
-$ go run ./cmd/core stack watch --service nats
-→ Watching nats events only...
+# Terminal 3: Watch events
+go run ./cmd/core stack observe watch
 
-$ go run ./cmd/core stack watch --type health
-→ Watching health events only...
+# Terminal 4: Generate events
+go run ./cmd/core stack process restart nats
 ```
 
-**Files to Create**:
-- `pkg/runtime/cli/stack_watch.go` - Watch command
-- `pkg/runtime/events/consumer.go` - NATS consumer helper
+## Future Enhancements
 
-**Features**:
-- Filter by service name
-- Filter by event type
-- Colored output
-- Follow mode (tail -f style)
-
-### Phase 4: TUI Dashboard (Week 3-4)
-
-**Goal**: Real-time visual dashboard
-
-**UI Layout**:
-```
-┌─ Process Status ──────────────────────────────────────────────┐
-│ nats        ✓ Running  (0 restarts) │ CPU: 0.5%  Mem: 45 MB  │
-│ pocketbase  ✓ Healthy  (0 restarts) │ CPU: 1.2%  Mem: 128 MB │
-│ caddy       ⚠ Starting (1 restart)  │ CPU: 0.1%  Mem: 32 MB  │
-└───────────────────────────────────────────────────────────────┘
-┌─ Recent Events ───────────────────────────────────────────────┐
-│ [20:30:18] caddy: healthy                                     │
-│ [20:30:13] caddy: unhealthy (connection refused)              │
-│ [20:30:12] caddy: restarted                                   │
-│ [20:30:05] pocketbase: healthy                                │
-│ [20:30:05] pocketbase: started                                │
-└───────────────────────────────────────────────────────────────┘
-┌─ Live Logs (caddy) ───────────────────────────────────────────┐
-│ [caddy] Server listening on :2015                             │
-│ [caddy] Proxying to http://127.0.0.1:8090                     │
-│ [caddy] Health check passed                                   │
-│                                                                │
-└───────────────────────────────────────────────────────────────┘
-```
-
-**Files to Create**:
-- `pkg/runtime/cli/stack_dashboard.go` - Dashboard command
-- `pkg/runtime/ui/dashboard/` - TUI components
-
-## Key Design Decisions
-
-### 1. **Polling Interval: 2 seconds**
-- ✅ Low enough latency for most use cases
-- ✅ Doesn't overwhelm process-compose API
-- ✅ Configurable via flag
-
-### 2. **Use NATS JetStream for Persistence**
-- ✅ Already running in our stack
-- ✅ Replay events on consumer restart
-- ✅ Multiple consumers don't duplicate load
-- ✅ Retention: 1 hour or 10k events (configurable)
-
-### 3. **Hybrid WebSocket + Polling**
-- ✅ WebSocket for logs (real-time, already supported)
-- ✅ Polling for state (no native event stream)
-- ✅ Best of both worlds
-
-### 4. **Event Adapter as Separate Service**
-- ✅ Can run standalone or embedded
-- ✅ Single point of integration with process-compose
-- ✅ Easier to test and maintain
-
-### 5. **Subject Hierarchy**
-```
-core.process.{name}.{event_type}
-core.project.{event_type}
-core.health.{name}
-core.logs.{name}
-```
-- ✅ Easy to filter/subscribe
-- ✅ Follows NATS best practices
-- ✅ Wildcards work: `core.process.*.healthy`
-
-## Questions to Resolve
-
-### 1. **Event Adapter Lifecycle**
-
-**Option A: Embedded in stack up**
-- Starts/stops with stack
-- Simple deployment
-- Coupled to stack
-
-**Option B: Standalone service**
-- Independent lifecycle
-- Can restart without affecting stack
-- Additional process to manage
-
-**Recommendation**: Option A (embedded) for simplicity
-
-### 2. **Event Retention**
-
-**Options**:
-- Memory only (ephemeral, fast)
-- JetStream (persistent, slower)
-- Both (memory + optional persistence)
-
-**Recommendation**: Start with JetStream (1hr retention)
-- Can replay on consumer restart
-- Good for debugging
-- Not too much overhead
-
-### 3. **Performance Tuning**
-
-**Polling interval**:
-- 1s = Very responsive, higher load
-- 2s = Good balance (recommended)
-- 5s = Lower load, might miss quick changes
-
-**Batch size**:
-- Process all changes immediately
-- Or batch events every N seconds?
-
-**Recommendation**: 2s polling, immediate publishing
-
-### 4. **Error Handling**
-
-What if process-compose API is down?
-- Keep trying with exponential backoff
-- Publish `adapter.disconnected` event
-- Consumers show "stale" indicator
-
-### 5. **Log Parsing**
-
-Do we parse log levels from messages?
-```
-[nats] INFO: Server listening → level=INFO
-[caddy] ERROR: Failed to start → level=ERROR
-```
-
-**Recommendation**:
-- Yes, parse common patterns
-- Fall back to `level=UNKNOWN` if can't parse
-- Allow custom parsers per service
-
-## Auto-Remediation Patterns (Using Existing Commands)
-
-Since we already have `stack process` commands, we can build powerful auto-remediation:
-
-### Pattern 1: Auto-Restart on Crash
-
-```go
-// Subscribe to crash events
-nc.Subscribe("core.process.*.crashed", func(msg *nats.Msg) {
-    evt := parseEvent(msg.Data)
-
-    // Policy: Auto-restart critical services
-    if isCriticalService(evt.Process) && evt.CurrentState.Restarts < 3 {
-        log.Info("Auto-restarting crashed process", "process", evt.Process)
-
-        // Use existing command!
-        exec.Command("go", "run", ".", "stack", "process", "restart", evt.Process).Run()
-
-        // Publish remediation event
-        publishEvent("core.remediation.restart", evt.Process)
-    } else {
-        // Too many restarts, alert instead
-        sendAlert("Process %s crashed too many times", evt.Process)
-    }
-})
-```
-
-### Pattern 2: Health-Based Recovery
-
-```go
-// Subscribe to unhealthy events
-nc.Subscribe("core.process.*.unhealthy", func(msg *nats.Msg) {
-    evt := parseEvent(msg.Data)
-
-    // Wait 30s to see if it recovers
-    time.Sleep(30 * time.Second)
-
-    // Check if still unhealthy
-    state := getCurrentState(evt.Process)
-    if state.Health != "Ready" {
-        log.Warn("Process unhealthy for 30s, restarting", "process", evt.Process)
-        exec.Command("go", "run", ".", "stack", "process", "restart", evt.Process).Run()
-    }
-})
-```
-
-### Pattern 3: Resource-Based Scaling
-
-```go
-// Subscribe to all process events
-nc.Subscribe("core.process.*.*", func(msg *nats.Msg) {
-    evt := parseEvent(msg.Data)
-
-    // Check resource usage
-    if evt.CurrentState.CPU > 80.0 {
-        log.Info("High CPU detected", "process", evt.Process, "cpu", evt.CurrentState.CPU)
-
-        // Scale up if possible
-        exec.Command("go", "run", ".", "stack", "process", "scale", evt.Process, "2").Run()
-    }
-})
-```
-
-### Pattern 4: Dependency-Based Restart
-
-```go
-// If PocketBase crashes, restart Caddy (proxy depends on it)
-nc.Subscribe("core.process.pocketbase.restarted", func(msg *nats.Msg) {
-    log.Info("PocketBase restarted, restarting dependent services")
-
-    // Restart Caddy to re-establish proxy connection
-    exec.Command("go", "run", ".", "stack", "process", "restart", "caddy").Run()
-})
-```
-
-### Pattern 5: Policy Enforcement
-
-```go
-// Prevent non-critical services from restarting too often
-nc.Subscribe("core.process.*.started", func(msg *nats.Msg) {
-    evt := parseEvent(msg.Data)
-
-    if !isCriticalService(evt.Process) && evt.CurrentState.Restarts > 5 {
-        log.Warn("Non-critical service flapping, stopping it", "process", evt.Process)
-
-        // Stop the flapping service
-        exec.Command("go", "run", ".", "stack", "process", "stop", evt.Process).Run()
-
-        // Alert operator
-        sendAlert("Stopped flapping service: %s", evt.Process)
-    }
-})
-```
-
-**Key Advantage**: All remediation logic can use our existing, tested `stack process` commands!
+1. **Historical queries**: Query past events from JetStream
+2. **Metrics aggregation**: Count crashes/restarts per service
+3. **Alerting**: Send notifications on critical events
+4. **Multi-stack**: Monitor multiple process-compose instances
+5. **Event filtering**: Server-side filtering in event adapter
+6. **Log aggregation**: Collect logs via polling `/process/logs/:name`
 
 ## Success Criteria
 
-✅ **Phase 1 Complete When**:
-- State changes detected within 2s
-- Events published to NATS correctly
-- No memory leaks after 24h run
+✅ Event adapter polls and detects changes
+✅ Events published to NATS JetStream
+✅ CLI watch command shows events in real-time
+✅ Events contain full process state snapshot
+✅ System is simple, reliable, observable
+✅ Documentation complete
 
-✅ **Phase 2 Complete When**:
-- Logs stream in real-time via WebSocket
-- Log events published to NATS
-- Reconnects automatically on disconnect
+## References
 
-✅ **Phase 3 Complete When**:
-- `stack watch` command works
-- Shows events in real-time
-- Filtering works correctly
-
-✅ **Phase 4 Complete When**:
-- TUI dashboard displays live state
-- Updates smoothly without flicker
-- Handles 100+ events/second
-
-## Next Steps
-
-1. **User Approval**: Get feedback on this design
-2. **Prototype**: Build Phase 1 minimal viable adapter
-3. **Test**: Verify with real stack
-4. **Iterate**: Refine based on learnings
-5. **Expand**: Add Phase 2-4 features
-
-## Open Questions for Discussion
-
-1. Is 2s polling interval acceptable, or do we need faster?
-2. Should event adapter be embedded or standalone?
-3. What event retention is needed? (1hr, 24hr, 7d?)
-4. Which consumers are highest priority? (CLI, TUI, Web UI?)
-5. Do we need log parsing, or raw logs are fine?
-6. Should we support event webhooks to external systems?
-
----
-
-**Status**: Ready for review and refinement
+- Implementation: `pkg/observability/events/`
+- Usage Guide: `OBSERVABILITY_USAGE.md`
+- CLI Commands: `go run ./cmd/core stack observe --help`
