@@ -6,6 +6,8 @@
 .logs/
 .bin/
 .tmp/
+.gocache/
+.core-stack/
 
 # Configs rendered from templates
 .ko.yaml
