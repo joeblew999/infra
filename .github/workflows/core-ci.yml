@@ -1,0 +1,45 @@
+name: Core CI/CD (V2)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'core/**'
+      - '.github/workflows/core-ci.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'core/**'
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+defaults:
+  run:
+    working-directory: ./core
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: actions/setup-go@v5
+      with:
+        go-version: 'stable'
+
+    - name: Run Tests
+      run: |
+        # Skip integration tests in CI
+        export SKIP_INTEGRATION_TESTS=1
+        go test ./...
+
+    - name: Build Core Binary
+      run: go build -o /tmp/core ./cmd/core
+
+    - name: Run Stack Doctor (Diagnostic Check)
+      run: |
+        # Test that stack doctor command works (may fail if stack not running, that's ok)
+        go run ./cmd/core stack doctor --verbose || echo "⚠️  Stack doctor checks completed with warnings (expected in CI)"

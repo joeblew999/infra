@@ -20,13 +20,33 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/joeblew999/infra/core/pkg/observability/events"
+	"github.com/joeblew999/infra/core/pkg/runtime/observability"
 	runtimecfg "github.com/joeblew999/infra/core/pkg/runtime/config"
 	"github.com/joeblew999/infra/core/pkg/runtime/process"
 	caddyservice "github.com/joeblew999/infra/core/services/caddy"
 	natssvc "github.com/joeblew999/infra/core/services/nats"
 	pocketbasesvc "github.com/joeblew999/infra/core/services/pocketbase"
 )
+
+// ANSI color codes for terminal output
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+	colorGray   = "\033[90m"
+	colorBold   = "\033[1m"
+)
+
+// colorize wraps text in ANSI color codes.
+// Respects the NO_COLOR environment variable (https://no-color.org/)
+func colorize(text, color string) string {
+	if os.Getenv("NO_COLOR") != "" {
+		return text
+	}
+	return color + text + colorReset
+}
 
 func newStackCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -130,6 +150,8 @@ func buildStackStatusCommand(use, short string) *cobra.Command {
 		RunE:  stackStatusRun,
 	}
 	cmd.Flags().Bool("json", false, "Output status as JSON")
+	cmd.Flags().BoolP("watch", "w", false, "Watch mode: continuously update status")
+	cmd.Flags().IntP("interval", "n", 2, "Watch interval in seconds (use with --watch)")
 	return cmd
 }
 
@@ -186,6 +208,20 @@ func stackDownRun(cmd *cobra.Command, args []string) error {
 
 func stackStatusRun(cmd *cobra.Command, args []string) error {
 	asJSON, _ := cmd.Flags().GetBool("json")
+	watch, _ := cmd.Flags().GetBool("watch")
+	interval, _ := cmd.Flags().GetInt("interval")
+
+	if watch && asJSON {
+		return fmt.Errorf("--watch and --json cannot be used together")
+	}
+
+	if watch {
+		if interval < 1 {
+			interval = 2
+		}
+		return watchStatusLoop(cmd, args, time.Duration(interval)*time.Second)
+	}
+
 	return statusComposeStack(cmd, args, asJSON)
 }
 
@@ -258,7 +294,8 @@ func stackDoctorRun(cmd *cobra.Command, args []string) error {
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	out := cmd.OutOrStdout()
 
-	fmt.Fprintln(out, "🔍 Running stack diagnostics...\n")
+	fmt.Fprintln(out, "🔍 Running stack diagnostics...")
+	fmt.Fprintln(out)
 
 	issues := 0
 	warnings := 0
@@ -317,14 +354,15 @@ func stackDoctorRun(cmd *cobra.Command, args []string) error {
 
 	// 3. Check health endpoints
 	fmt.Fprintln(out, "\n→ Checking health endpoints...")
+	cfg := runtimecfg.Load()
 	healthChecks := []struct {
 		name string
 		url  string
 		port int
 	}{
-		{"NATS", "http://127.0.0.1:8222/healthz", 8222},
-		{"PocketBase", "http://127.0.0.1:8090/api/health", 8090},
-		{"Caddy", "http://127.0.0.1:2015/api/health", 2015},
+		{"NATS", cfg.Services.NATSHTtp + "/healthz", 8222},
+		{"PocketBase", cfg.Services.PocketBase + "/api/health", 8090},
+		{"Caddy", cfg.Services.Caddy + "/api/health", 2015},
 	}
 
 	for _, hc := range healthChecks {
@@ -533,7 +571,22 @@ func printServiceExpectationsWith(out io.Writer, services []stackServiceStatus, 
 	fmt.Fprintln(out, "Services:")
 	for _, svc := range services {
 		state := describeServiceState(stackRunning, svc.Running)
-		fmt.Fprintf(out, "• %-12s port %-5d status: %-11s %s\n", svc.Name, svc.Port, state, svc.About)
+
+		// Color code service state
+		stateColor := colorGreen
+		switch state {
+		case "running":
+			stateColor = colorGreen
+		case "starting":
+			stateColor = colorYellow
+		case "orphaned":
+			stateColor = colorRed
+		case "stopped":
+			stateColor = colorGray
+		}
+
+		coloredState := colorize(fmt.Sprintf("%-11s", state), stateColor)
+		fmt.Fprintf(out, "• %-12s port %-5d status: %s %s\n", svc.Name, svc.Port, coloredState, svc.About)
 	}
 }
 
@@ -596,20 +649,48 @@ func printComposeStates(out io.Writer, states []process.ComposeProcessState) {
 	fmt.Fprintln(out, "Process Compose:")
 	for _, st := range states {
 		health := "-"
+		healthColor := colorGray
 		if st.HasHealthProbe {
 			health = st.Health
+			// Color code health status
+			switch strings.ToLower(st.Health) {
+			case "ready":
+				healthColor = colorGreen
+			case "starting", "pending":
+				healthColor = colorYellow
+			default:
+				healthColor = colorRed
+			}
 		}
+
+		// Color code process status
+		statusColor := colorGreen
+		switch strings.ToLower(st.Status) {
+		case "running":
+			statusColor = colorGreen
+		case "pending", "launching", "restarting":
+			statusColor = colorYellow
+		case "completed":
+			statusColor = colorBlue
+		default:
+			statusColor = colorRed
+		}
+
 		extra := ""
 		if !st.IsRunning && st.ExitCode != 0 {
-			extra = fmt.Sprintf(" exit=%d", st.ExitCode)
+			extra = colorize(fmt.Sprintf(" exit=%d", st.ExitCode), colorRed)
 		}
+
+		coloredStatus := colorize(fmt.Sprintf("%-12s", st.Status), statusColor)
+		coloredHealth := colorize(fmt.Sprintf("%-8s", health), healthColor)
+
 		if st.Namespace != "" {
-			fmt.Fprintf(out, "• %s/%-10s status: %-12s health: %-8s restarts: %d%s\n",
-				st.Namespace, st.Name, st.Status, health, st.Restarts, extra)
+			fmt.Fprintf(out, "• %s/%-10s status: %s health: %s restarts: %d%s\n",
+				st.Namespace, st.Name, coloredStatus, coloredHealth, st.Restarts, extra)
 			continue
 		}
-		fmt.Fprintf(out, "• %-12s status: %-12s health: %-8s restarts: %d%s\n",
-			st.Name, st.Status, health, st.Restarts, extra)
+		fmt.Fprintf(out, "• %-12s status: %s health: %s restarts: %d%s\n",
+			st.Name, coloredStatus, coloredHealth, st.Restarts, extra)
 	}
 }
 
@@ -886,6 +967,43 @@ func stackProcessScale(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+// readProcessLogsFromFile reads logs from the log file for a process.
+// Returns logs as a slice of strings, or error if file doesn't exist or can't be read.
+func readProcessLogsFromFile(processName string, maxLines, endOffset int) ([]string, error) {
+	logPath := fmt.Sprintf(".core-stack/logs/%s.log", processName)
+	
+	// Check if file exists
+	if _, err := os.Stat(logPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("log file not found: %s", logPath)
+	}
+	
+	// Read entire file
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		return nil, fmt.Errorf("read log file: %w", err)
+	}
+	
+	// Split into lines
+	allLines := strings.Split(string(data), "\n")
+	
+	// Remove empty last line if present
+	if len(allLines) > 0 && allLines[len(allLines)-1] == "" {
+		allLines = allLines[:len(allLines)-1]
+	}
+	
+	// Apply offset from end
+	if endOffset > 0 && endOffset < len(allLines) {
+		allLines = allLines[:len(allLines)-endOffset]
+	}
+	
+	// Apply line limit (get last N lines)
+	if maxLines > 0 && len(allLines) > maxLines {
+		allLines = allLines[len(allLines)-maxLines:]
+	}
+	
+	return allLines, nil
+}
+
 func stackProcessLogs(cmd *cobra.Command, args []string) error {
 	port := composePortFromCmd(cmd)
 	lines, _ := cmd.Flags().GetInt("lines")
@@ -898,10 +1016,18 @@ func stackProcessLogs(cmd *cobra.Command, args []string) error {
 		endOffset = 0
 	}
 	name := args[0]
-	logs, err := process.FetchComposeProcessLogs(cmd.Context(), port, name, endOffset, lines)
-	if err != nil {
-		return err
+	
+	// Try reading from log file first (when log_location is configured)
+	logs, err := readProcessLogsFromFile(name, lines, endOffset)
+	
+	// If file reading fails, fall back to API
+	if err != nil || len(logs) == 0 {
+		logs, err = process.FetchComposeProcessLogs(cmd.Context(), port, name, endOffset, lines)
+		if err != nil {
+			return err
+		}
 	}
+	
 	if jsonOut {
 		return writeJSON(cmd.OutOrStdout(), map[string]any{
 			"port":   port,
@@ -1001,6 +1127,50 @@ func stopComposeStack(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func watchStatusLoop(cmd *cobra.Command, args []string, interval time.Duration) error {
+	ctx, cancel := context.WithCancel(cmd.Context())
+	defer cancel()
+
+	// Handle Ctrl+C gracefully
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		cancel()
+	}()
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	// Clear screen and move cursor to top
+	clearScreen := func() {
+		fmt.Fprint(cmd.OutOrStdout(), "\033[2J\033[H")
+	}
+
+	// Initial display
+	clearScreen()
+	fmt.Fprintf(cmd.OutOrStdout(), "🔄 Watching stack status (refresh every %v, press Ctrl+C to exit)\n\n", interval)
+	if err := statusComposeStack(cmd, args, false); err != nil {
+		return err
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			fmt.Fprintln(cmd.OutOrStdout(), "\n\nWatch stopped")
+			return nil
+		case <-ticker.C:
+			clearScreen()
+			fmt.Fprintf(cmd.OutOrStdout(), "🔄 Watching stack status (refresh every %v, press Ctrl+C to exit)\n", interval)
+			fmt.Fprintf(cmd.OutOrStdout(), "Last update: %s\n\n", time.Now().Format("15:04:05"))
+			if err := statusComposeStack(cmd, args, false); err != nil {
+				// Don't exit on temporary errors, just display them
+				fmt.Fprintf(cmd.ErrOrStderr(), "Error: %v\n", err)
+			}
+		}
+	}
+}
+
 func statusComposeStack(cmd *cobra.Command, args []string, asJSON bool) error {
 	port := process.ComposePort(args)
 	states, err := process.FetchComposeProcesses(cmd.Context(), port)
@@ -1051,10 +1221,10 @@ func statusComposeStack(cmd *cobra.Command, args []string, asJSON bool) error {
 		fmt.Fprintf(cmd.OutOrStdout(), "(unable to inspect service ports: %v)\n", serr)
 	}
 	if running {
-		fmt.Fprintln(cmd.OutOrStdout(), "Stack status: running (process-compose)")
+		fmt.Fprintf(cmd.OutOrStdout(), "Stack status: %s (process-compose)\n", colorize("running", colorGreen))
 		fmt.Fprintf(cmd.OutOrStdout(), "Ports in use: %v\n", ports)
 	} else {
-		fmt.Fprintln(cmd.OutOrStdout(), "Stack status: stopped (process-compose)")
+		fmt.Fprintf(cmd.OutOrStdout(), "Stack status: %s (process-compose)\n", colorize("stopped", colorGray))
 	}
 	printComposeStates(cmd.OutOrStdout(), states)
 	printServiceExpectationsWith(cmd.OutOrStdout(), services, running)
@@ -1210,7 +1380,7 @@ Events are published to subjects like:
 
 Run this adapter in the background to enable real-time process monitoring.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			adapter, err := events.NewAdapter(events.Config{
+			adapter, err := observability.NewAdapter(observability.Config{
 				ComposePort:  composePort,
 				NATSURL:      natsURL,
 				PollInterval: pollInterval,
@@ -1240,7 +1410,7 @@ Run this adapter in the background to enable real-time process monitoring.`,
 	}
 
 	cmd.Flags().IntVar(&composePort, "compose-port", 28081, "Process Compose API port")
-	cmd.Flags().StringVar(&natsURL, "nats-url", "nats://127.0.0.1:4222", "NATS server URL")
+	cmd.Flags().StringVar(&natsURL, "nats-url", runtimecfg.Load().Services.NATS, "NATS server URL")
 	cmd.Flags().DurationVar(&pollInterval, "poll-interval", 2*time.Second, "How often to poll for state changes")
 
 	return cmd
@@ -1272,7 +1442,7 @@ Examples:
   # Watch crashes for specific process
   core stack observe watch --process pocketbase --type crashed`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			consumer, err := events.NewConsumer(natsURL)
+			consumer, err := observability.NewConsumer(natsURL)
 			if err != nil {
 				return fmt.Errorf("create consumer: %w", err)
 			}
@@ -1285,22 +1455,23 @@ Examples:
 			// Build subscription pattern
 			var pattern string
 			if process != "" && eventType != "" {
-				pattern = events.SubjectPattern(
-					events.ForProcessAndType(process, events.EventType(eventType)),
+				pattern = observability.SubjectPattern(
+					observability.ForProcessAndType(process, observability.EventType(eventType)),
 				)
 			} else if process != "" {
-				pattern = events.SubjectPattern(events.ForProcess(process))
+				pattern = observability.SubjectPattern(observability.ForProcess(process))
 			} else if eventType != "" {
-				pattern = events.SubjectPattern(events.ForEventType(events.EventType(eventType)))
+				pattern = observability.SubjectPattern(observability.ForEventType(observability.EventType(eventType)))
 			} else {
-				pattern = events.SubjectPattern(events.AllEvents())
+				pattern = observability.SubjectPattern(observability.AllEvents())
 			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Watching events: %s\n", pattern)
-			fmt.Fprintln(cmd.OutOrStdout(), "Press Ctrl+C to stop\n")
+			fmt.Fprintln(cmd.OutOrStdout(), "Press Ctrl+C to stop")
+			fmt.Fprintln(cmd.OutOrStdout())
 
 			// Subscribe with handler
-			handler := func(evt events.Event) error {
+			handler := func(evt observability.Event) error {
 				if jsonOutput {
 					// JSON output
 					data, _ := evt.MarshalJSON()
@@ -1336,7 +1507,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&natsURL, "nats-url", "nats://127.0.0.1:4222", "NATS server URL")
+	cmd.Flags().StringVar(&natsURL, "nats-url", runtimecfg.Load().Services.NATS, "NATS server URL")
 	cmd.Flags().StringVarP(&process, "process", "p", "", "Filter by process name")
 	cmd.Flags().StringVarP(&eventType, "type", "t", "", "Filter by event type (started, stopped, crashed, healthy, unhealthy)")
 	cmd.Flags().BoolVar(&jsonOutput, "json", false, "Output events as JSON")
@@ -1344,15 +1515,15 @@ Examples:
 	return cmd
 }
 
-func severityIcon(severity events.Severity) string {
+func severityIcon(severity observability.Severity) string {
 	switch severity {
-	case events.SeverityError:
+	case observability.SeverityError:
 		return "❌"
-	case events.SeverityWarning:
+	case observability.SeverityWarning:
 		return "⚠️ "
-	case events.SeverityInfo:
+	case observability.SeverityInfo:
 		return "ℹ️ "
-	case events.SeverityDebug:
+	case observability.SeverityDebug:
 		return "🐛"
 	default:
 		return "  "
