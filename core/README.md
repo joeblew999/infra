@@ -95,9 +95,28 @@ go run . caddy run             # Run Caddy standalone
 - **NATS Client**: nats://localhost:4222
 - **NATS Monitoring**: http://localhost:8222
 
+### Observability
+
+Real-time process monitoring and event streaming:
+
+```bash
+# Start event adapter (publishes to NATS JetStream)
+go run . stack observe adapter
+
+# Watch all events
+go run . stack observe watch
+
+# Watch specific process or event type
+go run . stack observe watch --process default/caddy
+go run . stack observe watch --type crashed
+```
+
+See **[docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)** for detailed usage and integration examples.
+
 ## Documentation
 
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** - System design, generation flow, design decisions
 - **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)** - Adding services, debugging, extending
+- **[docs/OBSERVABILITY.md](docs/OBSERVABILITY.md)** - Process monitoring and event streaming
 - **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Fly.io deployment instructions
