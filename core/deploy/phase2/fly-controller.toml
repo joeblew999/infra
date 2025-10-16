@@ -1,0 +1,73 @@
+# Fly.io configuration for core-controller (Orchestration)
+# Phase 2: Microservices deployment
+# Service: Central control plane, observability aggregation, coordination
+
+app = 'core-controller'
+primary_region = 'syd'
+kill_signal = 'SIGTERM'
+kill_timeout = '20s'
+
+[build]
+  # Single binary deployment - run specific subcommand
+
+[env]
+  # Service discovery
+  NATS_URL = 'nats://core-nats.internal:4222'
+  POCKETBASE_URL = 'http://core-pocketbase.internal:8090'
+
+  # Controller configuration
+  CONTROLLER_MODE = 'production'
+  OBSERVABILITY_ENABLED = 'true'
+  SERVICE_NAME = 'core-controller'
+
+  # Aggregation settings
+  EVENT_BUFFER_SIZE = '1000'
+  METRICS_INTERVAL = '30s'
+
+  # Production mode
+  ENVIRONMENT = 'production'
+
+# Persistent volume for state and aggregated metrics
+[[mounts]]
+  source = 'controller_data'
+  destination = '/app/.data'
+  initial_size = '1gb'
+
+# HTTP API for control plane (internal only)
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+
+  [[services.ports]]
+    port = 8080
+
+  # Health checks
+  [[services.http_checks]]
+    interval = '15s'
+    timeout = '10s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/health'
+
+# VM resources
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Deployment configuration
+[deploy]
+  strategy = 'rolling'
+  max_unavailable = 0  # Keep one instance running always
+
+# Keep running (critical control plane)
+[services]
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+  # For HA setup: min_machines_running = 2 (active/standby)
+
+# Future: Leader election for HA
+# [env]
+#   LEADER_ELECTION_ENABLED = 'true'
+#   LEADER_ELECTION_NAMESPACE = 'core-controller'

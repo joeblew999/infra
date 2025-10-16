@@ -1,0 +1,75 @@
+# Fly.io configuration for core-nats (NATS JetStream)
+# Phase 2: Microservices deployment
+# Service: Event streaming with JetStream persistence
+
+app = 'core-nats'
+primary_region = 'syd'
+kill_signal = 'SIGTERM'
+kill_timeout = '10s'
+
+[build]
+  # Single binary deployment - run specific subcommand
+  # The core binary includes all services as subcommands
+
+[env]
+  # NATS JetStream configuration
+  NATS_JETSTREAM_ENABLED = 'true'
+  NATS_STORE_DIR = '/app/.data/jetstream'
+  NATS_MAX_MEMORY = '256MB'
+  NATS_MAX_STORAGE = '1GB'
+
+  # Observability
+  OBSERVABILITY_ENABLED = 'true'
+  SERVICE_NAME = 'core-nats'
+
+  # Internal service discovery (future: for clustering)
+  # NATS_CLUSTER_NAME = 'core-v2-cluster'
+  # NATS_ROUTES = 'nats://core-nats-2.internal:6222,nats://core-nats-3.internal:6222'
+
+# Persistent volume for JetStream storage
+[[mounts]]
+  source = 'nats_data'
+  destination = '/app/.data'
+  initial_size = '1gb'
+
+# NATS client port (internal only - no public access)
+[[services]]
+  protocol = 'tcp'
+  internal_port = 4222
+
+  # Only accessible via private network
+  [[services.ports]]
+    port = 4222
+
+# NATS HTTP monitoring port (internal only)
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8222
+
+  [[services.ports]]
+    port = 8222
+
+  # Health checks
+  [[services.http_checks]]
+    interval = '15s'
+    timeout = '10s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/healthz'
+
+# VM resources
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Deployment configuration
+[deploy]
+  strategy = 'rolling'
+  max_unavailable = 0  # Zero-downtime for event streaming
+
+# Experimental: Auto-start/stop (disable for production)
+# [services]
+#   auto_stop_machines = false
+#   auto_start_machines = false
+#   min_machines_running = 1

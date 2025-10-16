@@ -1,0 +1,75 @@
+# Fly.io configuration for core-pocketbase (Database & API)
+# Phase 2: Microservices deployment
+# Service: SQLite database, REST API, authentication
+
+app = 'core-pocketbase'
+primary_region = 'syd'
+kill_signal = 'SIGTERM'
+kill_timeout = '30s'  # Allow time for graceful database shutdown
+
+[build]
+  # Single binary deployment - run specific subcommand
+
+[env]
+  # PocketBase configuration
+  POCKETBASE_DATA_DIR = '/app/.data/pb_data'
+  POCKETBASE_PUBLIC_DIR = '/app/.data/pb_public'
+
+  # NATS integration for observability
+  NATS_URL = 'nats://core-nats.internal:4222'
+  OBSERVABILITY_ENABLED = 'true'
+  SERVICE_NAME = 'core-pocketbase'
+
+  # Production mode
+  ENVIRONMENT = 'production'
+
+# Persistent volume for database and uploads
+[[mounts]]
+  source = 'pb_data'
+  destination = '/app/.data'
+  initial_size = '5gb'
+
+# HTTP API (internal only - accessed via Caddy proxy)
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8090
+
+  [[services.ports]]
+    port = 8090
+
+  # Health checks
+  [[services.http_checks]]
+    interval = '15s'
+    timeout = '10s'
+    grace_period = '30s'
+    method = 'GET'
+    path = '/api/health'
+
+  # Connection limits (SQLite single-writer)
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 50
+    soft_limit = 40
+
+# VM resources
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Deployment configuration
+[deploy]
+  strategy = 'immediate'  # No rolling deploy for SQLite (single writer)
+  max_unavailable = 1
+
+# Keep running (critical database service)
+[services]
+  auto_stop_machines = false
+  auto_start_machines = false
+  min_machines_running = 1
+
+# Backups (future: Litestream to R2)
+# [env]
+#   LITESTREAM_ENABLED = 'true'
+#   LITESTREAM_BUCKET = 's3://my-backups'
+#   LITESTREAM_REPLICA = 'path/to/db'
