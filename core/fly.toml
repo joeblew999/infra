@@ -1,0 +1,106 @@
+# Fly.io configuration for Core V2 (monolithic deployment)
+#
+# This configuration deploys the entire core stack as a single container:
+# - Process-compose orchestrator
+# - NATS JetStream
+# - PocketBase
+# - Caddy reverse proxy
+#
+# For microservices deployment (Phase 2), see docs/DEPLOYMENT.md
+
+app = 'core-v2'
+primary_region = 'syd'
+kill_signal = 'SIGTERM'
+kill_timeout = '30s'  # Give process-compose time to gracefully stop services
+
+[experimental]
+  auto_rollback = true
+
+[build]
+  # Image will be pushed by ko build tooling
+  # See: go run . deploy
+
+[env]
+  # Core runtime configuration
+  ENVIRONMENT = 'production'
+
+  # Process-compose settings
+  CORE_COMPOSE_PORT = '28081'
+
+  # Service ports (internal container ports)
+  CORE_NATS_PORT = '4222'
+  CORE_NATS_HTTP_PORT = '8222'
+  CORE_POCKETBASE_PORT = '8090'
+  CORE_CADDY_PORT = '2015'
+
+  # Observability
+  CORE_OBSERVABILITY_ENABLED = 'true'
+
+[[mounts]]
+  source = 'core_data'
+  destination = '/app/.data'
+  initial_size = '1gb'
+
+# Primary HTTP service (Caddy reverse proxy)
+[[services]]
+  protocol = 'tcp'
+  internal_port = 2015  # Caddy
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [[services.ports]]
+    port = 80
+    handlers = ['http']
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ['http', 'tls']
+
+  [services.concurrency]
+    type = 'connections'
+    hard_limit = 500
+    soft_limit = 400
+
+  # Health check via Caddy
+  [[services.http_checks]]
+    interval = '15s'
+    timeout = '5s'
+    grace_period = '10s'
+    method = 'get'
+    path = '/health'
+    protocol = 'http'
+
+# PocketBase admin/API access
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8090  # PocketBase
+  auto_stop_machines = false
+  processes = ['app']
+
+  [[services.ports]]
+    port = 8090
+
+  [[services.http_checks]]
+    interval = '30s'
+    timeout = '5s'
+    grace_period = '15s'
+    method = 'get'
+    path = '/api/health'
+    protocol = 'http'
+
+# NATS client connections (internal only - no external ports exposed)
+# External services connect via Fly private network: core-v2.internal:4222
+
+# VM configuration - needs enough RAM for all services
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+
+# Metrics from observability system
+[[metrics]]
+  port = 28081  # Process-compose metrics endpoint
+  path = '/metrics'

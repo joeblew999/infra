@@ -9,9 +9,7 @@
 .gocache/
 .core-stack/
 
-# Configs rendered from templates
-.ko.yaml
-fly.toml
+# Configs rendered from templates (NOTE: fly.toml and .ko.yaml are now static for monolithic deployment)
 
 # Local environment noise
 *.env
