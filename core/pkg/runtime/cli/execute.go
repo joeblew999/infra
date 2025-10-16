@@ -77,6 +77,7 @@ are still being wired in.
 		newWebCommand(),
 		newVersionCommand(),
 		newDeployCommand(),
+		newEnsureCommand(),
 	)
 	return cmd
 }
