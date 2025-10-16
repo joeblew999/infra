@@ -1,6 +1,7 @@
 package fly
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	sharedcfg "github.com/joeblew999/infra/core/pkg/shared/config"
+	"github.com/joeblew999/infra/core/pkg/shared/secrets"
 	"github.com/superfly/fly-go/tokens"
 )
 
@@ -22,7 +24,14 @@ type Settings struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+const (
+	tokenKey    = "fly.token"
+	settingsKey = "fly.settings"
+	userID      = "local" // CLI mode uses "local" userID
+)
+
 // DefaultTokenPath returns the path used to cache Fly API tokens.
+// Deprecated: Kept for compatibility, but storage now uses secrets backend.
 func DefaultTokenPath() string {
 	tooling := sharedcfg.Tooling()
 	if path := strings.TrimSpace(tooling.Active.TokenPath); path != "" {
@@ -31,31 +40,38 @@ func DefaultTokenPath() string {
 	return filepath.Join(sharedcfg.GetDataPath(), "core", "secrets", "fly", "access_token")
 }
 
-// SaveToken persists the provided token to disk with 0600 permissions.
+// SaveToken persists the provided token using the secrets backend.
 func SaveToken(path, token string) error {
-	if path == "" {
-		path = DefaultTokenPath()
+	ctx := context.Background()
+	backend, err := secrets.NewBackend(ctx, "") // Empty string uses env var or defaults to filesystem
+	if err != nil {
+		return fmt.Errorf("create secrets backend: %w", err)
 	}
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
+
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return errors.New("token cannot be empty")
 	}
-	return os.WriteFile(path, []byte(token), 0o600)
+
+	return backend.Set(ctx, userID, tokenKey, []byte(token))
 }
 
-// LoadToken reads the token from disk. It returns an error if the file is
-// missing or empty.
+// LoadToken reads the token using the secrets backend.
 func LoadToken(path string) (string, error) {
-	if path == "" {
-		path = DefaultTokenPath()
+	ctx := context.Background()
+	backend, err := secrets.NewBackend(ctx, "") // Empty string uses env var or defaults to filesystem
+	if err != nil {
+		return "", fmt.Errorf("create secrets backend: %w", err)
 	}
-	data, err := os.ReadFile(path)
+
+	data, err := backend.Get(ctx, userID, tokenKey)
 	if err != nil {
 		return "", err
 	}
+
 	token := strings.TrimSpace(string(data))
 	if token == "" {
-		return "", errors.New("cached fly token is empty")
+		return "", errors.New("cached fly token is empty or not found")
 	}
 	return token, nil
 }
@@ -73,52 +89,57 @@ func CreateDockerConfig(token string) (string, error) {
 		return "", err
 	}
 	configPath := filepath.Join(dir, "config.json")
-	json := fmt.Sprintf(`{"auths":{"registry.fly.io":{"auth":"%s"}}}`, auth)
-	if err := os.WriteFile(configPath, []byte(json), 0o600); err != nil {
+	jsonStr := fmt.Sprintf(`{"auths":{"registry.fly.io":{"auth":"%s"}}}`, auth)
+	if err := os.WriteFile(configPath, []byte(jsonStr), 0o600); err != nil {
 		_ = os.RemoveAll(dir)
 		return "", err
 	}
 	return dir, nil
 }
 
-func settingsPath() string {
-	root := filepath.Join(sharedcfg.GetDataPath(), "core", "fly")
-	return filepath.Join(root, "settings.json")
-}
-
-// LoadSettings returns stored Fly preferences. Missing files return zero-value settings.
+// LoadSettings returns stored Fly preferences using the secrets backend.
 func LoadSettings() (Settings, error) {
-	path := settingsPath()
-	data, err := os.ReadFile(path)
+	ctx := context.Background()
+	backend, err := secrets.NewBackend(ctx, "")
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return Settings{}, nil
-		}
+		return Settings{}, fmt.Errorf("create secrets backend: %w", err)
+	}
+
+	data, err := backend.Get(ctx, userID, settingsKey)
+	if err != nil {
 		return Settings{}, err
 	}
+
+	if len(data) == 0 {
+		return Settings{}, nil // No settings saved yet
+	}
+
 	var cfg Settings
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return Settings{}, err
+		return Settings{}, fmt.Errorf("parse settings: %w", err)
 	}
 	return normaliseSettings(cfg), nil
 }
 
-// SaveSettings writes the provided Fly preferences to disk.
+// SaveSettings writes the provided Fly preferences using the secrets backend.
 func SaveSettings(cfg Settings) error {
-	path := settingsPath()
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return err
+	ctx := context.Background()
+	backend, err := secrets.NewBackend(ctx, "")
+	if err != nil {
+		return fmt.Errorf("create secrets backend: %w", err)
 	}
+
 	cfg = normaliseSettings(cfg)
 	if cfg.UpdatedAt.IsZero() {
 		cfg.UpdatedAt = time.Now().UTC()
 	}
+
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal settings: %w", err)
 	}
-	return os.WriteFile(path, data, 0o600)
+
+	return backend.Set(ctx, userID, settingsKey, data)
 }
 
 func normaliseSettings(cfg Settings) Settings {

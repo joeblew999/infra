@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/joeblew999/infra/core/pkg/observability/events"
+	"github.com/joeblew999/infra/core/pkg/runtime/observability"
 	runtimeprocess "github.com/joeblew999/infra/core/pkg/runtime/process"
 	runtimeui "github.com/joeblew999/infra/core/pkg/runtime/ui"
 )
@@ -191,7 +191,7 @@ func addEvent(snapshot *runtimeui.Snapshot, message string) {
 // StartEventStream subscribes to process events from NATS and adds them to the
 // event log. This provides rich event history showing process lifecycle transitions.
 func (s *Store) StartEventStream(ctx context.Context, natsURL string) error {
-	consumer, err := events.NewConsumer(natsURL)
+	consumer, err := observability.NewConsumer(natsURL)
 	if err != nil {
 		return fmt.Errorf("create event consumer: %w", err)
 	}
@@ -201,7 +201,7 @@ func (s *Store) StartEventStream(ctx context.Context, natsURL string) error {
 	}
 
 	// Subscribe to all process events
-	if err := consumer.SubscribeAll(func(evt events.Event) error {
+	if err := consumer.SubscribeAll(func(evt observability.Event) error {
 		s.appendObservabilityEvent(evt)
 		return nil
 	}); err != nil {
@@ -218,7 +218,7 @@ func (s *Store) StartEventStream(ctx context.Context, natsURL string) error {
 }
 
 // appendObservabilityEvent adds an observability event to the snapshot event log.
-func (s *Store) appendObservabilityEvent(evt events.Event) {
+func (s *Store) appendObservabilityEvent(evt observability.Event) {
 	s.Update(func(snapshot *runtimeui.Snapshot) {
 		icon := eventIcon(evt.Type)
 		message := fmt.Sprintf("%s %s", icon, evt.String())
@@ -236,21 +236,21 @@ func (s *Store) appendObservabilityEvent(evt events.Event) {
 }
 
 // eventIcon returns an icon for the given event type.
-func eventIcon(eventType events.EventType) string {
+func eventIcon(eventType observability.EventType) string {
 	switch eventType {
-	case events.EventTypeStarted:
+	case observability.EventTypeStarted:
 		return "▶️"
-	case events.EventTypeStopped:
+	case observability.EventTypeStopped:
 		return "⏹️"
-	case events.EventTypeCrashed:
+	case observability.EventTypeCrashed:
 		return "❌"
-	case events.EventTypeRestarted:
+	case observability.EventTypeRestarted:
 		return "🔄"
-	case events.EventTypeHealthy:
+	case observability.EventTypeHealthy:
 		return "✅"
-	case events.EventTypeUnhealthy:
+	case observability.EventTypeUnhealthy:
 		return "⚠️"
-	case events.EventTypeStatusChanged:
+	case observability.EventTypeStatusChanged:
 		return "📊"
 	default:
 		return "ℹ️"

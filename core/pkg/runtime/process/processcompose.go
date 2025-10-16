@@ -44,6 +44,13 @@ func GenerateComposeConfig(appRoot string) (string, error) {
 	if err := os.MkdirAll(stateDir, 0o755); err != nil {
 		return "", fmt.Errorf("create compose state dir: %w", err)
 	}
+
+	// Create logs directory for process output
+	logsDir := filepath.Join(stateDir, "logs")
+	if err := os.MkdirAll(logsDir, 0o755); err != nil {
+		return "", fmt.Errorf("create logs dir: %w", err)
+	}
+
 	composePath := filepath.Join(stateDir, ComposeFileName)
 
 	composeDef, err := buildComposeDefinition(root)
@@ -129,6 +136,17 @@ func ExecuteCompose(ctx context.Context, appRoot string, args ...string) error {
 	cmd.Stdin = os.Stdin
 	cmd.Env = composeCommandEnv(appRoot, port)
 
+	// For "up" command with --detached, use Start() not Run() so we don't block
+	isDetached := command == "up" && hasFlag(tail, "--detached")
+	if isDetached {
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("start process-compose: %w", err)
+		}
+		// Process started successfully in background
+		return nil
+	}
+
+	// For all other commands, use Run() which waits for completion
 	if err := cmd.Run(); err != nil {
 		if command != "up" {
 			stderrStr := strings.ToLower(stderrBuf.String())
@@ -180,19 +198,19 @@ func buildComposeDefinition(root string) (map[string]any, error) {
 
 	natsEnv := natsSpec.ResolveEnv(natsPaths)
 	natsArgs := relativeArgs(root, natsSpec.ResolveArgs(natsPaths))
-	natsEntry := composeProcessEntry(root, relativeCommand(root, natsPaths["nats"]), natsArgs, natsEnv, natsSpec.ComposeOverrides())
+	natsEntry := composeProcessEntryWithName(root, "nats", relativeCommand(root, natsPaths["nats"]), natsArgs, natsEnv, natsSpec.ComposeOverrides())
 	processes["nats"] = natsEntry
 
 	pbEnv := pbSpec.ResolveEnv(pbPaths)
 	pbArgs := relativeArgs(root, pbSpec.ResolveArgs(pbPaths))
-	pbEntry := composeProcessEntry(root, relativeCommand(root, pbPaths["pocketbase"]), pbArgs, pbEnv, pbSpec.ComposeOverrides())
+	pbEntry := composeProcessEntryWithName(root, "pocketbase", relativeCommand(root, pbPaths["pocketbase"]), pbArgs, pbEnv, pbSpec.ComposeOverrides())
 	ensureDependsOn(pbEntry, map[string]map[string]any{
 		"nats": {"condition": "process_healthy"},
 	})
 	processes["pocketbase"] = pbEntry
 
 	caddyEnv := caddyCfg.Process.Env
-	caddyEntry := composeProcessEntry(root, relativeCommand(root, caddyPaths["caddy"]), nil, caddyEnv, caddyCfg.ComposeOverrides())
+	caddyEntry := composeProcessEntryWithName(root, "caddy", relativeCommand(root, caddyPaths["caddy"]), nil, caddyEnv, caddyCfg.ComposeOverrides())
 	ensureDependsOn(caddyEntry, map[string]map[string]any{
 		"pocketbase": {"condition": "process_healthy"},
 	})
@@ -244,6 +262,10 @@ func envMapToSlice(m map[string]string) []string {
 }
 
 func composeProcessEntry(root, command string, args []string, env map[string]string, overrides map[string]any) map[string]any {
+	return composeProcessEntryWithName(root, "", command, args, env, overrides)
+}
+
+func composeProcessEntryWithName(root, name, command string, args []string, env map[string]string, overrides map[string]any) map[string]any {
 	entry := map[string]any{
 		"command":     command,
 		"working_dir": root,
@@ -259,6 +281,18 @@ func composeProcessEntry(root, command string, args []string, env map[string]str
 		mergeComposeOverrides(entry, overrides)
 	}
 	ensureRestartPolicy(entry)
+
+	// Add log_location if not already set via overrides
+	if _, hasLog := entry["log_location"]; !hasLog && name != "" {
+		// Use per-process log file: .core-stack/logs/{process-name}.log
+		entry["log_location"] = fmt.Sprintf(".core-stack/logs/%s.log", name)
+		// Add log_configuration to ensure proper capture
+		entry["log_configuration"] = map[string]any{
+			"flush_each_line": true,
+			"no_color":        false,
+		}
+	}
+
 	return entry
 }
 

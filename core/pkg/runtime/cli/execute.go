@@ -10,8 +10,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	runtimeconfig "github.com/joeblew999/infra/core/pkg/runtime/config"
 	runtimecontroller "github.com/joeblew999/infra/core/pkg/runtime/controller"
-
 	runtimeprocess "github.com/joeblew999/infra/core/pkg/runtime/process"
 	runtimeui "github.com/joeblew999/infra/core/pkg/runtime/ui"
 	"github.com/joeblew999/infra/core/pkg/runtime/ui/live"
@@ -71,9 +71,8 @@ are still being wired in.
 		newNATSCommand(),
 		newPocketBaseCommand(),
 		newStackCommand(),
+		newSecretsCommand(),
 		newServicesCommand(),
-		newScaleCommand(),
-		newControllerCommand(),
 		newTUICommand(),
 		newWebCommand(),
 		newVersionCommand(),
@@ -129,10 +128,10 @@ func newTUICommand() *cobra.Command {
 			}
 			store := live.NewStore(snapshot)
 			store.StartComposeSync(cmd.Context(), port, 2*time.Second)
-			store.StartControllerStream(cmd.Context(), controller, 3*time.Second)
 
 			// Start observability event stream
-			if err := store.StartEventStream(cmd.Context(), "nats://127.0.0.1:4222"); err != nil {
+			cfg := runtimeconfig.Load()
+			if err := store.StartEventStream(cmd.Context(), cfg.Services.NATS); err != nil {
 				// Don't fail TUI startup if event stream fails, just warn
 				fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to start event stream: %v\n", err)
 			}
@@ -178,10 +177,10 @@ func newWebCommand() *cobra.Command {
 				}
 				store := live.NewStore(snapshot)
 				store.StartComposeSync(cmd.Context(), port, 2*time.Second)
-				store.StartControllerStream(cmd.Context(), controller, 3*time.Second)
 
 				// Start observability event stream
-				if err := store.StartEventStream(cmd.Context(), "nats://127.0.0.1:4222"); err != nil {
+				cfg := runtimeconfig.Load()
+				if err := store.StartEventStream(cmd.Context(), cfg.Services.NATS); err != nil {
 					fmt.Fprintf(cmd.ErrOrStderr(), "Warning: failed to start event stream: %v\n", err)
 				}
 

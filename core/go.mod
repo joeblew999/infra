@@ -8,7 +8,6 @@ require (
 	github.com/charmbracelet/ultraviolet v0.0.0-20250915111650-81d4262876ef
 	github.com/f1bonacc1/process-compose v1.64.1
 	github.com/google/uuid v1.6.0
-	github.com/joeblew999/infra/core/controller v0.0.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-runewidth v0.0.16
 	github.com/mholt/caddy-l4 v0.0.0-20250902102621-4a517a98d7fa
@@ -279,5 +278,3 @@ require (
 replace github.com/InVisionApp/go-health/v2 => github.com/f1bonacc1/go-health/v2 v2.1.5-0.20250716071924-704bdc47a43a
 
 replace github.com/cakturk/go-netstat => github.com/f1bonacc1/netstat v0.0.0-20230714090734-adb3fa07cab7
-
-replace github.com/joeblew999/infra/core/controller => ./controller

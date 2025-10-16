@@ -38,6 +38,21 @@ type ProjectState map[string]any
 // ErrComposeProcessNotFound is returned when a process name cannot be resolved.
 var ErrComposeProcessNotFound = errors.New("process not found")
 
+// IsComposeRunning checks if the Process Compose server is reachable.
+// Returns true if the server responds to health requests, false otherwise.
+func IsComposeRunning(ctx context.Context, port int) bool {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	// Use a short timeout context to avoid blocking
+	checkCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	// Try to fetch processes - if this succeeds, compose is running
+	_, err := FetchComposeProcesses(checkCtx, port)
+	return err == nil
+}
+
 func composeBaseURL(port int) string {
 	if port <= 0 {
 		port = composeServerPort

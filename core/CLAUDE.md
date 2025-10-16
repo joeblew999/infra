@@ -137,6 +137,123 @@ A baseline backup exists at `.data/.BACKUP_TOKENS/` created 2025-10-15.
   - Tested: Port 8090 now listening ✅
 ```
 
+## Core Package Organization - CRITICAL PATTERN
+
+**Location**: `core/pkg/`
+
+### The Shared/Runtime Pattern
+
+**EVERY capability must follow this structure**:
+
+```
+pkg/shared/{capability}/     ← Implementation lives here
+pkg/runtime/{capability}/    ← Re-exports from shared + runtime-specific extensions
+```
+
+**Examples**:
+- `pkg/shared/observability/` - Event types, adapter, consumer (implementation)
+- `pkg/runtime/observability/` - Re-exports observability types for runtime convenience
+- `pkg/shared/events/` - Event envelope implementation
+- `pkg/runtime/events/` - Re-exports events for runtime code
+- `pkg/shared/config/` - Configuration types and helpers
+- `pkg/runtime/config/` - Re-exports + runtime-specific config
+
+### Why This Pattern Exists
+
+From `pkg/README.md`:
+> When adding a new capability, **build the shared package first, then wire it into the runtime tree**. This keeps the dependency direction clean and makes it obvious when shared/runtime drift.
+
+**Dependency Flow**:
+```
+External services → import core/pkg/shared/{capability}
+Runtime code      → import core/pkg/runtime/{capability} → re-exports shared
+```
+
+**Benefits**:
+1. ✅ External services can import clean shared APIs
+2. ✅ Runtime code gets convenient re-exports
+3. ✅ Clear separation between library (shared) and orchestration (runtime)
+4. ✅ Prevents circular dependencies
+
+### Pattern Rules
+
+**When adding new functionality**:
+
+1. **Create in shared first**:
+   ```bash
+   mkdir -p pkg/shared/mycapability
+   # Write implementation in pkg/shared/mycapability/*.go
+   ```
+
+2. **Create runtime re-export**:
+   ```bash
+   mkdir -p pkg/runtime/mycapability
+   # Create pkg/runtime/mycapability/mycapability.go
+   ```
+
+3. **Runtime re-export template**:
+   ```go
+   package mycapability
+
+   import shared "github.com/joeblew999/infra/core/pkg/shared/mycapability"
+
+   // Re-export shared types
+   type Thing = shared.Thing
+
+   // Re-export shared functions
+   var NewThing = shared.NewThing
+   ```
+
+4. **Add runtime-specific extensions** (only if needed):
+   ```go
+   // File: pkg/runtime/mycapability/extensions.go
+   // Runtime-specific code that needs pkg/runtime/process or other runtime packages
+   ```
+
+### Current Capabilities Following Pattern
+
+Run this to verify the pattern:
+```bash
+comm -12 <(ls pkg/shared/ | sort) <(ls pkg/runtime/ | sort)
+```
+
+Should show: `cli`, `config`, `controller`, `dep`, `events`, `harness`, `log`, `observability`, `pipeline`, `process`, `state`, `ui`
+
+### Common Mistakes to Avoid
+
+❌ **Wrong - Creating at pkg/ level**:
+```
+pkg/mycapability/  # NO! Not at this level
+```
+
+❌ **Wrong - Only in runtime**:
+```
+pkg/runtime/mycapability/  # NO! Where's pkg/shared/mycapability?
+```
+
+❌ **Wrong - Runtime code in shared**:
+```go
+// In pkg/shared/mycapability/thing.go
+import "github.com/joeblew999/infra/core/pkg/runtime/process"  // NO!
+```
+
+✅ **Correct - Implementation in shared, re-export in runtime**:
+```
+pkg/shared/mycapability/thing.go        # Implementation
+pkg/runtime/mycapability/mycapability.go  # Re-exports from shared
+```
+
+### Verification
+
+Before committing new packages:
+```bash
+# Check your new package exists in BOTH locations
+ls pkg/shared/mycapability pkg/runtime/mycapability
+
+# Verify runtime re-exports from shared
+grep "pkg/shared/mycapability" pkg/runtime/mycapability/*.go
+```
+
 ## Documentation Structure
 
 **README.md**: Quick start and operational commands only
