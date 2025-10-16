@@ -1,5 +1,11 @@
 # Infra
 
+**Monorepo with V1 (legacy) and V2 (core) architectures:**
+- **V1 (this directory)**: Legacy runtime with goreman-based orchestration
+- **V2 ([core/](core/README.md))**: Modern event-driven orchestration with process-compose ← **Active development**
+
+## V1 - Legacy Runtime
+
 Manage the whole stack with the `infra runtime` namespace:
 
 ```bash
@@ -40,12 +46,22 @@ go run . tools flyctl status  # access supporting tooling
 go run . dev api-check        # compare Go API surfaces
 ```
 
+## V2 - Core Runtime (Active Development)
+
+See **[core/README.md](core/README.md)** for the modern architecture with:
+- Process-compose orchestration
+- Real-time observability via NATS JetStream
+- Event-driven TUI/GUI
+- Health-based dependency management
+- Single binary deployment
+
 ## Need More?
 
 This repo keeps deeper docs alongside the code:
 
-- `docs/` – architecture notes, service guides, CLI details
+- `docs/` – V1 architecture notes, service guides, CLI details
+- `core/docs/` – V2 architecture, observability, development guides
 - `pkg/` – package-level READMEs (goreman, nats, deck, etc.)
 - `agents/` – instructions for automation agents working in this repo
 
-If you ever forget what’s available, run `go run . --help`.
+If you ever forget what's available, run `go run . --help`.
