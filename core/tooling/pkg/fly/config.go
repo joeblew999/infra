@@ -21,21 +21,23 @@ func ConfigureFlyPreferences(ctx context.Context, client *flyapi.Client, out io.
 	updated := false
 
 	orgSlug := strings.TrimSpace(settings.OrgSlug)
-	if orgSlug != "" {
+
+	// If defaultOrg is provided (from flags/profile), use it directly without validation
+	// This avoids permission issues with GetOrganizationBySlug/GetOrganizations APIs
+	if strings.TrimSpace(defaultOrg) != "" {
+		orgSlug = strings.TrimSpace(defaultOrg)
+		if orgSlug != settings.OrgSlug {
+			fmt.Fprintf(out, "Using Fly organization %s (from profile/flags).\n", orgSlug)
+			updated = true
+		}
+	} else if orgSlug != "" {
+		// Try to validate stored org only if no defaultOrg provided
 		if _, err := client.GetOrganizationBySlug(ctx, orgSlug); err != nil {
-			fmt.Fprintf(out, "Stored Fly organization %s is not accessible: %v\n", orgSlug, err)
-			orgSlug = ""
-			updated = true
+			fmt.Fprintf(out, "⚠  Stored Fly organization %s validation failed: %v\n", orgSlug, err)
+			fmt.Fprintf(out, "   (Continuing anyway - will fail later if org is invalid)\n")
 		}
-	}
-	if orgSlug == "" && strings.TrimSpace(defaultOrg) != "" {
-		if _, err := client.GetOrganizationBySlug(ctx, strings.TrimSpace(defaultOrg)); err == nil {
-			orgSlug = strings.TrimSpace(defaultOrg)
-			fmt.Fprintf(out, "Using profile Fly organization %s.\n", orgSlug)
-			updated = true
-		}
-	}
-	if orgSlug == "" {
+	} else {
+		// No stored org and no defaultOrg - try to auto-detect
 		orgs, err := client.GetOrganizations(ctx)
 		if err != nil {
 			return fmt.Errorf("list fly organizations: %w", err)
